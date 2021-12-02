@@ -338,7 +338,7 @@ plot_violins <- function(df, classes=vonEconomo,
 #     geom_boxplot(aes(m, score, fill=Mean)) +
     # geom_text(aes(x=m), y=-150) +
 #     scale_fill_gradient2(high='#3A3A98',mid='white',low='#832424', limits=c(-2,2)) +
-    scale_fill_gradientn(colors=brewer.rdbu(100), limits=c(-2,2)) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-2,2)) +
     coord_cartesian(ylim=c(-2.5,3.5), clip='off') +
     theme_minimal() + 
     theme(panel.spacing=unit(2,'lines')) +

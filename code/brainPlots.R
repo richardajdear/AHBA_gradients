@@ -41,7 +41,7 @@ plot_dk <- function(scores_df, title="", three=F, switch=NULL) {
           plot.title=element_text(hjust=0.5)) +
     #   scale_fill_cmocean(name='balance', limits=c(-m,m), oob=squish) +
 #     scale_fill_gradient2(low=muted('red'), high=muted('blue'), 
-    scale_fill_gradientn(colors=brewer.rdbu(100), 
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), 
                          limits=c(-m,m), oob=squish, breaks=c(-m,0,m), 
                          labels=c(round(-m,2),0,round(m,2)), name=''
                         ) +
@@ -85,7 +85,7 @@ plot_hcp <- function(scores_df, title="", three=F, switch=NULL) {
           plot.title=element_text(hjust=0.5)) +
     #   scale_fill_cmocean(name='balance', limits=c(-m,m), oob=squish) +
 #     scale_fill_gradient2(low=muted('red'), high=muted('blue'), 
-    scale_fill_gradientn(colors=brewer.rdbu(100), 
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), 
                          limits=c(-m,m), oob=squish, breaks=c(-m,0,m), 
                          labels=c(round(-m,2),0,round(m,2)), name=''
                         ) +
@@ -114,7 +114,7 @@ plot_hcp_wide <- function(scores_df, title="", facet='h', spacing=4) {
     p <- ggplot(df) + 
     geom_brain(
         atlas=glasser,
-        mapping=aes(fill=score, geometry=geometry),
+        mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
         colour='grey', size=.1,
         show.legend=T
         ) + 
@@ -124,7 +124,7 @@ plot_hcp_wide <- function(scores_df, title="", facet='h', spacing=4) {
     theme(legend.position='right', text=element_text(size=20),
           plot.title=element_text(hjust=0.5)) +
     #   scale_fill_cmocean(name='balance', limits=c(-m,m), oob=squish) +
-    scale_fill_gradientn(colors=brewer.rdbu(100), 
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), 
                          limits=c(-m,m), oob=squish, breaks=c(-m,0,m), 
                          labels=c(round(-m,2),0,round(m,2)), name=''
                         ) +
@@ -207,7 +207,7 @@ plot_hcp_classes <- function(df, classes=vonEconomo, classcolors=vonEconomo.colo
     ggplot() +
     geom_brain(
         atlas=glasser,
-        mapping=aes(fill= classes , geometry=geometry),
+        mapping=aes(fill= classes , geometry=geometry, hemi=hemi, side=side, type=type),
         colour='grey', size=.1
     ) +
     theme_void() +

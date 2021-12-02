@@ -8,34 +8,6 @@ import nibabel as nib
 from pcaVersion import pcaVersion
 
 
-def read_expression_aurina(path):
-    """
-    Get expression matrix from Aurina
-    """
-    genes = pd.read_csv(path + 'GeneSymbol.csv',header=None,squeeze=True)
-    df = (
-        pd.read_csv(path + "parcelExpression.csv", header=None)
-        .rename(columns={0:'label_id'})
-        .set_index('label_id')
-        .set_axis(genes, axis=1)
-    )
-    return df 
-
-def read_labels_aurina(path, annotation):
-    """
-    Get labels from Aurina
-    """
-    labels = (
-        pd.read_csv(path + 'SampleCoordinates.csv')
-        .set_axis(['label', 'mni_x', 'mni_y', 'mni_z'], axis=1)
-        .set_index(['mni_x', 'mni_y', 'mni_z'])
-        .join(annotation.set_index(['mni_x', 'mni_y', 'mni_z']).loc[:,'well_id'])
-        .set_index('well_id').sort_index()['label']
-    )
-    return labels
-
-
-
 def get_expression_abagen(atlas, save_name=None, verbose=0, 
                           only_left=True,
                           only_cortex=True,
@@ -69,7 +41,7 @@ def get_expression_abagen(atlas, save_name=None, verbose=0,
         tolerance=tolerance,
         sample_norm=sample_norm,
         gene_norm=gene_norm,
-        data_dir='../abagen-data/microarray',
+        data_dir='../data/abagen-data/microarray',
         n_proc=32,
         return_counts=return_counts,
         return_labels=return_labels,
@@ -78,20 +50,21 @@ def get_expression_abagen(atlas, save_name=None, verbose=0,
     )
     
     if return_labels or return_counts:
-        expression = out[0]
+        expression_all_genes = out[0]
     else:
-        expression = out
+        expression_all_genes = out
     
-    expression, stability = keep_stable_genes(expression, threshold=DS_threshold, return_stability=True)
+    expression, stability = keep_stable_genes(expression_all_genes, threshold=DS_threshold, return_stability=True)
+    stability = pd.Series(stability, index=expression_all_genes.columns)
     print(f'{expression[0].shape[1]} genes remain after filtering for top {round(1-DS_threshold,2)} differential stability')
     
     if not return_donors:
         expression = pd.concat(expression).groupby(level=0).mean()
     
     if save_name is not None:
-        expression.to_csv("../abagen-data/expression/" + save_name + ".csv")
+        expression.to_csv("../data/abagen-data/expression/" + save_name + ".csv")
         if return_labels:
-            out[1].to_csv("../abagen-data/labels/" + save_name + ".csv")
+            out[1].to_csv("../data/abagen-data/labels/" + save_name + ".csv")
     
     out_ = (expression,)
     if return_labels:
@@ -108,30 +81,7 @@ def get_expression_abagen(atlas, save_name=None, verbose=0,
     
     return out_
 
-
-def test_params(param=None, params_list=None, atlas=None, base=None, **kwargs):
-    versions_dict = {}
     
-    for p in params_list:
-        param_args={param:p}
-        expression = get_expression_abagen(atlas=atlas, verbose=0, 
-                                           **param_args, **kwargs)
-        versions_dict[p] = pcaVersion(expression, message=False)
-        print(f'PCA done for param = {p}')
-
-    coef_corrs_dict = {}
-    score_corrs_dict = {}
-    for p, version in versions_dict.items():
-        coef_corrs_dict[p] = base.corr_coefs(version, match=True)[['corr']].T
-        score_corrs_dict[p] = base.corr_scores(version, match=True)[['corr']].T
-
-    out = {
-        'coef_corrs': pd.concat(coef_corrs_dict).reset_index(level=1, drop=True),
-        'score_corrs': pd.concat(score_corrs_dict).reset_index(level=1, drop=True),
-        'versions': versions_dict
-    }
-    return out
-
     
 
 def fetch_dk(native=True, only_cortex=False, only_left=False):
@@ -156,20 +106,22 @@ def fetch_dk(native=True, only_cortex=False, only_left=False):
     return atlas_dk
 
 
+
 def fetch_hcp(native=True, only_left=False):
     """
     Get HCP atlas
     """
     hcp_info = (
-        pd.read_csv('../HCP-MMP1_UniqueRegionList.txt')
+        pd.read_csv('../data/HCP-MMP1_UniqueRegionList.txt')
         .rename(columns={'LR':'hemisphere', 'regionID':'id', 'region':'label'})
         .assign(structure='cortex')
         .assign(id=lambda x: [id-20 if id>180 else id for id in x['id']])
     )
 
-    path = '../AHBAprocessing-data/parcellations/'
+    path = '../data/AHBAprocessing-data/parcellations/'
     name = 'HCPMMP1_acpc_uncorr.nii'
     donors = ['9861', '10021', '12876', '14380', '15496', '15697']
+    
     if native:
         atlas_hcp = {
             'image':{donor:path + 'S%s/' % str(i+1) + name for i,donor in enumerate(donors)},
@@ -177,8 +129,8 @@ def fetch_hcp(native=True, only_left=False):
         }
     else:
         atlas_hcp = {
-            'image':'../HCP-MMP_1mm.nii.gz',
-            'info':pd.read_csv('../HCP-MMP1_UniqueRegionList.txt').rename(columns={'LR':'hemisphere', 'regionID':'id', 'region':'label'}).assign(structure='cortex')
+            'image':'../data/HCP-MMP_1mm.nii.gz',
+            'info':pd.read_csv('../data/HCP-MMP1_UniqueRegionList.txt').rename(columns={'LR':'hemisphere', 'regionID':'id', 'region':'label'}).assign(structure='cortex')
         }
 
     def remove_right(image):
@@ -191,6 +143,7 @@ def fetch_hcp(native=True, only_left=False):
             atlas_hcp['image'][donor] = remove_right(image)
 
     return atlas_hcp
+
 
 
 def get_labels_dk():
@@ -210,7 +163,7 @@ def get_labels_hcp():
     Get HCP atlas labels from source file and format for ggseg
     """
     hcp_info = (
-        pd.read_csv('../HCP-MMP1_UniqueRegionList.txt')
+        pd.read_csv('../data/HCP-MMP1_UniqueRegionList.txt')
         .rename(columns={'LR':'hemisphere', 'regionID':'id', 'region':'label'})
         .assign(structure='cortex')
         .assign(id=lambda x: [id-20 if id>180 else id for id in x['id']]) 
@@ -247,3 +200,31 @@ def get_labels_aseg():
                  })
     )
     return labels_aseg
+
+
+
+def read_expression_aurina(path):
+    """
+    Get expression matrix from Aurina
+    """
+    genes = pd.read_csv(path + 'GeneSymbol.csv',header=None,squeeze=True)
+    df = (
+        pd.read_csv(path + "parcelExpression.csv", header=None)
+        .rename(columns={0:'label_id'})
+        .set_index('label_id')
+        .set_axis(genes, axis=1)
+    )
+    return df 
+
+def read_labels_aurina(path, annotation):
+    """
+    Get labels from Aurina
+    """
+    labels = (
+        pd.read_csv(path + 'SampleCoordinates.csv')
+        .set_axis(['label', 'mni_x', 'mni_y', 'mni_z'], axis=1)
+        .set_index(['mni_x', 'mni_y', 'mni_z'])
+        .join(annotation.set_index(['mni_x', 'mni_y', 'mni_z']).loc[:,'well_id'])
+        .set_index('well_id').sort_index()['label']
+    )
+    return labels

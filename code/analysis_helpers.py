@@ -1,10 +1,39 @@
 # Helper functions for analysis
 
 import numpy as np, pandas as pd
-from plots import *
+# from plots import *
 from scipy.linalg import orthogonal_procrustes
 from itertools import combinations
 from processing_helpers import *
+
+
+def test_params(param=None, params_list=None, atlas=None, base=None, **kwargs):
+    """
+    Compare PCA for different parameter settings
+    """
+    versions_dict = {}
+    
+    for p in params_list:
+        param_args={param:p}
+        expression = get_expression_abagen(atlas=atlas, verbose=0, 
+                                           **param_args, **kwargs)
+        versions_dict[p] = pcaVersion(expression, message=False)
+        print(f'PCA done for param = {p}')
+
+    coef_corrs_dict = {}
+    score_corrs_dict = {}
+    for p, version in versions_dict.items():
+        coef_corrs_dict[p] = base.corr_coefs(version, match=True)[['corr']].T
+        score_corrs_dict[p] = base.corr_scores(version, match=True)[['corr']].T
+
+    out = {
+        'coef_corrs': pd.concat(coef_corrs_dict).reset_index(level=1, drop=True),
+        'score_corrs': pd.concat(score_corrs_dict).reset_index(level=1, drop=True),
+        'versions': versions_dict
+    }
+    return out
+
+
 
 def correlate(a,b):
     return pd.concat([a,b],axis=1).corr().iloc[:5,5:]
