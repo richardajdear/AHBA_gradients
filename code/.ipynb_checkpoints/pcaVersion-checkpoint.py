@@ -4,6 +4,7 @@ Version class for analyzing PCA of AHBA
 
 import numpy as np, pandas as pd
 from sklearn.decomposition import PCA
+from sklearn.decomposition import SparsePCA, MiniBatchSparsePCA
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.preprocessing import StandardScaler
 
@@ -17,15 +18,27 @@ import abagen
 
 class pcaVersion():
     
-    def __init__(self, expression_data, labels_data=None, k=5, message=True):
+    def __init__(self, expression_data, labels_data=None, k=5, message=True, sparse_alpha=None, scale=True):
         # Initialize expression, clean, and run PCA
         X = expression_data.dropna(axis=0, how='all').dropna(axis=1, how='any')
-        X_scaled = StandardScaler().fit_transform(X)
-        self.expression = pd.DataFrame(X_scaled, index=X.index, columns=X.columns)
-        self.pca = PCA(n_components=k).fit(self.expression)
+        
+        if scale:
+            X_scaled = StandardScaler().fit_transform(X)
+            self.expression = pd.DataFrame(X_scaled, index=X.index, columns=X.columns)
+        else:
+            self.expression = X
+        
+        if sparse_alpha is None:
+            self.pca = PCA(n_components=k).fit(self.expression)
+        else:
+            self.pca = MiniBatchSparsePCA(n_components=k, alpha=sparse_alpha, n_jobs=-1).fit(self.expression)
+            
         self.coefs = pd.DataFrame(self.pca.components_, columns=X.columns)
         self.scores = self.expression @ self.coefs.T
-        self.var = self.pca.explained_variance_ratio_
+        
+        # variance explained only if not using sparse
+        if sparse_alpha is None:
+            self.var = self.pca.explained_variance_ratio_
 #         self.s = self.pca.singular_values_
 #         self.loadings = self.coefs.T * self.s
 #         self.U = self.scores / self.s
@@ -35,7 +48,7 @@ class pcaVersion():
     
         if message:
             print("New PCA version")
-
+            
             
 #     # Score coefs on this expression matrix
 #     # Coefs could be from this same pcaVersion

@@ -55,7 +55,7 @@ def get_expression_abagen(atlas, save_name=None, verbose=0,
         expression_all_genes = out
     
     expression, stability = keep_stable_genes(expression_all_genes, threshold=DS_threshold, return_stability=True)
-    stability = pd.Series(stability, index=expression_all_genes.columns)
+    stability = pd.Series(stability, index=expression_all_genes[0].columns)
     print(f'{expression[0].shape[1]} genes remain after filtering for top {round(1-DS_threshold,2)} differential stability')
     
     if not return_donors:

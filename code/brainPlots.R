@@ -82,6 +82,7 @@ plot_hcp <- function(scores_df, title="", three=F, switch=NULL) {
     facet_grid(component~version, switch=switch) +
     theme(legend.position='bottom',
           strip.text.x=element_text(vjust=1),
+          strip.text.y.left = element_text(angle = 0),
           plot.title=element_text(hjust=0.5)) +
     #   scale_fill_cmocean(name='balance', limits=c(-m,m), oob=squish) +
 #     scale_fill_gradient2(low=muted('red'), high=muted('blue'), 
@@ -89,6 +90,7 @@ plot_hcp <- function(scores_df, title="", three=F, switch=NULL) {
                          limits=c(-m,m), oob=squish, breaks=c(-m,0,m), 
                          labels=c(round(-m,2),0,round(m,2)), name=''
                         ) +
+    coord_sf(clip='off') +
 ggtitle(title) + xlab("") + ylab("")
 }
 

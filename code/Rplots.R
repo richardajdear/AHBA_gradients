@@ -19,6 +19,24 @@ plot_var_exp <- function(df_var) {
 }
 
 
+plot_coefs_ds <- function(df_coefs_ds) {
+    coefs_ds %>% rownames_to_column %>% rename(gene=rowname) %>% 
+    gather(PC, coef, -gene, -DS) %>% 
+    ggplot(aes(coef, DS)) + 
+    facet_grid(.~PC) +
+    geom_point(color=brewer.rdbu(100)[80], alpha=.3, size=.2) +
+    xlab('Gene Weight') + ylab("Differential\nStability") +
+    theme_void() +
+    annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+    annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+    theme(axis.title.x = element_text(),
+          axis.title.y = element_text(angle=90),
+          strip.text.y = element_blank(),
+          panel.spacing = unit(3, 'lines'),
+          aspect.ratio=1)
+}
+
+
 plot_dist <- function(df_dist) {
     ggplot(df_dist) +
     geom_histogram(aes(x=count, fill=atlas), alpha=1, binwidth=1, position='identity') + 
@@ -191,11 +209,11 @@ plot_robustness <- function(df_versions) {
 
 
 
-plot_triplets <- function(versions_df, title="") {
+plot_triplets <- function(versions_df, title="", line=0.6) {
     versions_df %>%
     ggplot(aes(component, corr_abs)) + 
     facet_grid(how~version)  +
-    geom_hline(yintercept=0.6,color=mycolors[1],size=.5,linetype=1) +
+    geom_hline(yintercept=line,color=mycolors[1],size=.5,linetype=1) +
 #     geom_violin(aes(fill=component), alpha=.2) + 
     geom_boxplot(aes(fill=component), alpha=.7) +
     geom_point() +
