@@ -255,3 +255,4 @@ plot_hcp_ranks <- function(scores_df, title="", three=F, switch=NULL) {
           plot.title=element_text(hjust=0.5)) +
 ggtitle(title) + xlab("") + ylab("")
 }
+

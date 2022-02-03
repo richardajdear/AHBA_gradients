@@ -42,16 +42,16 @@ ggtitle(title) + xlab("") + ylab("")
 }
 
 
-plot_spin_corrs <- function(corrs, spin_corrs, spin_p, spin_sig) {
+plot_spin_corrs <- function(corrs, spin_corrs, spin_p) {
     corrs <- corrs %>% rownames_to_column('map') %>% gather(pc, corr, -map)
     spin_corrs <- spin_corrs %>% gather(pc, corr, -map)
-    spin_p <- spin_p %>% rownames_to_column('map') %>% gather(pc, p, -map)
-    spin_sig <- spin_sig %>% rownames_to_column('map') %>% gather(pc, sig, -map)
+    spin_p <- spin_p %>% rownames_to_column('map') %>% gather(pc, p, -map) %>% mutate(sig = p<.05)
+    # spin_sig <- spin_p %>% mutate(sig = p<.05)
 
     spin_corrs %>% 
-    left_join(spin_sig, by = c('map', 'pc')) %>% 
+    left_join(spin_p, by = c('map', 'pc')) %>% 
     ggplot() + 
-    facet_grid(factor(map, levels=unique(spin_sig$map))~pc, switch='y') +
+    facet_grid(factor(map, levels=unique(spin_p$map))~pc, switch='y') +
     geom_histogram(aes(corr, alpha=sig)) +
     scale_alpha_manual(values=c(.4,1), guide='none') +
     ylab('') +

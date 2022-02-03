@@ -6,6 +6,7 @@ from analysis_helpers import *
 from netneurotools import freesurfer as nnsurf
 from nibabel.freesurfer.io import read_annot
 from brainsmash.mapgen.base import Base
+from scipy.stats import percentileofscore
 
 
 def get_corrs(scores, maps, method='pearson'):
@@ -69,16 +70,16 @@ def generate_spins_from_pcs(scores,
 
     
 def generate_surrogates(maps, n=10,
-                       outfile='../outputs/sim_maps_1000.npy'):
+                    dist_mat="../data/LeftParcelGeodesicDistmat.txt",
+                        outfile='../outputs/sim_maps_1000.npy'):
     """
     Generate null maps using brainsmash
     """
-    dist_mat_file = "../data/LeftParcelGeodesicDistmat.txt"
     null_maps = np.zeros([maps.shape[0], maps.shape[1], n])
     
     for m in range(maps.shape[1]):
         base_map = maps.iloc[:,m].values
-        base = Base(x=base_map, D=dist_mat_file)
+        base = Base(x=base_map, D=dist_mat)
         nulls = base(n)
         null_maps[:,m,:] = nulls.swapaxes(0,1)
         
@@ -124,5 +125,22 @@ def corr_nulls_from_pcs(null_pcs, scores, maps, method='pearson'):
     )
     return null_corrs
 
+def get_null_p(corrs, null_corrs):
+    """
+    Get p values
+    """
+    null_p = np.zeros(corrs.shape)
+    for m, _map in enumerate(corrs.index):
+        for i in range(3):
+            _null_corrs = null_corrs.set_index('map').loc[_map].iloc[:,i]
+            _corr = corrs.iloc[m,i]
+            p = percentileofscore(_null_corrs, _corr)/100
+            if p > .5:
+                p = 1-p
+            null_p[m,i] = p
 
-
+    null_p = pd.DataFrame(null_p, index=corrs.index, columns=corrs.columns)
+    
+    return null_p
+    
+    
