@@ -22,87 +22,52 @@ def get_age_groups():
     """
     Define age groupings for use in Brainspan analysis
     """
-    age_groups = {
-        # Initial groupings
-        # '8 pcw': '8-12 pcw',
-        # '9 pcw': '8-12 pcw',
-        # '12 pcw': '8-12 pcw',
-        # '13 pcw': '13-16 pcw',
-        # '16 pcw': '13-16 pcw',
-        # '17 pcw': '17-20 pcw',
-        # '19 pcw': '17-20 pcw',
-        # '21 pcw': '20-38 pcw',
-        # '24 pcw': '20-38 pcw',
-        # '25 pcw': '20-38 pcw',
-        # '26 pcw': '20-38 pcw',
-        # '35 pcw': '20-38 pcw',
-        # '37 pcw': '20-38 pcw',
-        # '4 mos': 'Birth-5 yrs',
-        # '10 mos': 'Birth-5 yrs',
-        # '1 yrs': 'Birth-5 yrs',
-        # '2 yrs': 'Birth-5 yrs',
-        # '3 yrs': 'Birth-5 yrs',
-        # '4 yrs': 'Birth-5 yrs',
-        # '8 yrs': '6-11 yrs',
-        # '11 yrs': '6-11 yrs',
-        # '13 yrs': '12-19 yrs',
-        # '15 yrs': '12-19 yrs',
-        # '18 yrs': '12-19 yrs',
-        # '19 yrs': '12-19 yrs',
-        # '21 yrs': '20-40 yrs',
-        # '23 yrs': '20-40 yrs',
-        # '30 yrs': '20-40 yrs',
-        # '36 yrs': '20-40 yrs',
-        # '37 yrs': '20-40 yrs',
-        # '40 yrs': '20-40 yrs',
-        
-        # 'Natural' groupings
-        # '8 pcw': '8 pcw',
+    age_groups = {        
+        # 'Best' groupings ...
         # '12 pcw': '12-13 pcw',
         # '13 pcw': '12-13 pcw',
-        # '16 pcw': '16-21 pcw',
-        # '17 pcw': '16-21 pcw',
-        # '19 pcw': '16-21 pcw',
-        # '21 pcw': '16-21 pcw',
-        # '24 pcw': '24 pcw',
-        # '37 pcw': '37 pcw',
-        # '4 mos': 'Birth-1 yr',
-        # '10 mos': 'Birth-1 yr',
-        # '1 yrs': 'Birth-1 yr',
-        # '2 yrs': '2-3 yrs',
-        # '3 yrs': '2-3 yrs',
-        # '8 yrs': '8 yrs',
-        # '11 yrs': '11-13 yrs',
-        # '13 yrs': '11-13 yrs',
-        # '18 yrs': '18-23 yrs',
-        # '19 yrs': '18-23 yrs',
-        # '21 yrs': '18-23 yrs',
-        # '23 yrs': '18-23 yrs',
-        # '30 yrs': '30-40 yrs',
-        # '36 yrs': '30-40 yrs',
-        # '37 yrs': '30-40 yrs',
-        # '40 yrs': '30-40 yrs',   
+        # '16 pcw': '16-19 pcw',
+        # '17 pcw': '16-19 pcw',
+        # '19 pcw': '16-19 pcw',
+        # '21 pcw': '21-37 pcw',
+        # '24 pcw': '21-37 pcw',
+        # '37 pcw': '21-37 pcw',
+        # '4 mos': 'Birth-3 yrs',
+        # '10 mos': 'Birth-3 yrs',
+        # '1 yrs': 'Birth-3 yrs',
+        # '2 yrs': 'Birth-3 yrs',
+        # '3 yrs': 'Birth-3 yrs',
+        # '4 yrs': 'Birth-3 yrs',
+        # '8 yrs': '8-13 yrs',
+        # '11 yrs': '8-13 yrs',
+        # '13 yrs': '8-13 yrs',
+        # '18 yrs': '18-40 yrs',
+        # '19 yrs': '18-40 yrs',
+        # '21 yrs': '18-40 yrs',
+        # '23 yrs': '18-40 yrs',
+        # '30 yrs': '18-40 yrs',
+        # '36 yrs': '18-40 yrs',
+        # '37 yrs': '18-40 yrs',
+        # '40 yrs': '18-40 yrs',   
         
-        # 'Cherry picked' groupings ...
-        # '8 pcw': '8-13 pcw',
-        '12 pcw': '12-13 pcw',
-        '13 pcw': '12-13 pcw',
-        '16 pcw': '16-19 pcw',
-        '17 pcw': '16-19 pcw',
-        '19 pcw': '16-19 pcw',
-        '21 pcw': '21-37 pcw',
-        '24 pcw': '21-37 pcw',
-        '37 pcw': '21-37 pcw',
-        '4 mos': 'Birth-3 yrs',
-        '10 mos': 'Birth-3 yrs',
-        '1 yrs': 'Birth-3 yrs',
-        '2 yrs': 'Birth-3 yrs',
-        '3 yrs': 'Birth-3 yrs',
-        '4 yrs': 'Birth-3 yrs',
-        '8 yrs': '8-13 yrs',
-        '11 yrs': '8-13 yrs',
-        '13 yrs': '8-13 yrs',
-        '15 yrs': '13-19 yrs',
+        # # Simple groupings ...
+        '12 pcw': 'Pre-Birth',
+        '13 pcw': 'Pre-Birth',
+        '16 pcw': 'Pre-Birth',
+        '17 pcw': 'Pre-Birth',
+        '19 pcw': 'Pre-Birth',
+        '21 pcw': 'Pre-Birth',
+        '24 pcw': 'Pre-Birth',
+        '37 pcw': 'Pre-Birth',
+        '4 mos': 'Birth-13 yrs',
+        '10 mos': 'Birth-13 yrs',
+        '1 yrs': 'Birth-13 yrs',
+        '2 yrs': 'Birth-13 yrs',
+        '3 yrs': 'Birth-13 yrs',
+        '4 yrs': 'Birth-13 yrs',
+        '8 yrs': 'Birth-13 yrs',
+        '11 yrs': 'Birth-13 yrs',
+        '13 yrs': 'Birth-13 yrs',
         '18 yrs': '18-40 yrs',
         '19 yrs': '18-40 yrs',
         '21 yrs': '18-40 yrs',
@@ -132,7 +97,27 @@ def get_bs_cortex_mapping():
         'primary auditory cortex (core)': 'Early_Auditory',
         'posterior (caudal) superior temporal cortex (area 22c)': 'Auditory_Association'
     }
+    
     return bs_cortex_mapping
+
+def get_short_bs_names():
+    """
+    Short Brainspan region names for plotting
+    """
+    bs_structure_name_short = {
+        'primary visual cortex (striate cortex, area V1/17)': 'primary visual cortex',
+        'posteroventral (inferior) parietal cortex': 'inferior parietal cortex',
+        'primary somatosensory cortex (area S1, areas 3,1,2)': 'primary somatosensory cortex',
+        'primary motor cortex (area M1, area 4)': 'primary motor cortex',
+        'dorsolateral prefrontal cortex': 'dorsolateral prefrontal cortex',
+        'ventrolateral prefrontal cortex': 'ventrolateral prefrontal cortex',
+        'anterior (rostral) cingulate (medial prefrontal) cortex': 'medial prefrontal cortex',
+        'orbital frontal cortex': 'orbital frontal cortex',
+        'inferolateral temporal cortex (area TEv, area 20)': 'inferolateral temporal cortex',
+        'primary auditory cortex (core)': 'primary auditory cortex',
+        'posterior (caudal) superior temporal cortex (area 22c)':'posterior superior temporal cortex'
+    }
+    return bs_structure_name_short
 
 
 def get_hcp_bs_mapping(bs_cortex_mapping,
@@ -155,6 +140,7 @@ def get_hcp_bs_mapping(bs_cortex_mapping,
     hcp_bs_mapping = (hcp_info
      .loc[lambda x: x['LR'] == 'L', ['region', 'cortex']]
      .assign(structure_name = lambda x: x['cortex'].map(cortex_bs_mapping))
+     .assign(structure_name_short = lambda x: x['structure_name'].map(get_short_bs_names()))
      .sort_values('structure_name')
                      )
     return hcp_bs_mapping

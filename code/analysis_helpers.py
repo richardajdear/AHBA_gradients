@@ -6,6 +6,22 @@ from scipy.linalg import orthogonal_procrustes
 from itertools import combinations
 from processing_helpers import *
 
+# def sort_genes(df, col):
+#     out = pd.concat([
+#         df.sort_values(col, ascending=False).index.to_series().reset_index(drop=True).rename(f'{col}_pos'),
+#         df.sort_values(col, ascending=True).index.to_series().reset_index(drop=True).rename(f'{col}_neg')
+#     ], axis=1)
+#     return out
+
+
+def sort_genes_PCs(version, i=0, asc=False):
+    name = f'PC{i+1}_neg' if asc else f'PC{i+1}_pos'
+    return version.coefs.T.iloc[:,:3].sort_values(i, ascending=asc).index.to_series().reset_index(drop=True).rename(name)
+
+
+def output_PC_gene_ranks(version, name):
+    pd.concat([sort_genes_PCs(version, i, asc) for i in range(3) for asc in [False, True]], axis=1).to_csv(f"../outputs/{name}.csv")
+
 
 def test_params(param=None, params_list=None, atlas=None, base=None, **kwargs):
     """
@@ -38,6 +54,8 @@ def test_params(param=None, params_list=None, atlas=None, base=None, **kwargs):
 def correlate(a,b):
     return pd.concat([a,b],axis=1).corr().iloc[:5,5:]
 
+
+
 def get_clusters(expression, coords):
     hc = hier.linkage(expression, 'complete')
     clust_id = hier.cut_tree(hc, n_clusters=2)
@@ -49,6 +67,7 @@ def get_clusters(expression, coords):
         index=expression.index
     ).join(coords)
     return df_cluster_coords
+
 
 def compare_matching(version1, version2, annotation, relabel=True):
     df = (

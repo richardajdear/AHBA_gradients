@@ -38,7 +38,8 @@ class pcaVersion():
         
         # variance explained only if not using sparse
         if sparse_alpha is None:
-            self.var = self.pca.explained_variance_ratio_
+            self.var = self.pca.explained_variance_
+            self.var_pct = self.pca.explained_variance_ratio_
 #         self.s = self.pca.singular_values_
 #         self.loadings = self.coefs.T * self.s
 #         self.U = self.scores / self.s
@@ -142,7 +143,7 @@ class pcaVersion():
             return df_corr
     
     
-    def corr_scores(self, other, match=False, boot=None):
+    def corr_scores(self, other, match=False, boot=None, base=None):
         if boot==None:
             self_scores = self.scores
             other_scores = other.scores
@@ -152,6 +153,10 @@ class pcaVersion():
         elif boot=='norm':
             self_scores = self.expression @ self.coefs_boot_norm.T
             other_scores = other.expression @ other.coefs_boot_norm.T
+            
+        if base is not None:
+            self_scores = base.score_from(self)
+            other_scores = base.score_from(other)
             
         df_corr = pd.concat([self_scores, other_scores],axis=1).corr().iloc[:5,5:]
         

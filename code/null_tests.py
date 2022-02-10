@@ -70,7 +70,7 @@ def generate_spins_from_pcs(scores,
 
     
 def generate_surrogates(maps, n=10,
-                    dist_mat="../data/LeftParcelGeodesicDistmat.txt",
+                        dist_mat="../data/LeftParcelGeodesicDistmat.txt",
                         outfile='../outputs/sim_maps_1000.npy'):
     """
     Generate null maps using brainsmash
@@ -84,6 +84,7 @@ def generate_surrogates(maps, n=10,
         null_maps[:,m,:] = nulls.swapaxes(0,1)
         
     np.save(outfile, null_maps)
+
     
 def corr_nulls_from_maps(null_maps, scores, maps, method='pearson'):
     """

@@ -2,10 +2,63 @@
 suppressMessages(library(tidyverse))
 suppressMessages(library(scales))
 library(patchwork)
+library(ggtext)
 library(lemon)
 library(pals)
 
 mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
+
+
+plot_dist_donors_hcp <- function(df_donors) {
+    df_donors %>%
+    ggplot() + 
+    geom_histogram(aes(x=count), alpha=1, binwidth=1, color='white', size=3, fill=brewer.blues(10)[4]) + 
+    # scale_fill_manual(values=brewer.blues(10)[c(10,4)], name='', guide='none') +
+    geom_vline(xintercept=2.5, linetype=2) +
+    scale_x_continuous(breaks=seq(0,6,1)) +
+    theme_minimal() + ylab('# HCP Regions') + xlab('Donors/Region') + 
+    theme(legend.position=c(.2,.8), panel.grid=element_blank())    
+}
+
+
+plot_ds_dist_hcp <- function(df_stability) {
+    ggplot(df_stability) + 
+    geom_density(aes(x=DS), size=1, color=mycolors[5]) +
+    geom_vline(xintercept=0.31, linetype=2) +
+    annotate(x=.32,y=2.5,geom='text',label='Top 20%', hjust=-0.05, size=8) +
+    ylab('Density') + xlab('Diff. Stability') +
+    theme_minimal() +
+    theme(panel.grid=element_blank())
+}
+
+
+plot_coefs_ds <- function(df_coefs_ds, facet='h') {
+    g <- coefs_ds %>% rownames_to_column %>% rename(gene=rowname) %>% 
+    gather(PC, coef, -gene, -DS) %>% 
+    ggplot(aes(coef, DS)) + 
+    geom_point(color=brewer.rdbu(100)[80], alpha=.3, size=.2) +
+    xlab('Gene Weight') + ylab("Differential Stability") +
+    theme_void() +
+    # annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+    # annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+    theme(axis.title.x = element_text(),
+          axis.title.y = element_text(angle=90),
+          strip.text.y = element_blank(),
+          panel.spacing = unit(3, 'lines'),
+          aspect.ratio=1)
+    
+    if (facet=='v') {
+        g + facet_grid(PC~.)
+    } else {
+        g + facet_grid(.~PC)
+    }
+}
+
+
+
+
+
+
 
 
 plot_var_exp <- function(df_var) {
@@ -19,22 +72,7 @@ plot_var_exp <- function(df_var) {
 }
 
 
-plot_coefs_ds <- function(df_coefs_ds) {
-    coefs_ds %>% rownames_to_column %>% rename(gene=rowname) %>% 
-    gather(PC, coef, -gene, -DS) %>% 
-    ggplot(aes(coef, DS)) + 
-    facet_grid(.~PC) +
-    geom_point(color=brewer.rdbu(100)[80], alpha=.3, size=.2) +
-    xlab('Gene Weight') + ylab("Differential\nStability") +
-    theme_void() +
-    annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
-    annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
-    theme(axis.title.x = element_text(),
-          axis.title.y = element_text(angle=90),
-          strip.text.y = element_blank(),
-          panel.spacing = unit(3, 'lines'),
-          aspect.ratio=1)
-}
+
 
 
 plot_dist <- function(df_dist) {

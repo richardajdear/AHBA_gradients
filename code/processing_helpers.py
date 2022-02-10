@@ -6,6 +6,9 @@ from abagen.correct import keep_stable_genes
 import abagen_allen_tweaked
 import nibabel as nib
 from pcaVersion import pcaVersion
+import pickle
+
+
 
 
 def get_expression_abagen(atlas, save_name=None, verbose=0, 
@@ -41,7 +44,7 @@ def get_expression_abagen(atlas, save_name=None, verbose=0,
         tolerance=tolerance,
         sample_norm=sample_norm,
         gene_norm=gene_norm,
-        data_dir='../data/abagen-data/microarray',
+        data_dir='~/rds/rds-cam-psych-transc-Pb9UGUlrwWc/Cam_LIBD/AHBA_data/abagen-data/microarray',
         n_proc=32,
         return_counts=return_counts,
         return_labels=return_labels,
@@ -158,6 +161,7 @@ def get_labels_dk():
     )
     return labels_dk
 
+
 def get_labels_hcp():
     """
     Get HCP atlas labels from source file and format for ggseg
@@ -172,6 +176,40 @@ def get_labels_hcp():
     )
     labels_hcp = hcp_info.set_index('id')['label']
     return labels_hcp
+
+
+
+
+
+## For triplets
+
+
+def save_pickle(data, fname):
+    with open('../outputs/' + fname + '.pickle', 'wb') as handle:
+        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+def load_pickle(fname):
+    with open('../outputs/' + fname + '.pickle', 'rb') as handle:
+        return pickle.load(handle)
+    
+def filter_triplet_ds(triplets, ds_threshold=0):
+    triplets_ds = {}
+    for name, triplet in triplets.items():
+        mask = triplet.stability.rank(pct=True) > ds_threshold
+        triplet_expression_ds = triplet.expression.loc[:, mask]
+        triplets_ds[name] = pcaVersion(triplet_expression_ds, message=False)
+    return triplets_ds
+
+
+
+
+
+
+
+
+
+
+
 
 def get_labels_aseg():
     """
