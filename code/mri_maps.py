@@ -120,31 +120,34 @@ def generate_surrogates(maps, n=10,
     np.save(outfile, null_maps)
 
     
-def corr_nulls_from_maps(null_maps, scores, maps, method='pearson'):
+def corr_nulls_from_maps(null_maps, scores, maps, method='pearson', pool=False):
     """
-    Get correlations with PC scores from null maps
+    Get correlations with PC scores from null maps x
     """
+    if pool:
+        mxn = null_maps.shape[1] * null_maps.shape[2] # 2nd dimension of array after pooling, for rehsaping
+        null_maps_pool = null_maps.reshape(-1, mxn)
+    
     null_corrs = {}
     for m, mapname in enumerate(maps.columns):
-        nulls = pd.DataFrame(null_maps[:,m,:],
-                             index=list(range(1,181)))
-
-        null_corrs[mapname] = (
-            pd.concat([scores, nulls], axis=1)
-            .corr(method=method).iloc[3:,:3]
-            # rank().corr(method='pearson').iloc[3:,:3]
-        )
-        # if method == 'spearman':
-        #     null_corrs[mapname] = (
-        #         pd.concat([scores, nulls], axis=1)
-        #         rank().corr().iloc[3:,:3]
-        #     )
-        # else:
-        #     null_corrs[mapname] = (
-        #         pd.concat([scores, nulls], axis=1)
-        #         .corr().iloc[3:,:3]
-        #     )
+        # Optionally pool maps together
+        if pool:
+            nulls = pd.DataFrame(null_maps_pool, index=list(range(1,181)))
+        else:
+            nulls = pd.DataFrame(null_maps[:,m,:], index=list(range(1,181)))
         
+        # Concat PC scores and nulls
+        df_concat = pd.concat([scores, nulls], axis=1)
+        # Optionally correlate with spearman, otherwise pearson
+        if method == 'spearman':
+            # .rank().corr() is faster than .corr(method='spearman') because of null checks
+            df_corr = df_concat.rank().corr()
+        else:
+            df_corr = df_concat.corr()
+        # Cleanup
+        null_corrs[mapname] = df_corr.iloc[3:,:3]
+        
+    # Concat rows (each map)
     null_corrs = (
         pd.concat(null_corrs).reset_index(level=0)
         .set_axis(['map','PC1','PC2','PC3'],axis=1)
@@ -152,26 +155,47 @@ def corr_nulls_from_maps(null_maps, scores, maps, method='pearson'):
     return null_corrs
 
 
-def corr_nulls_from_pcs(null_pcs, scores, maps, method='pearson'):
+def corr_nulls_from_pcs(null_pcs, scores, maps, method='pearson', pool=False):
     """
     Get correlations with maps from PC score nulls
     """
-    n_maps = maps.shape[1]
+    if pool:
+        mxn = null_pcs.shape[1] * null_pcs.shape[2] # 2nd dimension of array after pooling, for rehsaping
+        null_pcs_pool = null_pcs.reshape(-1, mxn)
+    
     null_corrs = {}
     for m in range(null_pcs.shape[1]):
-        nulls = pd.DataFrame(null_pcs[:,m,:],
-                             index=scores.index)
-        null_corrs[m] = (
-            pd.concat([maps.set_axis(list(range(1,181))), nulls], axis=1)
-            .corr(method=method).iloc[:n_maps,n_maps:]
-            .stack().droplevel(1)
-        )
+        # Optionally pool maps together
+        if pool:
+            nulls = pd.DataFrame(null_pcs_pool, index=scores.index)
+        else:
+            nulls = pd.DataFrame(null_pcs[:,m,:], index=scores.index)
         
+        # Concat PC scores and nulls
+        df_concat = pd.concat([maps.set_axis(list(range(1,181))), nulls], axis=1)
+        # Optionally correlate with spearman, otherwise pearson
+        if method == 'spearman':
+            # .rank().corr() is faster than .corr(method='spearman') because of null checks
+            df_corr = df_concat.rank().corr()
+        else:
+            df_corr = df_concat.corr()
+        # Cleanup and stack maps into vector
+        n_maps = maps.shape[1]
+        null_corrs[m] = df_corr.iloc[:n_maps,n_maps:].stack().droplevel(1)
+        
+    # Concat columns (each PC)
     null_corrs = (
         pd.concat(null_corrs, axis=1).reset_index(level=0)
         .set_axis(['map','PC1','PC2','PC3'], axis=1)
     )
     return null_corrs
+
+    'spin_maps_p', 'spin_maps_p_pool',
+    'sim_maps_p', 'sim_maps_p_pool',
+    'spin_pcs_p', 'spin_pcs_p_pool',
+    'sim_pcs_p', 'sim_pcs_p_pool',
+    
+    
 
 
 def get_null_p(corrs, null_corrs):
