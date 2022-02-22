@@ -7,7 +7,7 @@ suppressMessages(library(scales))
 library(patchwork)
 library(pals)
 
-plot_dk <- function(scores_df, title="", three=F, switch=NULL) {
+plot_dk <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
     df <- scores_df %>% 
         rename('PC1'='0', 'PC2'='1', 'PC3'='2', 'PC4'='3', 'PC5'='4') %>%
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
@@ -16,6 +16,10 @@ plot_dk <- function(scores_df, title="", three=F, switch=NULL) {
     
     if (three) {
         df <- df %>% filter(component %in% c('PC1','PC2','PC3'))
+    }
+    
+    if (flip) {
+        df <- df %>% mutate(component = factor(component,  levels=c('PC1','PC3','PC2'), ordered=T))
     }
     
     m <- pmax(
@@ -121,7 +125,7 @@ plot_hcp_wide <- function(scores_df, title="", facet='h', spacing=4) {
         show.legend=T
         ) + 
     theme_void() + 
-    theme(strip.text=element_blank()) +
+    theme(strip.text.x=element_text(size=20)) +
     theme(panel.spacing=unit(spacing,'lines')) +
     theme(legend.position='right', text=element_text(size=20),
           plot.title=element_text(hjust=0.5)) +
@@ -138,6 +142,58 @@ ggtitle(title) + xlab("") + ylab("")
         p + facet_grid(component~.)   
     }
 }
+
+
+
+plot_dk_wide <- function(scores_df, title="", facet='h', spacing=4) {
+    df <- scores_df %>% 
+        rename('PC1'='0', 'PC2'='1', 'PC3'='2') %>%
+        gather('component', 'score', -label) %>%
+        group_by(component)
+
+    m <- pmax(
+#         df %>% filter(component=='PC1') %>% .$score %>% quantile(.95) %>% abs,
+#         df %>% filter(component=='PC1') %>% .$score %>% quantile(.05) %>% abs
+        df %>% .$score %>% quantile(.99) %>% abs,
+        df %>% .$score %>% quantile(.01) %>% abs
+    )
+
+    dk$data <- dk$data %>% filter(hemi=='left')
+    
+    p <- ggplot(df) + 
+    geom_brain(
+        atlas=dk,
+        mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
+        colour='grey', size=.1,
+        show.legend=T
+        ) + 
+    theme_void() + 
+    theme(strip.text.x=element_text(size=20)) +
+    theme(panel.spacing=unit(spacing,'lines')) +
+    theme(legend.position='right', text=element_text(size=20),
+          plot.title=element_text(hjust=0.5)) +
+    #   scale_fill_cmocean(name='balance', limits=c(-m,m), oob=squish) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), 
+                         limits=c(-m,m), oob=squish, breaks=c(-m,0,m), 
+                         labels=c(round(-m,2),0,round(m,2)), name=''
+                        ) +
+ggtitle(title) + xlab("") + ylab("")
+    
+    if (facet=='h') {
+        p + facet_grid(.~component)
+    } else {
+        p + facet_grid(component~.)   
+    }
+}
+
+
+
+
+
+
+
+
+
 
 
 

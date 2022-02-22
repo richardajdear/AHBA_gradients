@@ -3,10 +3,13 @@ suppressMessages(library(tidyverse))
 suppressMessages(library(scales))
 library(patchwork)
 library(ggtext)
-library(lemon)
+suppressMessages(library(lemon))
 library(pals)
+library(shades)
 
 mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
+# mycolorscale = brightness(rev(brewer.rdbu(100)[15:85]), delta(-.2))
+mycolorscale = brightness(rev(brewer.rdbu(100)), delta(-.1))
 
 
 plot_dist_donors_hcp <- function(df_donors) {
@@ -32,27 +35,84 @@ plot_ds_dist_hcp <- function(df_stability) {
 }
 
 
-plot_coefs_ds <- function(df_coefs_ds, facet='h') {
-    g <- coefs_ds %>% rownames_to_column %>% rename(gene=rowname) %>% 
-    gather(PC, coef, -gene, -DS) %>% 
-    ggplot(aes(coef, DS)) + 
-    geom_point(color=brewer.rdbu(100)[80], alpha=.3, size=.2) +
-    xlab('Gene Weight') + ylab("Differential Stability") +
-    theme_void() +
-    # annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
-    # annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
-    theme(axis.title.x = element_text(),
-          axis.title.y = element_text(angle=90),
-          strip.text.y = element_blank(),
-          panel.spacing = unit(3, 'lines'),
-          aspect.ratio=1)
-    
-    if (facet=='v') {
-        g + facet_grid(PC~.)
-    } else {
-        g + facet_grid(.~PC)
-    }
+plot_coefs_ds <- function(coefs_ds) {
+    df <- coefs_ds %>% gather(PC, weight, -DS)
+
+    ggplot(df, aes(x=weight, y=DS)) + 
+        facet_grid(.~PC) +
+        # geom_point(color=mycolors[5], alpha=.5, size=1) +
+        geom_point(aes(color=weight), size=1) +
+        scale_color_gradientn(colors=mycolorscale, guide='none') +
+        xlab('Gene Weight') + ylab("Differential Stability") +
+        theme_minimal() + 
+        theme(
+            panel.grid=element_blank(), 
+            strip.text.x = element_blank(),
+            axis.text = element_blank(),
+            aspect.ratio = 1
+        )
 }
+
+plot_coefs_dist <- function(coefs_ds) {
+    df <- coefs_ds %>% gather(PC, weight, -DS)
+
+    ggplot(df) +
+        facet_grid(.~PC) +
+        geom_density(aes(weight), size=1, alpha=.8, color=mycolors[5]) +
+        # geom_density(size=1, alpha=.8, aes(color=stat(x))) +
+        # stat_density_ridges(geom = "density_ridges_gradient", calc_ecdf = TRUE, scale=.8, size=.2, fill='transparent',
+                       # aes(x=weight, y=1, color=stat(ecdf))) +
+        # scale_color_gradientn(colors=rev(brewer.rdbu(100)[15:85]), guide='none') +
+        theme_void()
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# plot_coefs_ds <- function(df_coefs_ds, facet='h') {
+#     g <- coefs_ds %>% rownames_to_column %>% rename(gene=rowname) %>% 
+#     gather(PC, coef, -gene, -DS) %>% 
+#     ggplot(aes(coef, DS)) + 
+#     geom_point(color=brewer.rdbu(100)[80], alpha=.3, size=.2) +
+#     xlab('Gene Weight') + ylab("Differential Stability") +
+#     theme_void() +
+#     # annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
+#     # annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
+#     theme(axis.title.x = element_text(),
+#           axis.title.y = element_text(angle=90),
+#           strip.text.y = element_blank(),
+#           panel.spacing = unit(3, 'lines'),
+#           aspect.ratio=1)
+    
+#     if (facet=='v') {
+#         g + facet_grid(PC~.)
+#     } else {
+#         g + facet_grid(.~PC)
+#     }
+# }
 
 
 
@@ -128,7 +188,7 @@ plot_matching <- function(plot_df) {
      xlab('') + ylab('% of samples')
 }
 
-plot_corrs <- function(df, facetting='h', xlab='DK', ylab='HCP', size=8) {
+plot_corrs <- function(df, facetting='h', xlab='HCP', ylab='DK', size=8) {
     p <- df %>% mutate(
         x=recode(x, `0`='PC1',`1`='PC2',`2`='PC3',`3`='PC4',`4`='PC5'),
         y=recode(y, `0`='PC1',`1`='PC2',`2`='PC3',`3`='PC4',`4`='PC5')

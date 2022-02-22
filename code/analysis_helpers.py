@@ -1,17 +1,23 @@
 # Helper functions for analysis
 
 import numpy as np, pandas as pd
-# from plots import *
 from scipy.linalg import orthogonal_procrustes
 from itertools import combinations
 from processing_helpers import *
 
-# def sort_genes(df, col):
-#     out = pd.concat([
-#         df.sort_values(col, ascending=False).index.to_series().reset_index(drop=True).rename(f'{col}_pos'),
-#         df.sort_values(col, ascending=True).index.to_series().reset_index(drop=True).rename(f'{col}_neg')
-#     ], axis=1)
-#     return out
+
+def correlate(a,b):
+    return pd.concat([a,b],axis=1).corr().iloc[:5,5:]
+
+
+### Enrichment
+
+def sort_genes(df, col):
+    out = pd.concat([
+        df.sort_values(col, ascending=False).index.to_series().reset_index(drop=True).rename(f'{col}_pos'),
+        df.sort_values(col, ascending=True).index.to_series().reset_index(drop=True).rename(f'{col}_neg')
+    ], axis=1)
+    return out
 
 
 def sort_genes_PCs(version, i=0, asc=False):
@@ -22,7 +28,18 @@ def sort_genes_PCs(version, i=0, asc=False):
 def output_PC_gene_ranks(version, name):
     pd.concat([sort_genes_PCs(version, i, asc) for i in range(3) for asc in [False, True]], axis=1).to_csv(f"../outputs/{name}.csv")
 
+def output_PC_region_scores(scores, name, atlas='hcp'):
+    if atlas=='hcp':
+        labels=get_labels_hcp()[:180]
+    elif atlas=='dk':
+        labels=get_labels_dk()[:34]
+        
+    labels.to_frame().join(scores.iloc[:,:3]).set_axis(['label','PC1','PC2','PC3'],axis=1).to_csv(f"../outputs/{name}.csv")
 
+    
+    
+### Legacy functions from MPhil    
+    
 def test_params(param=None, params_list=None, atlas=None, base=None, **kwargs):
     """
     Compare PCA for different parameter settings
@@ -48,11 +65,6 @@ def test_params(param=None, params_list=None, atlas=None, base=None, **kwargs):
         'versions': versions_dict
     }
     return out
-
-
-
-def correlate(a,b):
-    return pd.concat([a,b],axis=1).corr().iloc[:5,5:]
 
 
 
@@ -95,32 +107,6 @@ def compare_matching(version1, version2, annotation, relabel=True):
         .reset_index(drop=True)
              )
     return df
-
-
-def disjoint_corrs(triplets_version, how='coefs', match=True, boot=None):
-    triplets_list = [list(x) for x in list(combinations(range(6), 3))]
-    triplets_names = [''.join(map(str,x)) for x in triplets_list]
-    disjoint_triplets = [list(x) for x in combinations(triplets_names,2) if not any(set(list(x[0])).intersection(set(list(x[1]))))]
-    
-    corrs = {}
-    for pair in disjoint_triplets:
-#     for pair in all_pairs:
-        name = '-'.join(pair)
-        pca1 = triplets_version[pair[0]]
-        pca2 = triplets_version[pair[1]]
-    
-        if how=='coefs':
-            df_corr = pca1.corr_coefs(pca2, match=match, boot=boot)
-        else:
-            df_corr = pca1.corr_scores(pca2, match=match, boot=boot)
-    
-        if match:
-            corrs[name] = df_corr['corr'].values
-        else:
-            corrs[name] = df_corr.pipe(np.diag)
-            
-    return pd.DataFrame(corrs)
-
 
 
 def make_biplot(pca1, pca2, pca1_name='pca1', pca2_name='pca2', title='Rotations Biplot',
@@ -185,25 +171,7 @@ def make_biplot(pca1, pca2, pca1_name='pca1', pca2_name='pca2', title='Rotations
         ggtitle(title)
     )
     return plot
-    
         
-
-
-
-
-def corr_rois(version1, version2):
-    """
-    Get correlations from two versions in same atlas
-    """
-    scores1 = version1.score_from(version1)
-    scores2 = version2.score_from(version2)
-    return (
-        pd.concat([scores1,scores2],axis=1)
-        .corr().iloc[:5,5:]
-    )
-
-
-
 
 
 def compare_matching_by_roi(df):
@@ -224,7 +192,6 @@ def compare_matching_by_roi(df):
      .join(aurina_pct)
      .join(abagen_pct)
     )
-
 
 
 

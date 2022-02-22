@@ -1,5 +1,9 @@
 # Helper functions for processing brainspan data
 
+'lh_bankssuperiortemporalsulcus',
+ 'lh_hemisphereaveragethickness',
+ 'lh_paracentrallobule',
+
 import numpy as np, pandas as pd
 from processing_helpers import *
 
@@ -24,50 +28,29 @@ def get_age_groups():
     """
     age_groups = {        
         # 'Best' groupings ...
-        # '12 pcw': '12-13 pcw',
-        # '13 pcw': '12-13 pcw',
+        '12 pcw': '12-17 pcw',
+        '13 pcw': '12-17 pcw',
+        '16 pcw': '12-17 pcw',
+        '17 pcw': '12-17 pcw',
+        '19 pcw': '19-37 pcw',
+        '21 pcw': '19-37 pcw',
+        '24 pcw': '19-37 pcw',
+        '37 pcw': '19-37 pcw',
         # '16 pcw': '16-19 pcw',
         # '17 pcw': '16-19 pcw',
         # '19 pcw': '16-19 pcw',
         # '21 pcw': '21-37 pcw',
         # '24 pcw': '21-37 pcw',
         # '37 pcw': '21-37 pcw',
-        # '4 mos': 'Birth-3 yrs',
-        # '10 mos': 'Birth-3 yrs',
-        # '1 yrs': 'Birth-3 yrs',
-        # '2 yrs': 'Birth-3 yrs',
-        # '3 yrs': 'Birth-3 yrs',
-        # '4 yrs': 'Birth-3 yrs',
-        # '8 yrs': '8-13 yrs',
-        # '11 yrs': '8-13 yrs',
-        # '13 yrs': '8-13 yrs',
-        # '18 yrs': '18-40 yrs',
-        # '19 yrs': '18-40 yrs',
-        # '21 yrs': '18-40 yrs',
-        # '23 yrs': '18-40 yrs',
-        # '30 yrs': '18-40 yrs',
-        # '36 yrs': '18-40 yrs',
-        # '37 yrs': '18-40 yrs',
-        # '40 yrs': '18-40 yrs',   
-        
-        # # Simple groupings ...
-        '12 pcw': 'Pre-Birth',
-        '13 pcw': 'Pre-Birth',
-        '16 pcw': 'Pre-Birth',
-        '17 pcw': 'Pre-Birth',
-        '19 pcw': 'Pre-Birth',
-        '21 pcw': 'Pre-Birth',
-        '24 pcw': 'Pre-Birth',
-        '37 pcw': 'Pre-Birth',
-        '4 mos': 'Birth-13 yrs',
-        '10 mos': 'Birth-13 yrs',
-        '1 yrs': 'Birth-13 yrs',
-        '2 yrs': 'Birth-13 yrs',
-        '3 yrs': 'Birth-13 yrs',
-        '4 yrs': 'Birth-13 yrs',
-        '8 yrs': 'Birth-13 yrs',
-        '11 yrs': 'Birth-13 yrs',
-        '13 yrs': 'Birth-13 yrs',
+        '4 mos': 'Birth-3 yrs',
+        '10 mos': 'Birth-3 yrs',
+        '1 yrs': 'Birth-3 yrs',
+        '2 yrs': 'Birth-3 yrs',
+        '3 yrs': 'Birth-3 yrs',
+        '4 yrs': 'Birth-3 yrs',
+        '8 yrs': '8-13 yrs',
+        '11 yrs': '8-13 yrs',
+        '13 yrs': '8-13 yrs',
         '18 yrs': '18-40 yrs',
         '19 yrs': '18-40 yrs',
         '21 yrs': '18-40 yrs',
@@ -76,6 +59,33 @@ def get_age_groups():
         '36 yrs': '18-40 yrs',
         '37 yrs': '18-40 yrs',
         '40 yrs': '18-40 yrs',   
+        
+        # # Simple groupings ...
+        # '12 pcw': 'Pre-Birth',
+        # '13 pcw': 'Pre-Birth',
+        # '16 pcw': 'Pre-Birth',
+        # '17 pcw': 'Pre-Birth',
+        # '19 pcw': 'Pre-Birth',
+        # '21 pcw': 'Pre-Birth',
+        # '24 pcw': 'Pre-Birth',
+        # '37 pcw': 'Pre-Birth',
+        # '4 mos': 'Birth-13 yrs',
+        # '10 mos': 'Birth-13 yrs',
+        # '1 yrs': 'Birth-13 yrs',
+        # '2 yrs': 'Birth-13 yrs',
+        # '3 yrs': 'Birth-13 yrs',
+        # '4 yrs': 'Birth-13 yrs',
+        # '8 yrs': 'Birth-13 yrs',
+        # '11 yrs': 'Birth-13 yrs',
+        # '13 yrs': 'Birth-13 yrs',
+        # '18 yrs': '18-40 yrs',
+        # '19 yrs': '18-40 yrs',
+        # '21 yrs': '18-40 yrs',
+        # '23 yrs': '18-40 yrs',
+        # '30 yrs': '18-40 yrs',
+        # '36 yrs': '18-40 yrs',
+        # '37 yrs': '18-40 yrs',
+        # '40 yrs': '18-40 yrs',   
     }
     return age_groups
 
@@ -207,7 +217,7 @@ def clean_brainspan(bs_exp, bs_col, bs_row, bs_cortex_mapping):
 
 
 def aggregate_brainspan_by_age(bs_clean, normalize=True,
-                               merge_small_brains=True):
+                               merge_small_brains=False):
     """
     Aggregate Brainspan donor brains by ages
     Optionally merge brains with few samples into larger age groups
@@ -219,7 +229,7 @@ def aggregate_brainspan_by_age(bs_clean, normalize=True,
                 '9 pcw':'8 pcw', 
                 '25 pcw':'24 pcw', '26 pcw':'24 pcw', '35 pcw':'37 pcw',
                  '4 yrs':'3 yrs', '15 yrs':'13 yrs', 
-                  '10 mos':'3 mos', '8 pcw':'12 pcw'
+                  '10 mos':'4 mos', '8 pcw':'12 pcw'
                  }
     # merge_dict_donors = {12833:13058, 12948:12288, 12949:12288, 12295:263195015}
     if merge_small_brains:
@@ -310,7 +320,30 @@ def correlate_bs_pcs(bs_pcs, pcs_cortex, age_groups=None, rolling=None, plot=Tru
     return bs_pcs_corr
 
 
+def get_cortex_scores(bs_pcs, pcs_cortex, age_groups, bs_cortex_mapping):
+    """
+    Combine AHBA and Brainspan cortex scores for scatter plot
+    """
+    bs_pcs_adult = (bs_pcs
+     .reset_index().assign(age_group = lambda x: x['age'].map(age_groups))
+     .groupby(['age_group', 'cortex']).mean().loc['18-40 yrs', [0,1,2]]
+    )
 
+    cortex_scores = (pd.concat({'Brainspan':bs_pcs_adult, 'AHBA':pcs_cortex.iloc[:, :3]})
+     .reset_index().set_axis(['data', 'cortex', 'PC1', 'PC2', 'PC3'], axis=1)
+     .melt(id_vars=['data', 'cortex'], var_name='PC', value_name='score')
+     # swap back to Brainspan labels
+     .assign(cortex = lambda x: x['cortex'].map({v:k for k,v in bs_cortex_mapping.items()}))
+     .pivot(index=['PC', 'cortex'], columns='data', values='score')
+     .reset_index()
+    )
+    
+    cortex_corrs = (cortex_scores
+                    .groupby('PC').corr()
+                    .loc[(slice(None), 'AHBA'), 'Brainspan']
+                    .droplevel(1)
+                   )
+    return cortex_scores, cortex_corrs
 
 
 

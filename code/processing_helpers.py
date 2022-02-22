@@ -10,18 +10,20 @@ import pickle
 
 
 
+def save_pickle(data, fname):
+    with open('../outputs/' + fname + '.pickle', 'wb') as handle:
+        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-def get_expression_abagen(atlas, save_name=None, verbose=0, 
-                          only_left=True,
-                          only_cortex=True,
-                          ibf_threshold=0.5,
-                          probe_selection='diff_stability', 
-                          lr_mirror='rightleft',
-                          region_agg='donors',
-                          tolerance=2,
-                          sample_norm='srs',
-                          gene_norm='srs',
+def load_pickle(fname):
+    with open('../outputs/' + fname + '.pickle', 'rb') as handle:
+        return pickle.load(handle)
+
+
+
+def get_expression_abagen(atlas, 
                           DS_threshold=0,
+                          save_name=None, 
+                          data_dir='~/rds/rds-cam-psych-transc-Pb9UGUlrwWc/Cam_LIBD/AHBA_data/abagen-data',
                           return_donors=False,
                           return_counts=False,
                           return_labels=False,
@@ -30,45 +32,54 @@ def get_expression_abagen(atlas, save_name=None, verbose=0,
     """
     Get expression matrix and matching labels from Abagen X
     """
-
+    
     out = abagen_allen_tweaked.get_expression_data(
         atlas=atlas['image'],
         atlas_info=atlas['info'],
-        verbose=verbose,
-        only_left=only_left,
-        only_cortex=only_cortex,
-        ibf_threshold=ibf_threshold,
-        probe_selection=probe_selection,
-        lr_mirror=lr_mirror,
-        region_agg=region_agg,
-        tolerance=tolerance,
-        sample_norm=sample_norm,
-        gene_norm=gene_norm,
-        data_dir='~/rds/rds-cam-psych-transc-Pb9UGUlrwWc/Cam_LIBD/AHBA_data/abagen-data/microarray',
+        data_dir=data_dir + '/microarray',
         n_proc=32,
         return_counts=return_counts,
         return_labels=return_labels,
         return_donors=True, # always true to get DS
-        **kwargs
+        
+        # Set my own defaults for the kwarg parameters here
+        verbose=kwargs.get('verbose', 0),
+        only_left=kwargs.get('only_left', True),
+        only_cortex=kwargs.get('only_cortex', True),
+        ibf_threshold=kwargs.get('ibf_threshold', 0.5),
+        probe_selection=kwargs.get('probe_selection', 'diff_stability'),
+        lr_mirror=kwargs.get('lr_mirror', 'rightleft'),
+        region_agg=kwargs.get('region_agg', 'donors'),
+        tolerance=kwargs.get('tolerance', 2),
+        sample_norm=kwargs.get('sample_norm', 'srs'),
+        gene_norm=kwargs.get('gene_norm', 'srs'),
+        donors=kwargs.get('donors', 'all'),
+        donors_threshold=kwargs.get('donors_threshold', 0)
     )
     
+    # If returning labels or counts, expression is the first element of tuple
     if return_labels or return_counts:
         expression_all_genes = out[0]
     else:
         expression_all_genes = out
     
+    # Filter DS
     expression, stability = keep_stable_genes(expression_all_genes, threshold=DS_threshold, return_stability=True)
     stability = pd.Series(stability, index=expression_all_genes[0].columns)
-    print(f'{expression[0].shape[1]} genes remain after filtering for top {round(1-DS_threshold,2)} differential stability')
+    if DS_threshold > 0:
+        print(f'{expression[0].shape[1]} genes remain after filtering for top {round(1-DS_threshold,2)} differential stability')
     
+    # Combine donors together after filtering
     if not return_donors:
         expression = pd.concat(expression).groupby(level=0).mean()
     
+    # Save combined expression data
     if save_name is not None:
-        expression.to_csv("../data/abagen-data/expression/" + save_name + ".csv")
+        expression.to_csv(data_dir + "/expression/" + save_name + ".csv")
         if return_labels:
-            out[1].to_csv("../data/abagen-data/labels/" + save_name + ".csv")
+            out[1].to_csv(data_dir + "/labels/" + save_name + ".csv")
     
+    # Pack outputs into tuple
     out_ = (expression,)
     if return_labels:
         out_ += (out[1],)
@@ -84,10 +95,10 @@ def get_expression_abagen(atlas, save_name=None, verbose=0,
     
     return out_
 
-    
+
     
 
-def fetch_dk(native=True, only_cortex=False, only_left=False):
+def fetch_dk(native=True, only_cortex=True, only_left=False):
     """
     Get DK atlas and remove subcortex
     """
@@ -176,38 +187,13 @@ def get_labels_hcp():
     )
     labels_hcp = hcp_info.set_index('id')['label']
     return labels_hcp
-
-
-
-
-
-## For triplets
-
-
-def save_pickle(data, fname):
-    with open('../outputs/' + fname + '.pickle', 'wb') as handle:
-        pickle.dump(data, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
-def load_pickle(fname):
-    with open('../outputs/' + fname + '.pickle', 'rb') as handle:
-        return pickle.load(handle)
     
-def filter_triplet_ds(triplets, ds_threshold=0):
-    triplets_ds = {}
-    for name, triplet in triplets.items():
-        mask = triplet.stability.rank(pct=True) > ds_threshold
-        triplet_expression_ds = triplet.expression.loc[:, mask]
-        triplets_ds[name] = pcaVersion(triplet_expression_ds, message=False)
-    return triplets_ds
 
 
+    
 
 
-
-
-
-
-
+### Legacy
 
 
 

@@ -4,22 +4,23 @@ Version class for analyzing PCA of AHBA
 
 import numpy as np, pandas as pd
 from sklearn.decomposition import PCA
-from sklearn.decomposition import SparsePCA, MiniBatchSparsePCA
-from sklearn.cross_decomposition import PLSRegression
+# from sklearn.decomposition import SparsePCA, MiniBatchSparsePCA
+# from sklearn.cross_decomposition import PLSRegression
 from sklearn.preprocessing import StandardScaler
 
-from scipy.linalg import orthogonal_procrustes
+# from scipy.linalg import orthogonal_procrustes
 from numpy import eye, asarray, dot, sum, diag
 from sklearn.utils.extmath import randomized_svd
-from statsmodels.multivariate.factor_rotation import rotate_factors
+# from statsmodels.multivariate.factor_rotation import rotate_factors
 
 
-import abagen
 
 class pcaVersion():
     
     def __init__(self, expression_data, labels_data=None, k=5, message=True, sparse_alpha=None, scale=True):
-        # Initialize expression, clean, and run PCA
+        """
+        Initialize expression, clean, and run PCA
+        """
         X = expression_data.dropna(axis=0, how='all').dropna(axis=1, how='any')
         
         if scale:
@@ -51,10 +52,12 @@ class pcaVersion():
             print("New PCA version")
             
             
-#     # Score coefs on this expression matrix
-#     # Coefs could be from this same pcaVersion
-#     # Optionally Procrustes-rotate other version onto self before computing scores
     def score_from(self, other, labels=None, procrustes=False, invert=[]):
+        """
+        Score coefs on this expression matrix
+        Coefs could be from this same pcaVersion or another one
+        Optionally Procrustes-rotate other version onto self before computing scores
+        """
         
         # Rotate other_version coefs onto self
         if not procrustes:
@@ -81,8 +84,10 @@ class pcaVersion():
         return scores
     
 
-    # Matching logic for a correlation df
     def match_components(self, df_corr):
+        """
+        Matching logic for a correlation df
+        """
         _matches = [None]*5
         _corrs = [None]*5
 
@@ -101,8 +106,11 @@ class pcaVersion():
 
         return _matches, _corrs
 
-    # Do correlation matching for genes
+
     def match_and_sort(self, other, df_corr):
+        """
+        Do correlation matching for genes
+        """
         matches, corrs = self.match_components(df_corr)
 
         xs = [m[0] for m in matches]
@@ -125,6 +133,10 @@ class pcaVersion():
     
     
     def corr_coefs(self, other, match=False, boot=None):
+        """
+        Correlate gene weights with another version
+        Optionally with matching and bootstrap
+        """
         if boot==None:
             self_coefs = self.coefs
             other_coefs = other.coefs
@@ -144,6 +156,10 @@ class pcaVersion():
     
     
     def corr_scores(self, other, match=False, boot=None, base=None):
+        """
+        Correlate region scores with another version
+        Optionally with matching and bootstrap
+        """
         if boot==None:
             self_scores = self.scores
             other_scores = other.scores
@@ -166,8 +182,11 @@ class pcaVersion():
             return df_corr
     
 
-    # Do permutation test against variance explained
+    
     def var_test(self, p=10, k=5):
+        """
+        Do permutation test against variance explained
+        """
         self.var_perm = np.zeros([p,k])
         for i in range(p):
             _df = self.expression.copy().apply(np.random.permutation, axis=0)
@@ -176,8 +195,10 @@ class pcaVersion():
         print(f'Computed var explained over {p} permutations')
     
     
-    # Do noise test
     def noise_test(self, reps=10, betas=np.around(np.linspace(.25,5,20),2)):
+        """
+        Do noise test
+        """
         mu = self.expression.values.mean()
         sigma = self.expression.values.std()
         
@@ -216,8 +237,10 @@ class pcaVersion():
 
  
 
-    # Do noise test
     def missing_test(self, reps=40, missing=[.1,.2,.3,.4,.5], match=True):
+        """
+        Do missing regions test
+        """
         
         # Make arrays for each metric for each PC at each beta
         var_expl = np.zeros((len(missing), 5))
@@ -260,6 +283,9 @@ class pcaVersion():
 
     
     def bootstrap_test(self, q=100):
+        """
+        Do bootstrap test
+        """
         
         X = self.expression
         _coef_corrs = {'match': np.zeros((q, 5)), 
@@ -282,6 +308,9 @@ class pcaVersion():
     
     
     def bootstrap_coefs(self, q=1000):
+        """
+        Get bootstrapped coefficients
+        """
         X = self.expression
         _coefs = np.zeros((5, X.shape[1], q))
         for i in range(q):
@@ -300,6 +329,8 @@ class pcaVersion():
     
     
     
+### LEGACY
+    
     
 #     # Project two sets of coefs into roi-space of this pcaVersion and get correlation
 #     # Coefs could be from this or other pcaVersions
@@ -317,8 +348,6 @@ class pcaVersion():
             pd.concat([scores1, scores2],axis=1)
             .corr().iloc[:5,5:]
         )
-    
-
     
     
 

@@ -10,27 +10,6 @@ mycolors3 = c(mycolors[1],
               saturation(mycolors[4], delta(.4))) 
 
 
-plot_bs_pcs_corr <- function(bs_pcs_corr, title="", xint='4 mos', rotate=T) {
-    g <- bs_pcs_corr %>% 
-    mutate_at(vars(age), ~ factor(., levels=unique(.))) %>%
-    ggplot() + geom_hline(yintercept=0, color='grey') + geom_vline(xintercept=xint, color='grey') +
-    geom_line(aes(x=age, y=corr, color=PC, group=PC), size=1, alpha=1) + 
-    xlab("Age") + ylab("Correlation of Matched Regions") +
-    scale_color_manual(values=mycolors3) +
-    # scale_color_manual(values=brewer.rdylbu(4)) +
-    ggtitle(title) +
-    theme_minimal() + theme(panel.grid.minor = element_blank())
-    
-    if (rotate) {
-        g + theme(text=element_text(size=20), axis.text.x=element_text(size=16, angle=30, hjust=1))
-    } else {
-        g #+ theme(text=element_text(size=20), axis.text.x=element_text(size=16, hjust=.5))
-    }
-}
-
-
-
-
 plot_bs_mapping <- function(hcp_bs_mapping) {
     hcp_bs_mapping <- hcp_bs_mapping %>% 
         mutate_at(vars(cortex), ~ factor(., levels=unique(.)))
@@ -40,8 +19,34 @@ plot_bs_mapping <- function(hcp_bs_mapping) {
     geom_brain(atlas=glasser, hemi="left", mapping=aes(fill=structure_name_short, geometry=geometry, hemi=hemi, side=side, type=type)) +
     guides(fill=guide_legend('')) +
     scale_fill_manual(values=cols) +
-    theme_void() + theme(text=element_text(size=20), legend.position=c(1.3,.5))
+    theme_void() + theme(text=element_text(size=20), legend.position='right')
+                         # legend.position=c(1.3,.5))
 }
+
+
+plot_bs_pcs_corr <- function(bs_pcs_corr, title="", xint='Birth-3 yrs', rotate=F) {
+    g <- bs_pcs_corr %>% 
+    mutate_at(vars(age), ~ factor(., levels=unique(.))) %>%
+    ggplot() + geom_hline(yintercept=0, color='grey') + geom_vline(xintercept=xint, color='grey') +
+    geom_line(aes(x=age, y=corr, color=PC, group=PC), size=1, alpha=1) + 
+    xlab("Age") + ylab("Correlation of Matched Regions") +
+    scale_color_manual(values=mycolors3) +
+    # scale_color_manual(values=brewer.rdylbu(4)) +
+    ggtitle(title) +
+    theme_minimal() + 
+    theme(panel.grid.minor = element_blank(),
+          legend.position = c(.95, .9),
+          legend.title = element_blank()
+         )
+    
+    if (rotate) {
+        g + theme(text=element_text(size=20), axis.text.x=element_text(size=16, angle=30, hjust=.5))
+    } else {
+        g #+ theme(text=element_text(size=20), axis.text.x=element_text(size=16, hjust=.5))
+    }
+}
+
+
 
 
 plot_ahba_bs_corr <- function(df) {
@@ -60,40 +65,29 @@ plot_ahba_bs_corr <- function(df) {
 }
 
 
-plot_ahba_bs_scatter <- function(cortex_scores, corrs, facet='h') {
-    lim <- 2.8
+plot_ahba_bs_scatter <- function(cortex_scores, cortex_corrs, facet='h') {
+    # lim <- 2.8
     
-    g <- ggplot(cortex_scores, aes(AHBA_mean, Brainspan)) + 
-    xlim(c(-lim,lim)) + ylim(c(-lim,lim)) +
-    # geom_abline(linetype=3) +
+    g <- ggplot(cortex_scores, aes(AHBA, Brainspan)) + 
+    # xlim(c(-lim,lim)) + ylim(c(-lim,lim)) +
     geom_point(aes(color=cortex), size=5) +
     geom_smooth(method='lm', linetype=1, se=F, color='grey') +
-    scale_color_manual(values=rev(brewer.rdylbu(14)[-c(6,7,8)]), guide='none') +
-    # scale_color_manual(values=cols25(), guide='none') +
-    # guides(color=guide_colorbar(barwidth=10)) +
-    # geom_text(aes(AHBA_mean, Brainspan, label=cortex), 
-    #                 size=7, hjust=0, vjust=1.2) +
-    geom_text(
-        data=data.frame(
-            x=0, y=2.5, 
-            PC=c('PC1','PC2','PC3'), 
-            label=paste0('r = ', round(corrs[1:3],2))), 
-        aes(x=x,y=y,label=label), size=10
+    scale_color_manual(values=cols25(), guide='none') +
+    geom_text(data=data.frame(PC=names(cortex_corrs), 
+                              label=paste("r =", round(cortex_corrs, 2)))
+              , aes(x=0,y=1.8, label=label), size=12
     ) +
     coord_fixed() +
-    # guides(color=guide_legend(ncol=2)) +
-    # ggtitle('Brainspan-AHBA cortex correlations, AHBA DS=0.5') +
-    xlab('AHBA Region\nPC Score') + ylab('BrainSpan Region PC Score') +
-    theme_void() + 
-    # annotate("segment", x=-Inf, xend=Inf, y=-Inf, yend=-Inf) +
-    # annotate("segment", x=-Inf, xend=-Inf, y=-Inf, yend=Inf) +
-    theme(axis.title = element_text(),
-          panel.spacing = unit(3, 'lines'),
-          axis.title.y = element_text(angle=90),
-          aspect.ratio=1,
-          strip.text.y = element_blank()
+    xlab('AHBA Score') + ylab('BrainSpan Score') +
+    scale_y_continuous(position = "right", breaks=0) +
+    scale_x_continuous(breaks=0) +
+    theme_minimal() + 
+    theme(panel.grid.minor=element_blank(),
+          axis.text = element_blank(),
+          axis.title = element_text(),
+          axis.title.y = element_text(angle=-90),
+          aspect.ratio=1
          )
-    # theme(text=element_text(size=30), legend.position=c(.5,-.3))
     
     if (facet=='v') {
         g + facet_rep_grid(PC~., repeat.tick.labels=T)
