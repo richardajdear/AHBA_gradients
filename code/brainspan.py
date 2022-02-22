@@ -1,9 +1,5 @@
 # Helper functions for processing brainspan data
 
-'lh_bankssuperiortemporalsulcus',
- 'lh_hemisphereaveragethickness',
- 'lh_paracentrallobule',
-
 import numpy as np, pandas as pd
 from processing_helpers import *
 
