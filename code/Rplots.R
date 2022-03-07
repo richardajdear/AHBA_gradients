@@ -19,17 +19,17 @@ plot_dist_donors_hcp <- function(df_donors) {
     # scale_fill_manual(values=brewer.blues(10)[c(10,4)], name='', guide='none') +
     geom_vline(xintercept=2.5, linetype=2) +
     scale_x_continuous(breaks=seq(0,6,1)) +
-    theme_minimal() + ylab('# HCP Regions') + xlab('Donors/Region') + 
+    theme_minimal() + ylab('# Regions') + xlab('Donors/Region') + 
     theme(legend.position=c(.2,.8), panel.grid=element_blank())    
 }
 
 
 plot_ds_dist_hcp <- function(df_stability) {
     ggplot(df_stability) + 
-    geom_density(aes(x=DS), size=1, color=mycolors[5]) +
-    geom_vline(xintercept=0.31, linetype=2) +
-    annotate(x=.32,y=2.5,geom='text',label='Top 20%', hjust=-0.05, size=8) +
-    ylab('Density') + xlab('Diff. Stability') +
+    geom_density(aes(x=ds), size=1, color=mycolors[5]) +
+    geom_vline(xintercept=0.386, linetype=2) +
+    annotate(x=.39,y=2.5,geom='text',label='Top 10%', hjust=-0.05, size=8) +
+    ylab('') + xlab('Diff. Stability') +
     theme_minimal() +
     theme(panel.grid=element_blank())
 }
@@ -67,23 +67,39 @@ plot_coefs_dist <- function(coefs_ds) {
 }
 
 
+plot_triplets_v2 <- function(triplets_plot_v2) {
 
+    mycolors = brewer.rdylbu(5)[c(1,2,5)]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    triplets_plot_v2 %>%
+    filter(component <= 3) %>%
+    # group_by(method, component, DS) %>%
+    # mutate(ymean = mean(corr_abs),
+    #        ymin = mean(corr_abs) - 2*sd(corr_abs)/10, 
+    #        ymax = mean(corr_abs) + 2*sd(corr_abs)/10
+    #        ) %>%
+    ggplot(aes(x=DS, y=corr_abs)) +
+        facet_grid(.~method) +
+        geom_jitter(aes(color=component), width=0.01) +
+        geom_smooth(aes(group=component, fill=component, color=component), method='loess', span=1) +
+        # geom_line(aes(group=component, color=component, y=ymean)) +
+        # geom_ribbon(aes(group=component, fill=component, ymin=ymin, ymax=ymax), alpha=.3) +
+        scale_color_manual(values=mycolors, name='',labels=c('G1','G2','G3')) +
+        scale_fill_manual(values=mycolors, name='',labels=c('G1','G2','G3')) +
+        scale_x_continuous(breaks=c(.1,.3,.5,.7,.9), #minor_breaks=seq(0,.9,.1),
+                           labels=c('90%','70%','50%','30%','10%'),
+                           name='% of top-DS genes retained'
+                          ) +
+        scale_y_continuous(breaks=seq(0,1,.25), 
+                           # position='right',
+                           name='Correlation between triplets') +
+        theme_minimal() + 
+        theme(legend.position=c(.9,.3),
+              panel.grid.minor=element_blank(),
+              # axis.text.y = element_text(margin=margin(r=-1)),
+              panel.spacing=unit(2,'lines')
+             )
+}
 
 
 

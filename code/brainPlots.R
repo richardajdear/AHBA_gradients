@@ -9,22 +9,22 @@ library(pals)
 
 plot_dk <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
     df <- scores_df %>% 
-        rename('PC1'='0', 'PC2'='1', 'PC3'='2', 'PC4'='3', 'PC5'='4') %>%
+        rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
         gather('component', 'score', -version, -label) %>%
         group_by(component, version)
     
     if (three) {
-        df <- df %>% filter(component %in% c('PC1','PC2','PC3'))
+        df <- df %>% filter(component %in% c('G1','G2','G3'))
     }
     
     if (flip) {
-        df <- df %>% mutate(component = factor(component,  levels=c('PC1','PC3','PC2'), ordered=T))
+        df <- df %>% mutate(component = factor(component,  levels=c('G1','G3','G2'), ordered=T))
     }
     
     m <- pmax(
-#         df %>% filter(component=='PC1') %>% .$score %>% quantile(.95) %>% abs,
-#         df %>% filter(component=='PC1') %>% .$score %>% quantile(.05) %>% abs
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.95) %>% abs,
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.05) %>% abs
         df %>% .$score %>% quantile(.99) %>% abs,
         df %>% .$score %>% quantile(.01) %>% abs
     )
@@ -56,19 +56,19 @@ ggtitle(title) + xlab("") + ylab("")
 
 plot_hcp <- function(scores_df, title="", three=F, switch=NULL) {
     df <- scores_df %>% 
-        rename('PC1'='0', 'PC2'='1', 'PC3'='2', 'PC4'='3', 'PC5'='4') %>%
+        rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
         gather('component', 'score', -version, -region) %>%
         group_by(component, version)
 
     if(three) {
-        df <- df %>% filter(component %in% c('PC1','PC2','PC3'))
+        df <- df %>% filter(component %in% c('G1','G2','G3'))
     }
     
     m <- pmax(
-#         df %>% filter(component=='PC1') %>% .$score %>% quantile(.95) %>% abs,
-#         df %>% filter(component=='PC1') %>% .$score %>% quantile(.05) %>% abs
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.95) %>% abs,
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.05) %>% abs
         df %>% .$score %>% quantile(.99) %>% abs,
         df %>% .$score %>% quantile(.01) %>% abs
     )
@@ -103,14 +103,14 @@ ggtitle(title) + xlab("") + ylab("")
 
 plot_hcp_wide <- function(scores_df, title="", facet='h', spacing=4) {
     df <- scores_df %>% 
-        rename('PC1'='0', 'PC2'='1', 'PC3'='2') %>%
+        rename('G1'='0', 'G2'='1', 'G3'='2') %>%
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
         gather('component', 'score', -region) %>%
         group_by(component)
 
     m <- pmax(
-#         df %>% filter(component=='PC1') %>% .$score %>% quantile(.95) %>% abs,
-#         df %>% filter(component=='PC1') %>% .$score %>% quantile(.05) %>% abs
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.95) %>% abs,
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.05) %>% abs
         df %>% .$score %>% quantile(.99) %>% abs,
         df %>% .$score %>% quantile(.01) %>% abs
     )
@@ -147,13 +147,13 @@ ggtitle(title) + xlab("") + ylab("")
 
 plot_dk_wide <- function(scores_df, title="", facet='h', spacing=4) {
     df <- scores_df %>% 
-        rename('PC1'='0', 'PC2'='1', 'PC3'='2') %>%
+        rename('G1'='0', 'G2'='1', 'G3'='2') %>%
         gather('component', 'score', -label) %>%
         group_by(component)
 
     m <- pmax(
-#         df %>% filter(component=='PC1') %>% .$score %>% quantile(.95) %>% abs,
-#         df %>% filter(component=='PC1') %>% .$score %>% quantile(.05) %>% abs
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.95) %>% abs,
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.05) %>% abs
         df %>% .$score %>% quantile(.99) %>% abs,
         df %>% .$score %>% quantile(.01) %>% abs
     )
@@ -277,7 +277,7 @@ plot_hcp_classes <- function(df, classes=vonEconomo, classcolors=vonEconomo.colo
 
 plot_hcp_ranks <- function(scores_df, title="", three=F, switch=NULL) {
     df <- scores_df %>% 
-        rename('PC1'='0', 'PC2'='1', 'PC3'='2', 'PC4'='3', 'PC5'='4') %>%
+        rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
         drop_na() %>%
@@ -285,12 +285,12 @@ plot_hcp_ranks <- function(scores_df, title="", three=F, switch=NULL) {
         group_by(component, version)
 
     if(three) {
-        df <- df %>% filter(component %in% c('PC1','PC2','PC3'))
+        df <- df %>% filter(component %in% c('G1','G2','G3'))
     }
     
 #     m <- pmax(
-# #         df %>% filter(component=='PC1') %>% .$score %>% quantile(.95) %>% abs,
-# #         df %>% filter(component=='PC1') %>% .$score %>% quantile(.05) %>% abs
+# #         df %>% filter(component=='G1') %>% .$score %>% quantile(.95) %>% abs,
+# #         df %>% filter(component=='G1') %>% .$score %>% quantile(.05) %>% abs
 #         df %>% .$score %>% quantile(.99) %>% abs,
 #         df %>% .$score %>% quantile(.01) %>% abs
 #     )

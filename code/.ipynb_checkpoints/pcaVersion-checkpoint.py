@@ -181,7 +181,22 @@ class pcaVersion():
         else:
             return df_corr
     
-
+    
+    def sort_genes(self):
+        """
+        Return genes sorted by coef for each PC
+        """
+        gene_ranks = {}    
+        for pc in range(5):
+            gene_ranks[pc] = (
+                self.coefs.T.iloc[:,pc]
+                .sort_values(ascending=False)
+                .reset_index()
+                .set_axis(['gene', 'weight'], axis=1)
+            )
+        
+        return pd.concat(gene_ranks, axis=1)
+    
     
     def var_test(self, p=10, k=5):
         """

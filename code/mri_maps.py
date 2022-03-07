@@ -13,7 +13,7 @@ from scipy.stats import percentileofscore
 
 def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv"):
     maps_jakob = (
-        pd.read_csv("../data/stat_maps_HCP_forRichard.csv")
+        pd.read_csv(data_dir)
         .apply(lambda x: (x-np.mean(x))/np.std(x))
         .sort_index(axis=1)
         .set_index(get_labels_hcp()[:180])
@@ -44,10 +44,26 @@ def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv"):
     return maps
 
 
-def get_corrs(scores, maps, method='pearson'):
+def get_disorder_maps(data_dir="../data/lifespan_dx_DKatlas.csv"):
+    maps = (
+        pd.read_csv(data_dir, index_col=0)
+        .apply(lambda x: (x-np.mean(x))/np.std(x))
+        .sort_index(axis=1)
+        .rename_axis('region')#.reset_index()
+    )
+    maps = maps.set_index(maps.index.str.replace(" ", ""))
+    maps = maps.set_index('lh_' + maps.index)
+ 
+    return maps
+
+
+def get_corrs(scores, maps, method='pearson', atlas='hcp'):
+    
+    labels = get_labels_dk() if atlas=='dk' else get_labels_hcp()[:180]
+        
     corrs = (
         scores
-        .join(get_labels_hcp()[:180])
+        .join(labels)
         .set_index('label')
         .join(maps) #.set_index('region'))
         .corr(method=method).iloc[3:,:3]
@@ -65,39 +81,56 @@ def generate_shuffles(maps, n_shuffles=1000,
     np.save(outfile, shuffle_maps)
 
 
-def generate_spins(maps, n_rotate=1000, 
-                   outfile='../outputs/spin_maps_1000.npy'):
+def generate_spins(maps, n_rotate=10, 
+                   outfile='../outputs/spin_maps_1000.npy',
+                   atlas='hcp'):
     """
     Generate spins from a set of maps and save to file
     """
-    _,_,rh_names = read_annot("../data/rh.HCPMMP1.annot")
-
+    
+    if atlas == 'dk':
+        atlas = 'aparc'
+        _,_,rh_names = read_annot(f"../data/rh.{atlas}.annot")
+        drop = rh_names + ['lh_corpuscallosum', 'lh_unknown']
+    else: 
+        atlas = 'HCPMMP1'
+        _,_,rh_names = read_annot(f"../data/rh.{atlas}.annot")
+        drop = rh_names    
+    
     spin_maps = nnsurf.spin_data(
         data = np.array(maps),
-        drop = rh_names,
+        drop = drop,
         version = "fsaverage",
-        lhannot = "../data/lh.HCPMMP1.annot",
-        rhannot = "../data/rh.HCPMMP1.annot",
+        lhannot = f"../data/lh.{atlas}.annot",
+        rhannot = f"../data/rh.{atlas}.annot",
         n_rotate = n_rotate
     )
     np.save(outfile, spin_maps)
 
-def generate_spins_from_pcs(scores, n_rotate=1000,
-    outfile='../outputs/spin_pcs_1000.npy'):
+def generate_spins_from_pcs(scores, n_rotate=10,
+                           outfile='../outputs/spin_pcs_1000.npy',
+                           atlas='hcp'):
     
-    scores = scores.join(get_labels_hcp())
+    if atlas == 'dk':
+        atlas = 'aparc'
+        scores = scores.join(get_labels_dk())
+        _,_,rh_names = read_annot(f"../data/rh.{atlas}.annot")
+        drop = rh_names + ['lh_corpuscallosum', 'lh_unknown']
+    else: 
+        atlas = 'HCPMMP1'
+        scores = scores.join(get_labels_hcp())
+        _,_,rh_names = read_annot("../data/rh.HCPMMP1.annot")
+        # Drop regions missing in PCs
+        missing_rois = list(set(get_labels_hcp()[:180]).difference(scores['label']))
+        rh_names = rh_names + [np.bytes_('L_' + roi + '_ROI') for roi in missing_rois]
+        drop = rh_names
     
-    _,_,rh_names = read_annot("../data/rh.HCPMMP1.annot")
-    # Drop regions missing in PCs
-    missing_rois = list(set(get_labels_hcp()[:180]).difference(scores['label']))
-    rh_names = rh_names + [np.bytes_('L_' + roi + '_ROI') for roi in missing_rois]
-
     spin_pcs = nnsurf.spin_data(
         data = np.array(scores.set_index('label')),
-        drop = rh_names,
+        drop = drop,
         version = "fsaverage",
-        lhannot = "../data/lh.HCPMMP1.annot",
-        rhannot = "../data/rh.HCPMMP1.annot",
+        lhannot = f"../data/lh.{atlas}.annot",
+        rhannot = f"../data/rh.{atlas}.annot",
         n_rotate = n_rotate,
     )
     np.save(outfile, spin_pcs)
@@ -129,12 +162,13 @@ def corr_nulls_from_maps(null_maps, scores, maps, method='pearson', pool=False):
         null_maps_pool = null_maps.reshape(-1, mxn)
     
     null_corrs = {}
+    index = [i+1 for i in range(null_maps.shape[0])]
     for m, mapname in enumerate(maps.columns):
         # Optionally pool maps together
         if pool:
-            nulls = pd.DataFrame(null_maps_pool, index=list(range(1,181)))
+            nulls = pd.DataFrame(null_maps_pool, index=index)
         else:
-            nulls = pd.DataFrame(null_maps[:,m,:], index=list(range(1,181)))
+            nulls = pd.DataFrame(null_maps[:,m,:], index=index)
         
         # Concat PC scores and nulls
         df_concat = pd.concat([scores, nulls], axis=1)
@@ -164,6 +198,7 @@ def corr_nulls_from_pcs(null_pcs, scores, maps, method='pearson', pool=False):
         null_pcs_pool = null_pcs.reshape(-1, mxn)
     
     null_corrs = {}
+    index = [i+1 for i in range(null_pcs.shape[0])]
     for m in range(null_pcs.shape[1]):
         # Optionally pool maps together
         if pool:
@@ -172,7 +207,7 @@ def corr_nulls_from_pcs(null_pcs, scores, maps, method='pearson', pool=False):
             nulls = pd.DataFrame(null_pcs[:,m,:], index=scores.index)
         
         # Concat PC scores and nulls
-        df_concat = pd.concat([maps.set_axis(list(range(1,181))), nulls], axis=1)
+        df_concat = pd.concat([maps.set_axis(index), nulls], axis=1)
         # Optionally correlate with spearman, otherwise pearson
         if method == 'spearman':
             # .rank().corr() is faster than .corr(method='spearman') because of null checks

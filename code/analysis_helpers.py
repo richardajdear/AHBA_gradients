@@ -7,7 +7,12 @@ from processing_helpers import *
 
 
 def correlate(a,b):
-    return pd.concat([a,b],axis=1).corr().iloc[:5,5:]
+    """
+    x
+    """
+    n = a.shape[1]
+    corr = pd.concat([a,b],axis=1).corr().iloc[:n,n:]
+    return corr
 
 
 ### Enrichment

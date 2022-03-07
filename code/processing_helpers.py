@@ -5,7 +5,6 @@ import abagen
 from abagen.correct import keep_stable_genes
 import abagen_allen_tweaked
 import nibabel as nib
-from pcaVersion import pcaVersion
 import pickle
 
 
