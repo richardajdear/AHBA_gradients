@@ -125,7 +125,7 @@ def fetch_hcp(native=True, only_left=False):
     Get HCP atlas
     """
     hcp_info = (
-        pd.read_csv('../data/HCP-MMP1_UniqueRegionList.txt')
+        pd.read_csv('../data/parcellations/HCP-MMP1_UniqueRegionList.txt')
         .rename(columns={'LR':'hemisphere', 'regionID':'id', 'region':'label'})
         .assign(structure='cortex')
         .assign(id=lambda x: [id-20 if id>180 else id for id in x['id']])
@@ -142,7 +142,7 @@ def fetch_hcp(native=True, only_left=False):
         }
     else:
         atlas_hcp = {
-            'image':'../data/HCP-MMP_1mm.nii.gz',
+            'image':'../data/parcellations/HCP-MMP_1mm.nii.gz',
             'info':pd.read_csv('../data/HCP-MMP1_UniqueRegionList.txt').rename(columns={'LR':'hemisphere', 'regionID':'id', 'region':'label'}).assign(structure='cortex')
         }
 
@@ -177,7 +177,7 @@ def get_labels_hcp():
     Get HCP atlas labels from source file and format for ggseg
     """
     hcp_info = (
-        pd.read_csv('../data/HCP-MMP1_UniqueRegionList.txt')
+        pd.read_csv('../data/parcellations/HCP-MMP1_UniqueRegionList.txt')
         .rename(columns={'LR':'hemisphere', 'regionID':'id', 'region':'label'})
         .assign(structure='cortex')
         .assign(id=lambda x: [id-20 if id>180 else id for id in x['id']]) 
@@ -188,6 +188,64 @@ def get_labels_hcp():
     return labels_hcp
     
 
+    
+
+def fetch_dx():
+    """
+    Get Desterieux atlas
+    """
+    dx_info = (
+        pd.read_csv("../data/parcellations/Destrieux.csv")
+        .set_axis({'id','label'},axis=1)
+        .assign(structure='cortex', hemisphere='L')
+    )
+
+    atlas_dx = {
+        'image':'../data/parcellations/Destrieux_space-MNI152NLin6_res-4x4x4.nii.gz',
+        'info': dx_info
+    }
+
+    return atlas_dx
+
+def get_labels_dx():
+    labels_dx = (
+        pd.read_csv("../data/parcellations/desterieux_ggseg_labels.csv")
+        .set_axis({'id','label'},axis=1)
+        .set_index('id')['label']
+    )
+    return labels_dx
+
+
+def fetch_s200():
+    """
+    Get Schaefer200 atlas
+    """
+    s200_info = (
+        pd.read_csv("../data/parcellations/schaefer200_ggseg_labels.csv")
+        .assign(structure='cortex', hemisphere='L')
+    )
+
+    # Path to Schaefer200 image
+    img_path = '../data/parcellations/Schaefer200_space-MNI152NLin6_res-4x4x4.nii.gz'
+    
+    # Drop right hemi
+    img = nib.load(img_path)
+    img_left = np.where((img.dataobj[:] > 101), 0, img.dataobj[:])
+    img = img.__class__(img_left, img.affine, img.header)
+    
+    atlas_s200 = {
+        'image':img,
+        'info': s200_info
+    }
+
+    return atlas_s200
+
+def get_labels_s200():
+    labels_s200 = (
+        pd.read_csv("../data/parcellations/schaefer200_ggseg_labels.csv")
+        .set_index('id')['label']
+    )
+    return labels_s200
 
     
 

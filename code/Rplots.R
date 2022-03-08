@@ -35,15 +35,15 @@ plot_ds_dist_hcp <- function(df_stability) {
 }
 
 
-plot_coefs_ds <- function(coefs_ds) {
-    df <- coefs_ds %>% gather(PC, weight, -DS)
+plot_weights_ds <- function(weights_ds) {
+    df <- weights_ds %>% select(G1:G3, ds) %>% gather(G, weight, -ds)
 
-    ggplot(df, aes(x=weight, y=DS)) + 
-        facet_grid(.~PC) +
+    ggplot(df, aes(x=weight, y=ds)) + 
+        facet_grid(.~G) +
         # geom_point(color=mycolors[5], alpha=.5, size=1) +
         geom_point(aes(color=weight), size=1) +
         scale_color_gradientn(colors=mycolorscale, guide='none') +
-        xlab('Gene Weight') + ylab("Differential Stability") +
+        xlab('Gene weights from PLS') + ylab("DS") +
         theme_minimal() + 
         theme(
             panel.grid=element_blank(), 
@@ -53,11 +53,11 @@ plot_coefs_ds <- function(coefs_ds) {
         )
 }
 
-plot_coefs_dist <- function(coefs_ds) {
-    df <- coefs_ds %>% gather(PC, weight, -DS)
+plot_weights_dist <- function(weights_ds) {
+    df <- weights_ds %>% select(G1:G3, ds) %>% gather(G, weight, -ds)
 
     ggplot(df) +
-        facet_grid(.~PC) +
+        facet_grid(.~G) +
         geom_density(aes(weight), size=1, alpha=.8, color=mycolors[5]) +
         # geom_density(size=1, alpha=.8, aes(color=stat(x))) +
         # stat_density_ridges(geom = "density_ridges_gradient", calc_ecdf = TRUE, scale=.8, size=.2, fill='transparent',
@@ -102,7 +102,29 @@ plot_triplets_v2 <- function(triplets_plot_v2) {
 }
 
 
-
+plot_weight_corrs <- function(weight_corrs) {
+    weight_corrs %>% 
+    mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
+    mutate_at(vars(y), ~ factor(., levels=rev(unique(.)))) %>% 
+    ggplot() +
+    facet_rep_grid(.~version, repeat.tick.labels=T) + #, switch='x') +
+    geom_tile(aes(x,y, fill=corr)) +
+    geom_text(aes(x,y, label=sprintf("%0.2f", round(corr, digits = 2))), size=10) +
+    scale_fill_gradientn(colours=brewer.rdbu(100)[20:80], limits=c(-1,1), guide='colourbar') +
+    guides(fill=guide_colourbar(title='Corr.', barheight=10)) +
+    scale_x_discrete(position = "top") +
+    theme_minimal() + 
+    theme(panel.spacing=unit(14,'lines'), 
+          # axis.title.y=element_text(angle=0),
+          strip.text.y=element_text(size=36),
+          strip.text.x=element_text(size=36),
+          strip.placement='outside'
+#           legend.title.align = 0.5
+         ) +
+    coord_fixed() + 
+    xlab('') +
+    ylab('HCP, top 50% genes,\n3+ donor regions')
+}
 
 
 

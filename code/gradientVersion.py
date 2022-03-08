@@ -57,7 +57,7 @@ class gradientVersion():
         return self
         
     
-    def fit_weights(self, expression=None, independent=True, method='PLSCanonical', sort=False, save_name=None):
+    def fit_weights(self, expression=None, independent=True, sort=False, save_name=None, overwrite=True):
         """
         Get gene weights from PLS
         Use other expression matrix if provided, otherwise use self
@@ -67,43 +67,35 @@ class gradientVersion():
         if expression is None:
             X = self.expression
         else:
-            X = expression.loc[self.expression.index, :]
-            X = X.dropna(axis=0, how='all').dropna(axis=1, how='any')
+            X = expression.dropna(axis=0, how='all').dropna(axis=1, how='any')
             
         # Fit each component independently
         if independent:
-            pls_weights = np.zeros((X.shape[1], 3))
-            for i in range(3):
+            pls_weights = np.zeros((X.shape[1], 5))
+            for i in range(5):
                 Y = self.scores.loc[X.index, i]
-                
-                # Use PLSRegression, or PLSCanonical?
-                if method == 'PLSRegression':
-                    pls = PLSRegression(n_components=1)
-                else:
-                    pls = PLSCanonical(n_components=1)
-                    
-                pls_weights[:,i] = pls.fit(X,Y).x_weights_.squeeze()
+                pls_weights[:,i] = PLSCanonical(n_components=1).fit(X,Y).x_weights_.squeeze()
         # Or fit all components together
         else:
             Y = self.scores.loc[X.index, :]
-            
-            # Use PLSRegression, or PLSCanonical?
-            if method == 'PLSRegression':
-                pls = PLSRegression(n_components=3)
-            else:
-                pls = PLSCanonical(n_components=3)
-
-            pls_weights = pls.fit(X,Y).x_weights_
+            pls_weights = PLSCanonical(n_components=5).fit(X,Y).x_weights_
         
-        self.weights = pd.DataFrame(pls_weights, index=X.columns)
+        # Invert, because weights have opposite sign to scores
+        pls_weights *= -1 
+        
+        pls_weights = pd.DataFrame(pls_weights, index=X.columns)
+        
+        # Save to self
+        if overwrite:
+            self.weights = pls_weights
         
         # Output sorted lists, or unsorted dataframe
         if sort:
             if save_name is not None:
-                self.sort_weights(self.weights).to_csv("../outputs/" + save_name + ".csv")
-            return self.sort_weights(self.weights)
+                self.sort_weights(pls_weights).to_csv("../outputs/" + save_name + ".csv")
+            return self.sort_weights(pls_weights)
         else:
-            return self.weights
+            return pls_weights
         
         
         

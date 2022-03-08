@@ -2,6 +2,7 @@
 
 library(ggseg)
 library(ggsegGlasser)
+library(ggsegDesterieux)
 suppressMessages(library(tidyverse))
 suppressMessages(library(scales))
 library(patchwork)
@@ -28,12 +29,11 @@ plot_dk <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
         df %>% .$score %>% quantile(.99) %>% abs,
         df %>% .$score %>% quantile(.01) %>% abs
     )
-
-    dk$data <- dk$data %>% filter(hemi=='left')
     
     ggplot(df) + 
     geom_brain(
         atlas=dk,
+        hemi='left',
         mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
         colour='grey', size=.1,
         show.legend=T
@@ -42,6 +42,7 @@ plot_dk <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
     facet_grid(component~version, switch=switch) +
     theme(legend.position='bottom', 
           strip.text.x=element_text(vjust=1),
+          strip.text.y.left = element_text(angle = 0),
           plot.title=element_text(hjust=0.5)) +
     #   scale_fill_cmocean(name='balance', limits=c(-m,m), oob=squish) +
 #     scale_fill_gradient2(low=muted('red'), high=muted('blue'), 
@@ -72,12 +73,11 @@ plot_hcp <- function(scores_df, title="", three=F, switch=NULL) {
         df %>% .$score %>% quantile(.99) %>% abs,
         df %>% .$score %>% quantile(.01) %>% abs
     )
-
-    glasser$data <- glasser$data %>% filter(hemi=='left')
     
     ggplot(df) + 
     geom_brain(
         atlas=glasser,
+        hemi='left',
         mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
         colour='grey', size=.1,
         show.legend=T
@@ -98,6 +98,89 @@ plot_hcp <- function(scores_df, title="", three=F, switch=NULL) {
 ggtitle(title) + xlab("") + ylab("")
 }
 
+
+plot_dx <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
+    df <- scores_df %>% 
+        rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
+        mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
+        gather('component', 'score', -version, -label) %>%
+        group_by(component, version)
+    
+    if (three) {
+        df <- df %>% filter(component %in% c('G1','G2','G3'))
+    }
+    
+    m <- pmax(
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.95) %>% abs,
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.05) %>% abs
+        df %>% .$score %>% quantile(.99) %>% abs,
+        df %>% .$score %>% quantile(.01) %>% abs
+    )
+
+    
+    ggplot(df) + 
+    geom_brain(
+        atlas=desterieux,
+        hemi='left',
+        mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
+        colour='grey', size=.1,
+        show.legend=T
+        ) + 
+    theme_void() +
+    facet_grid(component~version, switch=switch) +
+    theme(legend.position='bottom', 
+          strip.text.x=element_text(vjust=1),
+          strip.text.y.left = element_text(angle = 0),
+          plot.title=element_text(hjust=0.5)) +
+    #   scale_fill_cmocean(name='balance', limits=c(-m,m), oob=squish) +
+#     scale_fill_gradient2(low=muted('red'), high=muted('blue'), 
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), 
+                         limits=c(-m,m), oob=squish, breaks=c(-m,0,m), 
+                         labels=c(round(-m,2),0,round(m,2)), name=''
+                        ) +
+ggtitle(title) + xlab("") + ylab("")
+}
+
+plot_s200 <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
+    df <- scores_df %>% 
+        rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
+        mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
+        gather('component', 'score', -version, -label) %>%
+        group_by(component, version)
+    
+    if (three) {
+        df <- df %>% filter(component %in% c('G1','G2','G3'))
+    }
+    
+    m <- pmax(
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.95) %>% abs,
+#         df %>% filter(component=='G1') %>% .$score %>% quantile(.05) %>% abs
+        df %>% .$score %>% quantile(.99) %>% abs,
+        df %>% .$score %>% quantile(.01) %>% abs
+    )
+
+    
+    ggplot(df) + 
+    geom_brain(
+        atlas=desterieux,
+        hemi='left',
+        mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
+        colour='grey', size=.1,
+        show.legend=T
+        ) + 
+    theme_void() +
+    facet_grid(component~version, switch=switch) +
+    theme(legend.position='bottom', 
+          strip.text.x=element_text(vjust=1),
+          plot.title=element_text(hjust=0.5)) +
+    #   scale_fill_cmocean(name='balance', limits=c(-m,m), oob=squish) +
+#     scale_fill_gradient2(low=muted('red'), high=muted('blue'), 
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), 
+                         limits=c(-m,m), oob=squish, breaks=c(-m,0,m), 
+                         labels=c(round(-m,2),0,round(m,2)), name=''
+                        ) +
+ggtitle(title) + xlab("") + ylab("")
+}
 
 
 

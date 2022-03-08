@@ -16,19 +16,22 @@ plot_bs_mapping <- function(hcp_bs_mapping) {
     cols = as.character(cols25())
     
     ggplot(hcp_bs_mapping) + 
-    geom_brain(atlas=glasser, hemi="left", mapping=aes(fill=structure_name_short, geometry=geometry, hemi=hemi, side=side, type=type)) +
-    guides(fill=guide_legend('')) +
-    scale_fill_manual(values=cols) +
-    theme_void() + theme(text=element_text(size=20), legend.position='right')
+    geom_brain(atlas=glasser, hemi='left', mapping=aes(fill=structure_name, geometry=geometry, hemi=hemi, side=side, type=type)) +
+    # guides(fill=guide_legend('')) +
+    scale_fill_manual(values=cols, guide='none') +
+    theme_void() + 
+    theme(text=element_text(size=20), legend.position='none',
+         plot.title=element_text(size=36, vjust=-1)) +
+    ggtitle("BrainSpan regions matched to HCP-MMP1.0")
                          # legend.position=c(1.3,.5))
 }
 
 
-plot_bs_pcs_corr <- function(bs_pcs_corr, title="", xint='Birth-3 yrs', rotate=F) {
-    g <- bs_pcs_corr %>% 
+plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', rotate=F) {
+    g <- bs_scores_corr %>% 
     mutate_at(vars(age), ~ factor(., levels=unique(.))) %>%
     ggplot() + geom_hline(yintercept=0, color='grey') + geom_vline(xintercept=xint, color='grey') +
-    geom_line(aes(x=age, y=corr, color=PC, group=PC), size=1, alpha=1) + 
+    geom_line(aes(x=age, y=corr, color=G, group=G), size=1, alpha=1) + 
     xlab("Age") + ylab("Correlation of Matched Regions") +
     scale_color_manual(values=mycolors3) +
     # scale_color_manual(values=brewer.rdylbu(4)) +
@@ -73,26 +76,26 @@ plot_ahba_bs_scatter <- function(cortex_scores, cortex_corrs, facet='h') {
     geom_point(aes(color=cortex), size=5) +
     geom_smooth(method='lm', linetype=1, se=F, color='grey') +
     scale_color_manual(values=cols25(), guide='none') +
-    geom_text(data=data.frame(PC=names(cortex_corrs), 
+    geom_text(data=data.frame(G=names(cortex_corrs), 
                               label=paste("r =", round(cortex_corrs, 2)))
-              , aes(x=0,y=1.8, label=label), size=12
+              , aes(x=0,y=1.6, label=label), size=12
     ) +
     coord_fixed() +
-    xlab('AHBA Score') + ylab('BrainSpan Score') +
-    scale_y_continuous(position = "right", breaks=0) +
+    xlab('AHBA Score') + ylab('BrainSpan\nScore') +
+    scale_y_continuous(breaks=0) +
     scale_x_continuous(breaks=0) +
     theme_minimal() + 
     theme(panel.grid.minor=element_blank(),
           axis.text = element_blank(),
           axis.title = element_text(),
-          axis.title.y = element_text(angle=-90),
+          # axis.title.y = element_text(angle=0),
           aspect.ratio=1
          )
     
     if (facet=='v') {
-        g + facet_rep_grid(PC~., repeat.tick.labels=T)
+        g + facet_rep_grid(G~., repeat.tick.labels=T)
     } else {
-        g + facet_rep_grid(.~PC, repeat.tick.labels=T)
+        g + facet_rep_grid(.~G, repeat.tick.labels=T)
     }
 }
 

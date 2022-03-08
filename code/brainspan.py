@@ -24,56 +24,41 @@ def get_age_groups():
     """
     age_groups = {        
         # 'Best' groupings ...
-        '12 pcw': '12-17 pcw',
-        '13 pcw': '12-17 pcw',
-        '16 pcw': '12-17 pcw',
-        '17 pcw': '12-17 pcw',
-        '19 pcw': '19-37 pcw',
-        '21 pcw': '19-37 pcw',
-        '24 pcw': '19-37 pcw',
-        '37 pcw': '19-37 pcw',
+        # '12 pcw': '12-17 pcw',
+        # '13 pcw': '12-17 pcw',
+        # '16 pcw': '12-17 pcw',
+        # '17 pcw': '12-17 pcw',
+        # '19 pcw': '19-37 pcw',
+        # '21 pcw': '19-37 pcw',
+        # '24 pcw': '19-37 pcw',
+        # '37 pcw': '19-37 pcw',
+        
+        # '12 pcw': '12-13 pcw',
+        # '13 pcw': '12-13 pcw',
+        
+#         # '16 pcw': '16-37 pcw',
+#         # '17 pcw': '16-37 pcw',
+#         # '19 pcw': '16-37 pcw',
+#         # '21 pcw': '16-37 pcw',
+#         # '24 pcw': '16-37 pcw',
+#         # '37 pcw': '16-37 pcw',
+        
         # '16 pcw': '16-19 pcw',
         # '17 pcw': '16-19 pcw',
         # '19 pcw': '16-19 pcw',
         # '21 pcw': '21-37 pcw',
         # '24 pcw': '21-37 pcw',
         # '37 pcw': '21-37 pcw',
-        '4 mos': 'Birth-3 yrs',
-        '10 mos': 'Birth-3 yrs',
-        '1 yrs': 'Birth-3 yrs',
-        '2 yrs': 'Birth-3 yrs',
-        '3 yrs': 'Birth-3 yrs',
-        '4 yrs': 'Birth-3 yrs',
-        '8 yrs': '8-13 yrs',
-        '11 yrs': '8-13 yrs',
-        '13 yrs': '8-13 yrs',
-        '18 yrs': '18-40 yrs',
-        '19 yrs': '18-40 yrs',
-        '21 yrs': '18-40 yrs',
-        '23 yrs': '18-40 yrs',
-        '30 yrs': '18-40 yrs',
-        '36 yrs': '18-40 yrs',
-        '37 yrs': '18-40 yrs',
-        '40 yrs': '18-40 yrs',   
         
-        # # Simple groupings ...
-        # '12 pcw': 'Pre-Birth',
-        # '13 pcw': 'Pre-Birth',
-        # '16 pcw': 'Pre-Birth',
-        # '17 pcw': 'Pre-Birth',
-        # '19 pcw': 'Pre-Birth',
-        # '21 pcw': 'Pre-Birth',
-        # '24 pcw': 'Pre-Birth',
-        # '37 pcw': 'Pre-Birth',
-        # '4 mos': 'Birth-13 yrs',
-        # '10 mos': 'Birth-13 yrs',
-        # '1 yrs': 'Birth-13 yrs',
-        # '2 yrs': 'Birth-13 yrs',
-        # '3 yrs': 'Birth-13 yrs',
-        # '4 yrs': 'Birth-13 yrs',
-        # '8 yrs': 'Birth-13 yrs',
-        # '11 yrs': 'Birth-13 yrs',
-        # '13 yrs': 'Birth-13 yrs',
+        # '4 mos': 'Birth-3 yrs',
+        # '10 mos': 'Birth-3 yrs',
+        # '1 yrs': 'Birth-3 yrs',
+        # '2 yrs': 'Birth-3 yrs',
+        # '3 yrs': 'Birth-3 yrs',
+        # '4 yrs': 'Birth-3 yrs',
+        # '8 yrs': '8-13 yrs',
+        # '11 yrs': '8-13 yrs',
+        # '13 yrs': '8-13 yrs',
         # '18 yrs': '18-40 yrs',
         # '19 yrs': '18-40 yrs',
         # '21 yrs': '18-40 yrs',
@@ -82,6 +67,33 @@ def get_age_groups():
         # '36 yrs': '18-40 yrs',
         # '37 yrs': '18-40 yrs',
         # '40 yrs': '18-40 yrs',   
+        
+        # # Simple groupings ...
+        '12 pcw': 'Pre-Birth',
+        '13 pcw': 'Pre-Birth',
+        '16 pcw': 'Pre-Birth',
+        '17 pcw': 'Pre-Birth',
+        '19 pcw': 'Pre-Birth',
+        '21 pcw': 'Pre-Birth',
+        '24 pcw': 'Pre-Birth',
+        '37 pcw': 'Pre-Birth',
+        '4 mos': 'Birth-13 yrs',
+        '10 mos': 'Birth-13 yrs',
+        '1 yrs': 'Birth-13 yrs',
+        '2 yrs': 'Birth-13 yrs',
+        '3 yrs': 'Birth-13 yrs',
+        '4 yrs': 'Birth-13 yrs',
+        '8 yrs': 'Birth-13 yrs',
+        '11 yrs': 'Birth-13 yrs',
+        '13 yrs': 'Birth-13 yrs',
+        '18 yrs': '18-40 yrs',
+        '19 yrs': '18-40 yrs',
+        '21 yrs': '18-40 yrs',
+        '23 yrs': '18-40 yrs',
+        '30 yrs': '18-40 yrs',
+        '36 yrs': '18-40 yrs',
+        '37 yrs': '18-40 yrs',
+        '40 yrs': '18-40 yrs',   
     }
     return age_groups
 
@@ -127,7 +139,7 @@ def get_short_bs_names():
 
 
 def get_hcp_bs_mapping(bs_cortex_mapping,
-                      hcp_info_file = "../data/HCP-MMP1_UniqueRegionList.txt"):
+                      hcp_info_file = "../data/parcellations/HCP-MMP1_UniqueRegionList.txt"):
     """
     Get HCP regions mapped to Brainspan from Brainspan cortex mapping
     """
@@ -152,26 +164,48 @@ def get_hcp_bs_mapping(bs_cortex_mapping,
     return hcp_bs_mapping
     
 
-def get_mapped_pcs(pc_version, hcp_base, hcp_bs_mapping):
+def get_mapped_scores(version, hcp_bs_mapping):
     """
-    Get PC scores in mapped Brainspan regions
+    Get gradient scores in mapped Brainspan regions
     """
-    # Get PCs filtered to HCP regions matched in brainspan
-    pcs_filtered = (
-     hcp_base.score_from(pc_version)
+    # Get gradients filtered to HCP regions matched in brainspan
+    scores_filtered = (
+     version.scores
      .join(get_labels_hcp())
      .rename_axis('id')
      .join(hcp_bs_mapping.set_index('region'), on='label')
      .dropna(axis=0)
     )
 
-    pcs_cortex = (pcs_filtered
+    scores_cortex = (scores_filtered
      .groupby('cortex')
      .mean()
      .apply(lambda x: (x-np.mean(x))/np.std(x))
     )
     
-    return pcs_filtered, pcs_cortex
+    return scores_cortex
+
+    
+# def get_mapped_pcs(pc_version, hcp_base, hcp_bs_mapping):
+#     """
+#     Get PC scores in mapped Brainspan regions
+#     """
+#     # Get PCs filtered to HCP regions matched in brainspan
+#     pcs_filtered = (
+#      hcp_base.score_from(pc_version)
+#      .join(get_labels_hcp())
+#      .rename_axis('id')
+#      .join(hcp_bs_mapping.set_index('region'), on='label')
+#      .dropna(axis=0)
+#     )
+
+#     pcs_cortex = (pcs_filtered
+#      .groupby('cortex')
+#      .mean()
+#      .apply(lambda x: (x-np.mean(x))/np.std(x))
+#     )
+    
+#     return pcs_filtered, pcs_cortex
 
 
 def count_samples(bs_col, bs_cortex_mapping):
@@ -253,19 +287,23 @@ def aggregate_brainspan_by_age(bs_clean, normalize=True,
 
 
 
-def compute_brainspan_pc_scores(bs_agg, pc_version, bs_cortex_mapping=None, normalize=True):
+def compute_brainspan_scores(bs_agg, version, bs_cortex_mapping=None, normalize=True):
     """
-    Compute scores of AHBA PCs on donor-aggregated Brainspan
+    Compute scores of AHBA gradients on donor-aggregated Brainspan
     Relabel regions by HCP cortex names, adding in missing NA rows
     Optionally normalize by age
     """
+    # If version does not already have weights, fit them
+    if not hasattr(version, 'weights'):
+        version.fit_weights()
+    
     # Find matching genes
-    gene_mask = pc_version.coefs.columns.intersection(bs_agg.columns)
+    gene_mask = version.weights.index.intersection(bs_agg.columns)
     # Score PCs
-    bs_pcs = (bs_agg.loc[:, gene_mask] @ pc_version.coefs.loc[:, gene_mask].T).iloc[:, :5]
+    bs_scores = (bs_agg.loc[:, gene_mask] @ version.weights.loc[gene_mask, :]).iloc[:, :5]
     # Relabel
     if bs_cortex_mapping is not None:
-        bs_pcs = (bs_pcs
+        bs_scores = (bs_scores
         .assign(cortex = lambda x: x.index.get_level_values(1).map(bs_cortex_mapping))
         .reset_index().set_index(['age', 'cortex']).drop('structure_name',axis=1)
         .groupby('age').apply(lambda x: x.droplevel(0).reindex(pd.CategoricalIndex(bs_cortex_mapping.values()))) # add missing rows as NaN
@@ -273,19 +311,20 @@ def compute_brainspan_pc_scores(bs_agg, pc_version, bs_cortex_mapping=None, norm
                  )
     # Normalize by age
     if normalize:
-        bs_pcs = bs_pcs.groupby('age').apply(lambda x: (x-np.mean(x))/np.std(x))
-    return bs_pcs
+        bs_scores = bs_scores.groupby('age').apply(lambda x: (x-np.mean(x))/np.std(x))
+    return bs_scores
 
 
-def correlate_bs_pcs(bs_pcs, pcs_cortex, age_groups=None, rolling=None, plot=True):
+def correlate_bs_scores(bs_scores, scores_cortex, age_groups=None, rolling=None, plot=True):
     """
-    Correlate Brainspan PC scores with HCP cortex PC scores
+    Correlate Brainspan gradient scores with HCP cortex gradient scores
+    Take absolute correlation because PLS may invert scores
     Either by all ages, or in defined age groups
     Optionally melt for plotting
     """
     # Aggregate into age groups if desired
     if age_groups is not None:
-        bs_pcs = (bs_pcs
+        bs_scores = (bs_scores
         .reset_index()
         .assign(age_group = lambda x: x['age'].map(age_groups))
         .assign(age = lambda x: pd.Categorical(x['age_group'], ordered=True, categories = x['age_group'].unique()))
@@ -295,7 +334,7 @@ def correlate_bs_pcs(bs_pcs, pcs_cortex, age_groups=None, rolling=None, plot=Tru
 
     # Rolling average over ages if desired
     if rolling is not None:
-        bs_pcs = (bs_pcs
+        bs_scores = (bs_scores
         .reset_index()
         .groupby(['cortex'])
         .rolling(rolling, center=False, on='age', min_periods=1).mean()
@@ -304,38 +343,40 @@ def correlate_bs_pcs(bs_pcs, pcs_cortex, age_groups=None, rolling=None, plot=Tru
                  )
         
     # Correlate
-    bs_pcs_corr = (bs_pcs
-    .groupby('age').corrwith(pcs_cortex)
-    .iloc[:,:3].set_axis(['PC1','PC2','PC3'], axis=1)
+    # Take absolute because PLS may invert
+    bs_scores_corr = (bs_scores
+    .groupby('age').corrwith(scores_cortex)
+    .abs() # take absolute
+    .iloc[:,:3].set_axis(['G1','G2','G3'], axis=1)
                   ) 
     # Clean up for plotting
     if plot:
-        bs_pcs_corr = (bs_pcs_corr
-                       .melt(var_name='PC', value_name='corr', ignore_index=False)
+        bs_scores_corr = (bs_scores_corr
+                       .melt(var_name='G', value_name='corr', ignore_index=False)
                        .reset_index())
-    return bs_pcs_corr
+    return bs_scores_corr
 
 
-def get_cortex_scores(bs_pcs, pcs_cortex, age_groups, bs_cortex_mapping):
+def get_cortex_scores(bs_scores, scores_cortex, age_groups, bs_cortex_mapping):
     """
     Combine AHBA and Brainspan cortex scores for scatter plot
     """
-    bs_pcs_adult = (bs_pcs
+    bs_scores_adult = (bs_scores
      .reset_index().assign(age_group = lambda x: x['age'].map(age_groups))
      .groupby(['age_group', 'cortex']).mean().loc['18-40 yrs', [0,1,2]]
     )
 
-    cortex_scores = (pd.concat({'Brainspan':bs_pcs_adult, 'AHBA':pcs_cortex.iloc[:, :3]})
-     .reset_index().set_axis(['data', 'cortex', 'PC1', 'PC2', 'PC3'], axis=1)
-     .melt(id_vars=['data', 'cortex'], var_name='PC', value_name='score')
+    cortex_scores = (pd.concat({'Brainspan':bs_scores_adult, 'AHBA':scores_cortex.iloc[:, :3]})
+     .reset_index().set_axis(['data', 'cortex', 'G1', 'G2', 'G3'], axis=1)
+     .melt(id_vars=['data', 'cortex'], var_name='G', value_name='score')
      # swap back to Brainspan labels
      .assign(cortex = lambda x: x['cortex'].map({v:k for k,v in bs_cortex_mapping.items()}))
-     .pivot(index=['PC', 'cortex'], columns='data', values='score')
+     .pivot(index=['G', 'cortex'], columns='data', values='score')
      .reset_index()
     )
     
     cortex_corrs = (cortex_scores
-                    .groupby('PC').corr()
+                    .groupby('G').corr()
                     .loc[(slice(None), 'AHBA'), 'Brainspan']
                     .droplevel(1)
                    )
