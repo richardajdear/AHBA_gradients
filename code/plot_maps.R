@@ -91,19 +91,42 @@ ggtitle(title) + xlab("") + ylab("")
 }
 
 
+plot_corr_versions <- function(corr_versions, size=6) {
+    corr_versions %>%
+    mutate(map = factor(map, ordered=T, levels=rev(unique(.$map)))) %>%
+    mutate(p_level=ifelse(p<0.001, '***',
+                   ifelse(p<0.01, '**',
+                   ifelse(p<0.05, '*','')))) %>%
+    mutate(p_sig = paste(round(p,3), p_level)) %>%
+    ggplot(aes(x=G, y=map)) +
+    facet_grid(.~version) +
+    geom_tile(aes(fill=true_mean)) + 
+    geom_tile(aes(color=sig), fill='transparent', size=2) + 
+    geom_text(aes(label=round(true_mean,2)), vjust=-.5, size=size) +
+    geom_text(aes(label=p_sig), vjust=1, size=size) +
+    scale_fill_gradientn(colors=brewer.rdbu(100)[10:90], name='corr') +
+    scale_color_manual(values=c(NA, 'green'), labels=c('', 'FDR sig'), name='') +
+    xlab('') + ylab('') +
+    coord_fixed() +
+    theme_minimal() +
+    theme(panel.grid=element_blank(),
+          text = element_text(size=20),
+          legend.position='bottom'
+         )
+}
+
 
 plot_null_corrs <- function(corrs, null_corrs, null_p) {
 
-    null_p <- null_p %>% rownames_to_column('map') %>% gather(pc, p, -map) %>% mutate(sig = p<.05)
-    null_corrs <- null_corrs %>% gather(pc, corr, -map)
-    corrs <- corrs %>% rownames_to_column('map') %>% gather(pc, corr, -map) %>% left_join(null_p, by=c('pc', 'map'))
+    null_corrs <- null_corrs %>% gather(G, corr, -map)
+    corrs <- corrs %>% rownames_to_column('map') %>% gather(G, corr, -map) %>% left_join(null_p, by=c('G', 'map'))
 
     null_corrs %>% 
-    left_join(null_p, by = c('map', 'pc')) %>%
+    left_join(null_p, by = c('map', 'G')) %>%
     ggplot() + 
-    facet_grid(factor(map, levels=unique(null_p$map), ordered=T)~pc, switch='y') +
+    facet_grid(factor(map, levels=unique(null_p$map), ordered=T)~G, switch='y') +
     geom_density(aes(corr), color=mycolors[5], fill=mycolors[4]) +
-    # facet_grid(.~pc) +
+    # facet_grid(.~G) +
     # stat_density_ridges(geom = "density_ridges_gradient", calc_ecdf = TRUE, scale=.8, size=.2, color='grey', alpha=.5,
     #                    aes(x=corr, y=factor(map, levels=unique(null_p$map), ordered=T), fill=stat(ecdf))) +
     # scale_fill_gradientn(colors=rev(brewer.rdbu(100)[15:85]), name = 'Quantile') +
@@ -122,14 +145,14 @@ plot_null_corrs <- function(corrs, null_corrs, null_p) {
 
 
 plot_map_scatters <- function(corrs, null_corrs, null_p) {
-    corrs <- corrs %>% rownames_to_column('map') %>% gather(pc, corr, -map)
-    # null_corrs <- null_corrs %>% gather(pc, corr, -map)
-    null_p <- null_p %>% rownames_to_column('map') %>% gather(pc, p, -map) %>% mutate(sig = p<.05)
+    corrs <- corrs %>% rownames_to_column('map') %>% gather(G, corr, -map)
+    # null_corrs <- null_corrs %>% gather(G, corr, -map)
+    null_p <- null_p %>% rownames_to_column('map') %>% gather(G, p, -map) %>% mutate(sig = p<.05)
 
     null_corrs %>% 
-    left_join(null_p, by = c('map', 'pc')) %>% 
+    left_join(null_p, by = c('map', 'G')) %>% 
     ggplot() + 
-    facet_grid(factor(map, levels=unique(null_p$map))~pc, switch='y') +
+    facet_grid(factor(map, levels=unique(null_p$map))~G, switch='y') +
     # geom_histogram(aes(corr, alpha=sig)) +
     geom_density(aes(corr, alpha=sig), color=mycolors[5], fill=mycolors[4]) +
     scale_alpha_manual(values=c(.2,1), guide='none') +

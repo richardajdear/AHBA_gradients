@@ -186,6 +186,7 @@ ggtitle(title) + xlab("") + ylab("")
 
 plot_hcp_wide <- function(scores_df, title="", facet='h', spacing=4) {
     df <- scores_df %>% 
+        select(-`3`, -`4`) %>%
         rename('G1'='0', 'G2'='1', 'G3'='2') %>%
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
         gather('component', 'score', -region) %>%

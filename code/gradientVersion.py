@@ -7,6 +7,7 @@ from sklearn.decomposition import PCA
 from sklearn.cross_decomposition import PLSCanonical, PLSRegression
 from sklearn.preprocessing import StandardScaler
 from brainspace.gradient import GradientMaps
+from processing_helpers import *
 
 
 class gradientVersion():
@@ -50,24 +51,48 @@ class gradientVersion():
         self.expression = X
         self.scores = pd.DataFrame(self.gradients.gradients_, index=X.index)
         self.var = self.gradients.lambdas_
+        self.weights = self.fit_weights()
     
         if message:
             print(f"New gradients version: method={self.approach}, kernel={self.kernel}, data={expression}")
         
         return self
+    
+    def clean_scores(self, flips = [1]):
+        """
+        Normalize scores, flip as needed, add labels x
+        """
+        flips = [-1 if i in flips else 1 for i in range(5)]
+        scores = self.scores * flips
+        
+        if self.scores.shape[0]>=120:
+            labels = get_labels_hcp()
+        elif self.scores.shape[0]<=34:
+            labels = get_labels_dk()
+        else:
+            labels = get_labels_dx()
+        
+        scores = (scores
+                  .apply(lambda x: (x-np.mean(x))/np.std(x))
+                  .join(labels)
+                 )
+        return scores
         
     
-    def fit_weights(self, expression=None, independent=True, sort=False, save_name=None, overwrite=True):
+    def fit_weights(self, expression=None, independent=True, sort=False, save_name=None, overwrite=True, flips = [0,2], normalize=False):
         """
         Get gene weights from PLS
         Use other expression matrix if provided, otherwise use self
         If independent==True, fit each component separately
+        Flip weight gradients as needed
         """
         # Use own expression matrix as X, or use matching regions in another expression matrix
         if expression is None:
             X = self.expression
         else:
             X = expression.dropna(axis=0, how='all').dropna(axis=1, how='any')
+            # Make sure X will match onto Y
+            X = X.loc[set(X.index).intersection(self.scores.index), :]
             
         # Fit each component independently
         if independent:
@@ -80,10 +105,13 @@ class gradientVersion():
             Y = self.scores.loc[X.index, :]
             pls_weights = PLSCanonical(n_components=5).fit(X,Y).x_weights_
         
-        # Invert, because weights have opposite sign to scores
-        pls_weights *= -1 
+        # Normalize
+        if normalize:
+            pls_weights = StandardScaler().fit_transform(pls_weights)
         
-        pls_weights = pd.DataFrame(pls_weights, index=X.columns)
+        # Make dataframe and flip as needed
+        flips = [-1 if i in flips else 1 for i in range(5)]
+        pls_weights = pd.DataFrame(pls_weights, index=X.columns) * flips
         
         # Save to self
         if overwrite:
@@ -186,37 +214,25 @@ class gradientVersion():
         Correlate region scores with another version, with matching
         """
 
-        self_scores = self.scores
-        other_scores = other.scores
-                        
-        df_corr = pd.concat([self_scores, other_scores],axis=1).corr().iloc[:5,5:]
+        df_corr = pd.concat([self.scores, other.scores],axis=1).corr().iloc[:5,5:]
         
         if match:
             return self.match_and_sort(other, df_corr)
         else:
             return df_corr
     
-#     def corr_coefs(self, other, match=False, boot=None):
-#         """
-#         Correlate gene weights with another version
-#         Optionally with matching and bootstrap
-#         """
-#         if boot==None:
-#             self_coefs = self.coefs
-#             other_coefs = other.coefs
-#         elif boot=='boot':
-#             self_coefs = self.coefs_boot
-#             other_coefs = other.coefs_boot
-#         elif boot=='norm':
-#             self_coefs = self.coefs_boot_norm
-#             other_coefs = other.coefs_boot_norm
+    def corr_weights(self, other, match=False):
+        """
+        Correlate gene weights with another version
+        Optionally with matching
+        """
+  
+        df_corr = pd.concat([self.weights, other.weights],axis=1).corr().iloc[:5,5:]
         
-#         df_corr = pd.concat([self_coefs.T, other_coefs.T],axis=1).corr().iloc[:5,5:]
-        
-#         if match:
-#             return self.match_and_sort(other, df_corr)
-#         else:
-#             return df_corr
+        if match:
+            return self.match_and_sort(other, df_corr)
+        else:
+            return df_corr
     
     
 

@@ -17,11 +17,19 @@ from sklearn.utils.extmath import randomized_svd
 
 class pcaVersion():
     
-    def __init__(self, expression_data, labels_data=None, k=5, message=True, sparse_alpha=None, scale=True):
+    def __init__(self, expression, labels_data=None, k=5, message=True, sparse_alpha=None, scale=True):
         """
         Initialize expression, clean, and run PCA
         """
-        X = expression_data.dropna(axis=0, how='all').dropna(axis=1, how='any')
+        if isinstance(expression, str):
+            data_dir = "~/rds/rds-cam-psych-transc-Pb9UGUlrwWc/Cam_LIBD/AHBA_data/abagen-data/expression/"
+            X = pd.read_csv(data_dir + expression + '.csv', index_col=0)
+        else:
+            X = expression
+            expression = ''
+            
+        # Clean data: drop regions with all nulls, and genes with any nulls
+        X = X.dropna(axis=0, how='all').dropna(axis=1, how='any')
         
         if scale:
             X_scaled = StandardScaler().fit_transform(X)

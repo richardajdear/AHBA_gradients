@@ -8,12 +8,31 @@ from processing_helpers import *
 
 def correlate(a,b):
     """
-    x
+    Correlate
     """
     n = a.shape[1]
     corr = pd.concat([a,b],axis=1).corr().iloc[:n,n:]
     return corr
 
+
+def make_corrs_plot(corrs_dict, weights=True):
+    """
+    Correlate dictionary of version pairs for plotting
+    """
+    corrs_plot = {}
+    corrs_plot['Scores'] = pd.concat({name:pair[1].corr_scores(pair[0]) for name, pair in corrs_dict.items()})
+    
+    if weights:
+        corrs_plot['Weights'] = pd.concat({name:pair[1].corr_weights(pair[0]) for name, pair in corrs_dict.items()})
+
+    corrs_plot = (pd.concat(corrs_plot)
+              .stack().to_frame().reset_index()
+              .set_axis(['how','version', 'x','y','corr'], axis=1)
+             )
+    return corrs_plot
+
+        
+    
 
 ### Enrichment
 

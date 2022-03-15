@@ -1,6 +1,86 @@
-library(tidyverse)
+suppressPackageStartupMessages(library(tidyverse))
 library(pals)
 library(ggridges)
+library(ggrepel)
+library(ggradar)
+
+
+
+plot_enrichments <- function(enrichments, n=10, facet='v') {
+    
+    if (facet=='v') {
+        p <- enrichments %>%
+        ggplot(aes(enrichment, neglogFDR)) + 
+        facet_wrap(~G, scales='free_x')
+    } else {
+        p <- enrichments %>%
+        ggplot(aes(enrichment, neglogFDR)) + 
+        facet_wrap(~G, scales='free')
+    }
+    
+    p +
+    # geom_point(aes(size=n_genes), alpha=.8, fill=brewer.blues(5)[2], shape=21) +
+    geom_point(aes(size=n_genes, fill=direction), alpha=.8, shape=21) +
+    geom_text_repel(aes(label=description), data = enrichments %>% filter(rank < n), force=100, force_pull=.1, nudge_y=-.1, size=9) +
+    scale_y_continuous(name='FDR p-value', breaks=c(-log10(0.05),2,3,4,5), labels=function(x) 10^(-x)) +
+    scale_size_continuous(name='# genes', range=c(1,20)) +
+    scale_fill_manual(values=brewer.rdbu(5)[c(2,4)], guide='none') +
+    xlab('Enrichment Ratio') +
+    theme_minimal() + 
+    theme(panel.grid = element_blank(),
+          panel.border = element_rect(fill=NA),
+          # legend.position=c(.9,.9),
+          legend.position='bottom',
+          strip.text.y = element_text(size=36, angle=0)
+         )
+    
+}
+
+plot_cell_dotplot <- function(null_p) {
+    null_p %>% 
+    ggplot(aes(x=celltype, y=z, group=rev(G), fill=G)) + 
+    geom_col(aes(), width=.2, position=position_dodge(.5)) +
+    geom_point(aes(alpha=!sig), shape=21, size=5, position=position_dodge(.5)) +
+    geom_point(aes(alpha=sig), fill='white', shape=21, size=5, position=position_dodge(.5)) +
+    scale_alpha_manual(values=c(1,0)) +
+    geom_hline(yintercept=0) +
+    scale_x_discrete(limits=rev, name='') +
+    scale_y_continuous(limits=c(-20,20), name='Z-score of true mean weight vs permuted mean weights') +
+    scale_fill_manual(values=brewer.rdylbu(5)[c(1,2,5)]) +
+    coord_flip() +
+    theme_minimal() +
+    theme(panel.grid.minor=element_blank(),
+          text=element_text(size=30)
+         )
+}
+
+plot_cell_radar <- function(null_p) {
+    null_p %>% 
+    select(celltype, G, z) %>%
+    spread(celltype, z) %>%
+    ggradar(
+            grid.min=-20, grid.max=20,
+            values.radar = c("z = -20", "z = 0", "z = +20"),
+            group.point.size = 3,
+            base.size = 36,
+            axis.label.size = 12,
+            grid.label.size = 12,
+            fill=T,
+            fill.alpha=.05,
+            group.colours=brewer.rdylbu(5)[c(1,2,5)],
+            background.circle.colour = "white",
+            gridline.mid.colour = "grey",
+            legend.text.size = 36,
+            legend.position = "left"
+    )
+}
+
+
+
+
+
+
+
 
 plot_cell_enrichment <- function(true_scores, null_scores, null_p, how='mean', p_sig = .05/7) {
 
@@ -37,6 +117,7 @@ plot_cell_enrichment <- function(true_scores, null_scores, null_p, how='mean', p
         strip.text.y.left = element_text(size=36, angle=0), 
         # strip.text.x = element_text(size=30, angle=0), 
         strip.text.x = element_blank(), 
+        panel.spacing=unit(20, 'lines'), 
         text = element_text(size=30),
         legend.position='bottom'
     )

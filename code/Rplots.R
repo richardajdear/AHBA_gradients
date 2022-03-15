@@ -7,8 +7,9 @@ suppressMessages(library(lemon))
 library(pals)
 library(shades)
 
-mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
+# mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 # mycolorscale = brightness(rev(brewer.rdbu(100)[15:85]), delta(-.2))
+mycolors = brewer.rdylbu(5)[c(1,2,5)]
 mycolorscale = brightness(rev(brewer.rdbu(100)), delta(-.1))
 
 
@@ -26,7 +27,7 @@ plot_dist_donors_hcp <- function(df_donors) {
 
 plot_ds_dist_hcp <- function(df_stability) {
     ggplot(df_stability) + 
-    geom_density(aes(x=ds), size=1, color=mycolors[5]) +
+    geom_density(aes(x=ds), size=1, color=brewer.blues(10)[6], fill=brewer.blues(10)[4]) +
     geom_vline(xintercept=0.386, linetype=2) +
     annotate(x=.39,y=2.5,geom='text',label='Top 10%', hjust=-0.05, size=8) +
     ylab('') + xlab('Diff. Stability') +
@@ -69,8 +70,6 @@ plot_weights_dist <- function(weights_ds) {
 
 plot_triplets_v2 <- function(triplets_plot_v2) {
 
-    mycolors = brewer.rdylbu(5)[c(1,2,5)]
-
     triplets_plot_v2 %>%
     filter(component <= 3) %>%
     # group_by(method, component, DS) %>%
@@ -94,8 +93,8 @@ plot_triplets_v2 <- function(triplets_plot_v2) {
                            # position='right',
                            name='Correlation between triplets') +
         theme_minimal() + 
-        theme(legend.position=c(.9,.3),
-              panel.grid.minor=element_blank(),
+        theme(panel.grid.minor=element_blank(),
+              legend.position=c(.9,.3),
               # axis.text.y = element_text(margin=margin(r=-1)),
               panel.spacing=unit(2,'lines')
              )
@@ -128,6 +127,43 @@ plot_weight_corrs <- function(weight_corrs) {
 
 
 
+plot_corrs <- function(df, facetting='h', xlab='', ylab='', size=8) {
+    p <- df %>% 
+    filter(x<3, y<3) %>%
+    mutate(
+        x=recode(x, `0`='G1',`1`='G2',`2`='G3',`3`='G4',`4`='G5'),
+        y=recode(y, `0`='G1',`1`='G2',`2`='G3',`3`='G4',`4`='G5')
+    ) %>% 
+    mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
+    ggplot() +
+    geom_tile(aes(x,y, fill=corr)) +
+    geom_text(aes(x,y, label=sprintf("%0.2f", round(corr, digits = 2))), size=size) +
+#     scale_fill_gradient2(low=muted('red'),mid='white',high=muted('blue'), limits=c(-1,1)) +
+    scale_fill_gradientn(colours=brewer.rdbu(100)[20:80], limits=c(-1,1), guide='colourbar') +
+    scale_y_discrete(limits=rev) +
+    guides(fill=guide_colourbar(title='Corr.', barwidth=20)) +
+    theme_minimal() + 
+    theme(panel.spacing=unit(4,'lines'), 
+          text=element_text(size=30), 
+          strip.text.y=element_text(size=30),
+          strip.text.x=element_text(size=30),
+          strip.placement='outside',
+          legend.position='bottom',
+          legend.title.align = 0.5
+         ) +
+    coord_fixed() +
+    xlab(xlab) + ylab(ylab) + ggtitle('')
+    
+    if (facetting=='v') {
+        p + facet_rep_grid(version~., repeat.tick.labels=T)
+    } else if (facetting=='h') {
+        p + facet_rep_grid(.~version, repeat.tick.labels=T)
+    } else if (facetting=='w') {
+        p + facet_rep_wrap(~version, repeat.tick.labels=T)
+    } else {
+        p + facet_rep_grid(how~version, repeat.tick.labels=T, switch='y')
+    }        
+}
 
 
 # plot_coefs_ds <- function(df_coefs_ds, facet='h') {
@@ -226,35 +262,6 @@ plot_matching <- function(plot_df) {
      xlab('') + ylab('% of samples')
 }
 
-plot_corrs <- function(df, facetting='h', xlab='HCP', ylab='DK', size=8) {
-    p <- df %>% mutate(
-        x=recode(x, `0`='PC1',`1`='PC2',`2`='PC3',`3`='PC4',`4`='PC5'),
-        y=recode(y, `0`='PC1',`1`='PC2',`2`='PC3',`3`='PC4',`4`='PC5')
-    ) %>% 
-    mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
-    ggplot() +
-    geom_tile(aes(x,y, fill=corr)) +
-    geom_text(aes(x,y, label=sprintf("%0.2f", round(corr, digits = 2))), size=size) +
-#     scale_fill_gradient2(low=muted('red'),mid='white',high=muted('blue'), limits=c(-1,1)) +
-    scale_fill_gradientn(colours=brewer.rdbu(100)[20:80], limits=c(-1,1), guide='colourbar') +
-    guides(fill=guide_colourbar(title='Corr.', barheight=10)) +
-    theme_minimal() + 
-#     theme(panel.spacing=unit(4,'lines'), 
-#           axis.text.x=element_text(hjust=1),
-#           strip.text.y=element_text(hjust=2),
-#           legend.title.align = 0.5
-#          ) +
-    coord_fixed() +
-    xlab(xlab) + ylab(ylab) + ggtitle('')
-    
-    if (facetting=='v') {
-        p + facet_rep_grid(version~., repeat.tick.labels=T)
-    } else if (facetting=='h') {
-        p + facet_rep_grid(.~version, repeat.tick.labels=T)
-    } else {
-        p + facet_rep_wrap(~version, repeat.tick.labels=T)
-    }
-}
 
 
 

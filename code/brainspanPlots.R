@@ -2,12 +2,13 @@
 
 library(pals)
 library(shades)
-mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
+mycolors = brewer.rdylbu(5)[c(1,2,5)]
+# mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 # mycolors = saturation(c(brewer.rdylbu(5)[1:2],brewer.rdylbu(6)[4:6]), delta(.2))
-mycolors2 = c(mycolors[1:2], saturation(mycolors[3], delta(.4)))
-mycolors3 = c(mycolors[1], 
-              saturation(mycolors[3], delta(.4)), 
-              saturation(mycolors[4], delta(.4))) 
+# mycolors2 = c(mycolors[1:2], saturation(mycolors[3], delta(.4)))
+# mycolors3 = c(mycolors[1], 
+#               saturation(mycolors[3], delta(.4)), 
+#               saturation(mycolors[4], delta(.4))) 
 
 
 plot_bs_mapping <- function(hcp_bs_mapping) {
@@ -32,13 +33,15 @@ plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', ro
     mutate_at(vars(age), ~ factor(., levels=unique(.))) %>%
     ggplot() + geom_hline(yintercept=0, color='grey') + geom_vline(xintercept=xint, color='grey') +
     geom_line(aes(x=age, y=corr, color=G, group=G), size=1, alpha=1) + 
+    geom_point(aes(x=age, y=corr, color=G), size=5) + 
     xlab("Age") + ylab("Correlation of Matched Regions") +
-    scale_color_manual(values=mycolors3) +
+    scale_color_manual(values=mycolors, guide='none') +
     # scale_color_manual(values=brewer.rdylbu(4)) +
     ggtitle(title) +
     theme_minimal() + 
     theme(panel.grid.minor = element_blank(),
-          legend.position = c(.95, .9),
+          # legend.position = c(.95, .9),
+          # legend.position=element_blank(),
           legend.title = element_blank()
          )
     
