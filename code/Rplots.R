@@ -1,11 +1,11 @@
 # R functions for other plots
-suppressMessages(library(tidyverse))
 suppressMessages(library(scales))
 library(patchwork)
 library(ggtext)
 suppressMessages(library(lemon))
 library(pals)
 library(shades)
+suppressMessages(library(tidyverse))
 
 # mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 # mycolorscale = brightness(rev(brewer.rdbu(100)[15:85]), delta(-.2))
@@ -164,6 +164,72 @@ plot_corrs <- function(df, facetting='h', xlab='', ylab='', size=8) {
         p + facet_rep_grid(how~version, repeat.tick.labels=T, switch='y')
     }        
 }
+
+
+
+plot_violins <- function(df, classes=vonEconomo, 
+                         classcolors=vonEconomo.colors,
+                         classlabels=vonEconomo_labels
+                        ) {
+    colors <- df %>% select( {{classes}} ,  {{classcolors}} ) %>% unique() %>% 
+        arrange( {{classes}} ) %>% drop_na() %>% pull( {{classcolors}} )
+    
+    labels <- df %>% select( {{classes}} ,  {{classlabels}} ) %>% unique() %>% 
+        arrange( {{classes}} ) %>% drop_na() %>% pull( {{classlabels}} )
+    df_labels <- data.frame(x=seq(1,7), label=labels)
+    
+    df %>% 
+    mutate(m=factor( {{classes}} )) %>%
+    filter(m != 'NaN', m != 8) %>%
+    select(G1:G3,m) %>%
+    gather(G, score, -m) %>%
+    group_by(G, m) %>%
+    mutate(Mean = mean(score)) %>%
+    ggplot() + facet_grid(~G) +
+    geom_hline(yintercept=0) +
+    geom_violin(aes(m, score, fill=Mean)) +
+    geom_boxplot(aes(m, score), width=.1) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-2,2)) +
+    coord_cartesian(ylim=c(-2.5,2.5), clip='off') +
+    geom_text(aes(x=x,y=-4,label=label),size=8,data=df_labels,angle=35,hjust=1) +
+    theme_minimal() + 
+    theme(panel.spacing=unit(2,'lines'),
+          axis.text.x = element_text(color=colors, face='bold', size=30),
+          plot.margin = unit(c(t=1,r=1,b=5,l=1), "lines"),
+          text=element_text(size=30)
+         ) +
+    xlab('') + ylab('Region scores')
+}
+
+
+plot_xyz <- function(df, component=G1, title='G1', colors=brewer.set1(5)) {
+    p <- df %>%
+    mutate(colors=Lobe) %>%
+#     select(colors, G1:G3, X=pos_all1, Y=pos_all2, Z=pos_all3) %>%
+    dplyr::select(colors, {{ component }}, X=x, Y=y, Z=z) %>%
+    gather(G,score,-(X:Z), -colors) %>%
+    gather(dim,coord,-G,-score, -colors) %>%
+    ggplot(aes(coord,score)) + 
+    facet_grid(.~dim, scales='free_x') +
+    geom_point(aes(color=colors), size=1, alpha=.5) +
+    geom_smooth(method='lm', color='black', se=F) +
+    scale_color_manual(values=colors, guide=guide_legend(ncol=1,title='Lobe')) +
+#     coord_fixed() +
+    theme_minimal() + 
+    theme(panel.grid=element_blank(),
+          plot.title=element_text(size=30,hjust=0.5,vjust=-4),
+          axis.text=element_blank(),
+          aspect.ratio=1) +
+    xlab('XYZ coords') + 
+    ggtitle(title)
+    
+    if (title=="G1") {
+        p + ylab("Region scores")
+    } else {
+        p + ylab('')
+    }
+}
+
 
 
 # plot_coefs_ds <- function(df_coefs_ds, facet='h') {
@@ -475,67 +541,67 @@ plot_triplet_ds_corrs <- function(df_ds_corrs) {
 
 
 # library(gridExtra)
-plot_violins <- function(df, classes=vonEconomo, 
-                         classcolors=vonEconomo.colors,
-                         classlabels=vonEconomo_labels
-                        ) {
-    colors <- df %>% select( {{classes}} ,  {{classcolors}} ) %>% unique() %>% 
-        arrange( {{classes}} ) %>% drop_na() %>% pull( {{classcolors}} )
+# plot_violins <- function(df, classes=vonEconomo, 
+#                          classcolors=vonEconomo.colors,
+#                          classlabels=vonEconomo_labels
+#                         ) {
+#     colors <- df %>% select( {{classes}} ,  {{classcolors}} ) %>% unique() %>% 
+#         arrange( {{classes}} ) %>% drop_na() %>% pull( {{classcolors}} )
     
-    labels <- df %>% select( {{classes}} ,  {{classlabels}} ) %>% unique() %>% 
-        arrange( {{classes}} ) %>% drop_na() %>% pull( {{classlabels}} )
-    df_labels <- data.frame(x=seq(1,7), label=labels)
+#     labels <- df %>% select( {{classes}} ,  {{classlabels}} ) %>% unique() %>% 
+#         arrange( {{classes}} ) %>% drop_na() %>% pull( {{classlabels}} )
+#     df_labels <- data.frame(x=seq(1,7), label=labels)
     
-    df %>% 
-    mutate(m=factor( {{classes}} )) %>%
-    filter(m != 'NaN', m != 8) %>%
-    select(PC1:PC3,m) %>%
-    gather(PC, score, -m) %>%
-    group_by(PC, m) %>%
-    mutate(Mean = mean(score)) %>%
-    ggplot() + facet_grid(~PC) +
-    geom_violin(aes(m, score, fill=Mean)) +
-    geom_boxplot(aes(m, score), width=.1) +
-#     geom_boxplot(aes(m, score, fill=Mean)) +
-    # geom_text(aes(x=m), y=-150) +
-#     scale_fill_gradient2(high='#3A3A98',mid='white',low='#832424', limits=c(-2,2)) +
-    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-2,2)) +
-    coord_cartesian(ylim=c(-2.5,3.5), clip='off') +
-    theme_minimal() + 
-    theme(panel.spacing=unit(2,'lines')) +
-    theme(axis.text.x = element_text(color=colors, face='bold', size=30)) + 
-    geom_text(aes(x=x,y=-4,label=label),size=8,data=df_labels,angle=35,hjust=1) +
-    theme(plot.margin = unit(c(1,1,2,1), "lines")) + # This widens the right margin
-#     annotation_custom(geom = "text", x=2, y = -3, label = 'hello', size = 6) +
-    xlab('') + ylab('Region scores')
-}
+#     df %>% 
+#     mutate(m=factor( {{classes}} )) %>%
+#     filter(m != 'NaN', m != 8) %>%
+#     select(PC1:PC3,m) %>%
+#     gather(PC, score, -m) %>%
+#     group_by(PC, m) %>%
+#     mutate(Mean = mean(score)) %>%
+#     ggplot() + facet_grid(~PC) +
+#     geom_violin(aes(m, score, fill=Mean)) +
+#     geom_boxplot(aes(m, score), width=.1) +
+# #     geom_boxplot(aes(m, score, fill=Mean)) +
+#     # geom_text(aes(x=m), y=-150) +
+# #     scale_fill_gradient2(high='#3A3A98',mid='white',low='#832424', limits=c(-2,2)) +
+#     scale_fill_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-2,2)) +
+#     coord_cartesian(ylim=c(-2.5,3.5), clip='off') +
+#     theme_minimal() + 
+#     theme(panel.spacing=unit(2,'lines')) +
+#     theme(axis.text.x = element_text(color=colors, face='bold', size=30)) + 
+#     geom_text(aes(x=x,y=-4,label=label),size=8,data=df_labels,angle=35,hjust=1) +
+#     theme(plot.margin = unit(c(1,1,2,1), "lines")) + # This widens the right margin
+# #     annotation_custom(geom = "text", x=2, y = -3, label = 'hello', size = 6) +
+#     xlab('') + ylab('Region scores')
+# }
 
 
 
-plot_xyz <- function(df, component=PC1, title='PC1', colors=brewer.set1(5)) {
-    p <- df %>%
-    mutate(colors=Lobe) %>%
-#     select(colors, PC1:PC3, X=pos_all1, Y=pos_all2, Z=pos_all3) %>%
-    select(colors, {{ component }}, X=x, Y=y, Z=z) %>%
-    gather(PC,score,-(X:Z), -colors) %>%
-    gather(dim,coord,-PC,-score, -colors) %>%
-    ggplot(aes(coord,score)) + 
-    facet_grid(.~dim, scales='free_x') +
-    geom_point(aes(color=colors), size=1, alpha=.5) +
-    geom_smooth(method='lm', color='black', se=F) +
-    scale_color_manual(values=colors, guide=guide_legend(ncol=1,title='Lobe')) +
-#     coord_fixed() +
-    theme_minimal() + 
-    theme(panel.grid=element_blank(),
-          plot.title=element_text(size=30,hjust=0.5,vjust=-4),
-          axis.text=element_blank(),
-          aspect.ratio=1) +
-    xlab('XYZ coords') + 
-    ggtitle(title)
+# plot_xyz <- function(df, component=PC1, title='PC1', colors=brewer.set1(5)) {
+#     p <- df %>%
+#     mutate(colors=Lobe) %>%
+# #     select(colors, PC1:PC3, X=pos_all1, Y=pos_all2, Z=pos_all3) %>%
+#     select(colors, {{ component }}, X=x, Y=y, Z=z) %>%
+#     gather(PC,score,-(X:Z), -colors) %>%
+#     gather(dim,coord,-PC,-score, -colors) %>%
+#     ggplot(aes(coord,score)) + 
+#     facet_grid(.~dim, scales='free_x') +
+#     geom_point(aes(color=colors), size=1, alpha=.5) +
+#     geom_smooth(method='lm', color='black', se=F) +
+#     scale_color_manual(values=colors, guide=guide_legend(ncol=1,title='Lobe')) +
+# #     coord_fixed() +
+#     theme_minimal() + 
+#     theme(panel.grid=element_blank(),
+#           plot.title=element_text(size=30,hjust=0.5,vjust=-4),
+#           axis.text=element_blank(),
+#           aspect.ratio=1) +
+#     xlab('XYZ coords') + 
+#     ggtitle(title)
     
-    if (title=="PC1") {
-        p + ylab("Region scores")
-    } else {
-        p + ylab('')
-    }
-}
+#     if (title=="PC1") {
+#         p + ylab("Region scores")
+#     } else {
+#         p + ylab('')
+#     }
+# }

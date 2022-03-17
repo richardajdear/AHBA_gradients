@@ -61,12 +61,12 @@ def get_disorder_maps(data_dir="../data/lifespan_dx_DKatlas.csv"):
 
 def get_corrs(scores, maps, method='pearson', atlas='hcp'):
     
-    labels = get_labels_dk() if atlas=='dk' else get_labels_hcp()[:180]
+    # labels = get_labels_dk() if atlas=='dk' else get_labels_hcp()[:180]
         
     corrs = (
         scores
-        .join(labels)
-        .set_index('label')
+        # .join(labels)
+        # .set_index('label')
         .join(maps) #.set_index('region'))
         .corr(method=method).iloc[3:,:3]
         .set_axis([f'G{i+1}' for i in range(3)], axis=1)
@@ -312,7 +312,7 @@ def print_corrs_sig(corrs, null_p):
     return map_corrs_sig
 
 
-def get_inflammation_data(img="../data/Activation_proportion.nii.gz"):
+def get_inflammation_data(img="../data/inflammation/Activation_proportion.nii.gz"):
     hcp_mask = "../data/parcellations/HCP-MMP_1mm.nii.gz"
     mask = NiftiLabelsMasker(hcp_mask, resampling_target='data')
     inflammation_img = img
@@ -324,7 +324,9 @@ def get_inflammation_data(img="../data/Activation_proportion.nii.gz"):
         .to_frame()
         .set_axis([i+1 for i in range(360)])
         .join(get_labels_hcp())
-        .rename({'label':'region'}, axis=1)
-        .assign(hemi=lambda x:['left' if id<=180 else 'right' for id in x.index])
+        .set_index('label')
+        # .rename({'label':'region'}, axis=1)
+        # set_index('region')
+        # .assign(hemi=lambda x:['left' if id<=180 else 'right' for id in x.index])
                )
     return inflammation_hcp

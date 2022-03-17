@@ -10,7 +10,7 @@ library(pals)
 
 plot_dk <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
     df <- scores_df %>% 
-        rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
+        # rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
         gather('component', 'score', -version, -label) %>%
         group_by(component, version)
@@ -57,7 +57,7 @@ ggtitle(title) + xlab("") + ylab("")
 
 plot_hcp <- function(scores_df, title="", three=F, switch=NULL) {
     df <- scores_df %>% 
-        rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
+        # rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
         gather('component', 'score', -version, -region) %>%
@@ -101,7 +101,7 @@ ggtitle(title) + xlab("") + ylab("")
 
 plot_dx <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
     df <- scores_df %>% 
-        rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
+        # rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
         gather('component', 'score', -version, -label) %>%
         group_by(component, version)
@@ -186,8 +186,8 @@ ggtitle(title) + xlab("") + ylab("")
 
 plot_hcp_wide <- function(scores_df, title="", facet='h', spacing=4) {
     df <- scores_df %>% 
-        select(-`3`, -`4`) %>%
-        rename('G1'='0', 'G2'='1', 'G3'='2') %>%
+        # select(-`3`, -`4`) %>%
+        # rename('G1'='0', 'G2'='1', 'G3'='2') %>%
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
         gather('component', 'score', -region) %>%
         group_by(component)
@@ -231,7 +231,7 @@ ggtitle(title) + xlab("") + ylab("")
 
 plot_dk_wide <- function(scores_df, title="", facet='h', spacing=4) {
     df <- scores_df %>% 
-        rename('G1'='0', 'G2'='1', 'G3'='2') %>%
+        # rename('G1'='0', 'G2'='1', 'G3'='2') %>%
         gather('component', 'score', -label) %>%
         group_by(component)
 

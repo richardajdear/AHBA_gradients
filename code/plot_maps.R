@@ -12,7 +12,7 @@ mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 #               saturation(mycolors[3], delta(.4)), 
 #               saturation(mycolors[4], delta(.4))) 
 
-plot_maps <- function(maps, title="", colors=rev(brewer.rdbu(100)), ncol=3) {
+plot_maps <- function(maps, title="", colors=rev(brewer.rdbu(100)), ncol=3, zero=F) {
     df <- maps %>%
         rownames_to_column %>%
         mutate(region = recode(rowname,'7Pl'='7PL')) %>% 
@@ -24,10 +24,12 @@ plot_maps <- function(maps, title="", colors=rev(brewer.rdbu(100)), ncol=3) {
     glasser$data <- glasser$data %>% filter(hemi=='left')
     
     # set scale limits at 99th percentile
-    m <- pmax(
+    m_max <- pmax(
         df %>% .$value %>% quantile(.99) %>% abs,
         df %>% .$value %>% quantile(.01) %>% abs
     )
+    m_min <- -m_max
+    if (zero) {m_min <- 0}
     
     ggplot(df) + 
     geom_brain(
@@ -39,8 +41,8 @@ plot_maps <- function(maps, title="", colors=rev(brewer.rdbu(100)), ncol=3) {
     facet_wrap(~map, ncol=ncol, dir="v") +
     scale_fill_gradientn(
         colors=colors, 
-        limits=c(-m,m), oob=squish, breaks=c(-m,0,m), 
-        labels=c(round(-m,2),0,round(m,2)), 
+        limits=c(m_min,m_max), oob=squish, breaks=c(m_min,0,m_max), 
+        labels=c(round(m_min,2),0,round(m_max,2)), 
         name=''
     ) +
     theme_void() + 

@@ -60,10 +60,10 @@ class gradientVersion():
     
     def clean_scores(self, flips = [1]):
         """
-        Normalize scores, flip as needed, add labels x
+        Normalize G1-3 scores, flip as needed, add labels x
         """
-        flips = [-1 if i in flips else 1 for i in range(5)]
-        scores = self.scores * flips
+        flips = [-1 if i in flips else 1 for i in range(3)]
+        scores = self.scores.iloc[:,:3] * flips
         
         if self.scores.shape[0]>=120:
             labels = get_labels_hcp()
@@ -73,7 +73,9 @@ class gradientVersion():
             labels = get_labels_dx()
         
         scores = (scores
+                  .set_axis(['G'+str(i+1) for i in range(3)],axis=1)
                   .apply(lambda x: (x-np.mean(x))/np.std(x))
+                  .rename_axis('id')
                   .join(labels)
                  )
         return scores
