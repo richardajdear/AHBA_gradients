@@ -12,17 +12,21 @@ mycolors = brewer.rdylbu(5)[c(1,2,5)]
 
 
 plot_bs_mapping <- function(hcp_bs_mapping) {
+    
+    n_colors <- hcp_bs_mapping$structure_name %>% n_distinct
+    cols = cols25(n_colors)
+
     hcp_bs_mapping <- hcp_bs_mapping %>% 
-        mutate_at(vars(cortex), ~ factor(., levels=unique(.)))
-    cols = as.character(cols25())
+        mutate_at(vars(cortex), ~ factor(., levels=unique(.))) %>%
+        mutate(structure_name = replace_na(structure_name, '__NA__'))
     
     ggplot(hcp_bs_mapping) + 
     geom_brain(atlas=glasser, hemi='left', mapping=aes(fill=structure_name, geometry=geometry, hemi=hemi, side=side, type=type)) +
     # guides(fill=guide_legend('')) +
-    scale_fill_manual(values=cols, guide='none') +
+    scale_fill_manual(values=c('white', cols), guide='none') +
     theme_void() + 
     theme(text=element_text(size=20), legend.position='none',
-         plot.title=element_text(size=36, vjust=-1)) +
+         plot.title=element_text(size=20, vjust=-1, hjust=.5)) +
     ggtitle("BrainSpan regions matched to HCP-MMP1.0")
                          # legend.position=c(1.3,.5))
 }
@@ -34,19 +38,21 @@ plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', ro
     ggplot() + geom_hline(yintercept=0, color='grey') + geom_vline(xintercept=xint, color='grey') +
     geom_line(aes(x=age, y=corr, color=G, group=G), size=1, alpha=1) + 
     geom_point(aes(x=age, y=corr, color=G), size=5) + 
-    xlab("Age") + ylab("Correlation of Matched Regions") +
-    scale_color_manual(values=mycolors, guide='none') +
+    xlab("Age") + ylab("r") +
+    scale_color_manual(values=mycolors) +
+    scale_y_continuous(limits=c(0,1), breaks=seq(0,1,.25)) +
     # scale_color_manual(values=brewer.rdylbu(4)) +
     ggtitle(title) +
     theme_minimal() + 
     theme(panel.grid.minor = element_blank(),
+          axis.title=element_text(angle=0),
           # legend.position = c(.95, .9),
           # legend.position=element_blank(),
           legend.title = element_blank()
          )
     
     if (rotate) {
-        g + theme(text=element_text(size=20), axis.text.x=element_text(size=16, angle=30, hjust=.5))
+        g + theme(text=element_text(size=8), axis.text.x=element_text(size=16, angle=30, hjust=.5))
     } else {
         g #+ theme(text=element_text(size=20), axis.text.x=element_text(size=16, hjust=.5))
     }
@@ -71,17 +77,17 @@ plot_ahba_bs_corr <- function(df) {
 }
 
 
-plot_ahba_bs_scatter <- function(cortex_scores, cortex_corrs, facet='h') {
+plot_ahba_bs_scatter <- function(cortex_scores, cortex_corrs, facet='h', size=4) {
     # lim <- 2.8
     
     g <- ggplot(cortex_scores, aes(AHBA, Brainspan)) + 
     # xlim(c(-lim,lim)) + ylim(c(-lim,lim)) +
-    geom_point(aes(color=cortex), size=5) +
+    geom_point(aes(color=cortex), size=size) +
     geom_smooth(method='lm', linetype=1, se=F, color='grey') +
     scale_color_manual(values=cols25(), guide='none') +
     geom_text(data=data.frame(G=names(cortex_corrs), 
                               label=paste("r =", round(cortex_corrs, 2)))
-              , aes(x=0,y=1.6, label=label), size=12
+              , aes(x=-1,y=1, label=label), size=8
     ) +
     coord_fixed() +
     xlab('AHBA Score') + ylab('BrainSpan\nScore') +
@@ -90,8 +96,9 @@ plot_ahba_bs_scatter <- function(cortex_scores, cortex_corrs, facet='h') {
     theme_minimal() + 
     theme(panel.grid.minor=element_blank(),
           axis.text = element_blank(),
-          axis.title = element_text(),
-          # axis.title.y = element_text(angle=0),
+          strip.text.x = element_blank(),
+          axis.title.x = element_text(size=20, angle=0),
+          axis.title.y = element_text(size=20, angle=0, vjust=0.5),
           aspect.ratio=1
          )
     

@@ -7,42 +7,48 @@ from netneurotools import freesurfer as nnsurf
 from nibabel.freesurfer.io import read_annot
 from brainsmash.mapgen.base import Base
 from scipy.stats import percentileofscore
+from sklearn.decomposition import PCA
 from statsmodels.stats.multitest import multipletests
 from nilearn.input_data import NiftiLabelsMasker
 
 
 
 
-def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv"):
-    maps_jakob = (
+def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True, rename=True):
+    maps = (
         pd.read_csv(data_dir)
         .apply(lambda x: (x-np.mean(x))/np.std(x))
         .sort_index(axis=1)
         .set_index(get_labels_hcp()[:180])
-        .rename_axis('region')#.reset_index()
+        # .rename_axis('region')#.reset_index()
     )
     
     selected_maps = {
-        'T1T2':'Myelination (T1w/T2w ratio)',
+        'T1T2':'T1w/T2w',
         'thickness':'Cortical Thickness',    
-        'externopyramidisation':'Intracortical Connectivity Distance',
-        'allom':'Size Variation (allometric scaling)',
-        # 'x':'X axis',
-
-        'CBF':'Cerebral Blood Flow',
-        'glasser_CMRGlu':'Glucose Metabolic Rate (CMRGlu)',
-        'glasser_CMRO2':'Oxygen Metabolic Rate (CMRO2)',
-        'glasser_GI':'Glycolytic Index (CMRO2/CMRGlu)',
-        # 'y':'Y axis',
-
         'G1_fMRI': 'fMRI PC1',
-        'PC1_neurosynth': 'NeuroSynth PC1',
-        'hill.evo_remapped':'Evolutionary Expansion',
+        'glasser_CMRO2':'Oxygen Metabolism (CMRO2)',
+        'glasser_CMRGlu':'Glucose Metabolism (CMRGlu)',
+        'glasser_GI':'Glycolytic Index (CMRO2/CMRGlu)',
         'hill.dev_remapped':'Developmental Expansion',
+        'hill.evo_remapped':'Evolutionary Expansion',
+        'externopyramidisation':'Externopyramidisation',
+        'glasser_CBF':'Cerebral Blood Flow',
+        # 'glasser_CBV':'Cerebral Blood Volume',
+        # 'asl':'Arterial Spin Labelling',
+        'allom':'Allometric Scaling',        
+        'PC1_neurosynth': 'NeuroSynth PC1',
+        # 'x':'X axis',
+        # 'y':'Y axis',
         # 'z':'Z axis'
     }
 
-    maps = maps_jakob.loc[:, list(selected_maps.keys())].set_axis(selected_maps.values(), axis=1)
+    
+    if filter:
+        maps = maps.loc[:, list(selected_maps.keys())]
+        if rename:
+            maps = maps.set_axis(selected_maps.values(), axis=1)
+        
     return maps
 
 
@@ -65,9 +71,8 @@ def get_corrs(scores, maps, method='pearson', atlas='hcp'):
         
     corrs = (
         scores
-        # .join(labels)
-        # .set_index('label')
-        .join(maps) #.set_index('region'))
+        .set_index('label')
+        .join(maps)
         .corr(method=method).iloc[3:,:3]
         .set_axis([f'G{i+1}' for i in range(3)], axis=1)
     )
@@ -115,12 +120,10 @@ def generate_spins_from_gradients(scores, n=10,
     
     if atlas == 'dk':
         atlas = 'aparc'
-        scores = scores.join(get_labels_dk())
         _,_,rh_names = read_annot(f"../data/parcellations/rh.{atlas}.annot")
         drop = rh_names + ['lh_corpuscallosum', 'lh_unknown']
     else: 
         atlas = 'HCPMMP1'
-        scores = scores.join(get_labels_hcp())
         _,_,rh_names = read_annot("../data/parcellations/rh.HCPMMP1.annot")
         # Find regions missing in scores
         missing_rois = list(set(get_labels_hcp()[:180]).difference(scores['label']))
@@ -169,6 +172,7 @@ def corr_nulls_from_maps(null_maps, scores, maps, method='pearson', pool=False, 
     """
     Get correlations with  scores from null maps
     """
+    
     if pool:
         # Set dimensions for reshaping
         # Downsample nulls because of pooling
@@ -178,7 +182,7 @@ def corr_nulls_from_maps(null_maps, scores, maps, method='pearson', pool=False, 
         null_maps_pool = null_maps_downsample.reshape(-1, m*n)
     
     null_corrs = {}
-    # Maps have all regions, so define index as 1 to n
+    # Define index as 1 to n
     index = [i+1 for i in range(null_maps.shape[0])]
     for m, mapname in enumerate(maps.columns):
         # Optionally pool maps together
@@ -299,7 +303,46 @@ def get_null_p(true_corrs, null_corrs, adjust=None):
     
     return null_p
 
+
+
+def maps_pca(maps, short_names=None):
+    """
+    Run PCA on maps
+    """
+    pca = PCA(n_components=3).fit(maps)
+    pca_scores = (pd.DataFrame(pca.transform(maps), 
+                               index=maps.index, 
+                               columns=['PC1','PC2','PC3']
+                              )
+                  .apply(lambda x: (x-np.mean(x))/np.std(x))
+                 )
+    pca_weights = pd.DataFrame(pca.components_.T, 
+                               columns=['PC1','PC2','PC3'], 
+                               index=maps.columns)
     
+    if short_names is not None:
+        pca_weights = pca_weights.assign(map_name = lambda x: x.index.map(short_names))
+    
+    return pca_scores, pca_weights
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
 def print_corrs_sig(corrs, null_p):
     map_corrs_sig = (corrs
      .loc[null_p.index]

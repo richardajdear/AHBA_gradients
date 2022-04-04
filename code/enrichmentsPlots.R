@@ -5,56 +5,109 @@ library(ggrepel)
 library(ggradar)
 
 
+plot_enrichments_v2 <- function(enrichments, size=4) {
+    df <- enrichments %>%
+    mutate(neglogFDR_fill = ifelse(direction=='top', -neglogFDR, neglogFDR)) %>%
+    mutate(rank = ifelse(direction=='top', -rank, rank)) %>%
+    # mutate(hjust = ifelse(direction=='top', 0, 1)) %>%
+    arrange(neglogFDR)
+    
+    lim <- max(abs(df$neglogFDR))
 
-plot_enrichments <- function(enrichments, n=10, facet='v') {
-    
-    if (facet=='v') {
-        p <- enrichments %>%
-        ggplot(aes(enrichment, neglogFDR)) + 
-        facet_wrap(~G, scales='free_x')
-    } else {
-        p <- enrichments %>%
-        ggplot(aes(enrichment, neglogFDR)) + 
-        facet_wrap(~G, scales='free')
-    }
-    
-    p +
-    # geom_point(aes(size=n_genes), alpha=.8, fill=brewer.blues(5)[2], shape=21) +
-    geom_point(aes(size=n_genes, fill=direction), alpha=.8, shape=21) +
-    geom_text_repel(aes(label=description), data = enrichments %>% filter(rank < n), force=100, force_pull=.1, nudge_y=-.1, size=9) +
-    scale_y_continuous(name='FDR p-value', breaks=c(-log10(0.05),2,3,4,5), labels=function(x) 10^(-x)) +
-    scale_size_continuous(name='# genes', range=c(1,20)) +
-    scale_fill_manual(values=brewer.rdbu(5)[c(2,4)], guide='none') +
-    xlab('Enrichment Ratio') +
-    theme_minimal() + 
-    theme(panel.grid = element_blank(),
-          panel.border = element_rect(fill=NA),
-          # legend.position=c(.9,.9),
-          legend.position='bottom',
-          strip.text.y = element_text(size=36, angle=0)
-         )
-    
-}
-
-plot_cell_dotplot <- function(null_p) {
-    null_p %>% 
-    ggplot(aes(x=celltype, y=z, group=rev(G), fill=G)) + 
-    geom_col(aes(), width=.2, position=position_dodge(.5)) +
-    geom_point(aes(alpha=!sig), shape=21, size=5, position=position_dodge(.5)) +
-    geom_point(aes(alpha=sig), fill='white', shape=21, size=5, position=position_dodge(.5)) +
-    scale_alpha_manual(values=c(1,0)) +
-    geom_hline(yintercept=0) +
-    scale_x_discrete(limits=rev, name='') +
-    scale_y_continuous(limits=c(-20,20), name='Z-score of true mean weight vs permuted mean weights') +
-    scale_fill_manual(values=brewer.rdylbu(5)[c(1,2,5)]) +
-    coord_flip() +
+    df %>%
+    ggplot() + 
+    facet_wrap(~G, switch='x') +
+    coord_flip(clip='off') +
+    geom_col(aes(x=rank, y=neglogFDR, fill=neglogFDR_fill), alpha=.2) +
+    geom_text(aes(x=rank, y=0, label=description, hjust=0), size=size) +
     theme_minimal() +
-    theme(panel.grid.minor=element_blank(),
-          text=element_text(size=30)
+    ylab('-log(FDR)') + xlab('') +
+    scale_y_continuous(breaks=c(0,2,4), labels=c(0, 0.01, 0.0001)) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(200)), guide='none',
+                         limits=c(-lim,lim)) +
+    theme(axis.text.y=element_blank(),
+          panel.grid=element_blank(),
+          panel.spacing=unit(10,'lines'),
+          strip.placement='outside',
+          legend.position=c(0.1,0.8),
+          text=element_text(size=20)
          )
 }
 
-plot_cell_radar <- function(null_p) {
+plot_enrichments <- function(enrichments, size=4) {
+    df <- enrichments %>%
+    mutate(neglogFDR = ifelse(direction=='top', -neglogFDR, neglogFDR)) %>%
+    mutate(rank = ifelse(direction=='top', -rank, rank)) %>%
+    mutate(hjust = ifelse(direction=='top', 0, 1)) %>%
+    arrange(neglogFDR)
+    
+    lim <- max(abs(df$neglogFDR))
+
+    df %>%
+    ggplot() + 
+    facet_wrap(~G, switch='x') +
+    coord_flip(clip='off') +
+    geom_col(aes(x=rank, y=neglogFDR, fill=neglogFDR), alpha=.5) +
+    geom_text(aes(x=rank, y=0, label=description, hjust=hjust), size=size) +
+    theme_minimal() +
+    ylab('-log(FDR)') + xlab('') +
+    scale_y_continuous(breaks=c(-2,0,2,4), labels=c(0.01, 0, 0.01, 0.0001)) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(200)), guide='none',
+                         limits=c(-lim,lim)) +
+    theme(axis.text.y=element_blank(),
+          panel.grid=element_blank(),
+          panel.spacing=unit(10,'lines'),
+          strip.placement='outside',
+          legend.position=c(0.1,0.8),
+          text=element_text(size=20)
+         )
+}
+
+plot_cell_bars <- function(null_p) {
+    
+    lim <- max(abs(null_p$z))
+    
+    null_p %>% 
+    ggplot(aes(x=celltype, y=z, group=G, fill=G)) + 
+    geom_col(aes(alpha=sig), color='black', width=.5, position=position_dodge(.5)) +
+    # geom_point(aes(alpha=!sig), shape=21, size=5, position=position_dodge(.5)) +
+    # geom_point(aes(alpha=sig), fill='white', shape=21, size=5, position=position_dodge(.5), guide='none') +
+    scale_alpha_manual(values=c(0.2,1)) +
+    geom_hline(yintercept=0) +
+    scale_x_discrete(name='') +
+    scale_y_continuous(limits=c(-lim,lim), name='z-score') +
+    scale_fill_manual(values=brewer.rdylbu(5)[c(1,2,5)], name='') +
+    ggtitle("Mean weight of cell genes vs permutations") +
+    # coord_flip() +
+    theme_minimal() +
+    theme(panel.grid=element_blank(),
+          plot.title=element_text(size=20),
+          axis.text=element_text(size=20),
+          text=element_text(size=20)
+         )
+}
+
+plot_burt_bars <- function(cell_maps_corrs) {
+    cell_maps_corrs %>% 
+    rownames_to_column('gene') %>%
+    gather(map, corr, -gene) %>%
+    mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
+    mutate(gene = factor(gene, ordered=T, levels=unique(.$gene))) %>%
+    ggplot(aes(x=corr, y=gene, fill=corr)) +
+    facet_grid(.~map) +
+    geom_col() +
+    scale_y_discrete(limits=rev) +
+    scale_x_continuous(breaks=c(-.5,0,.5)) +
+    # scale_fill_manual(values=c('mediumpurple3', brewer.rdylbu(5)[c(1,2,5)]), guide='none') +
+    scale_fill_gradientn(values=rev(brewer.rdbu(100)), guide='none') +
+    xlab('Corr') + ylab('') +
+    theme_minimal() + 
+    theme(panel.grid.minor=element_blank(),
+          # panel.grid.major=element_line(color='lightgrey')
+         )
+}                  
+
+plot_cell_radar <- function(null_p, size=4) {
     null_p %>% 
     select(celltype, G, z) %>%
     spread(celltype, z) %>%
@@ -62,22 +115,90 @@ plot_cell_radar <- function(null_p) {
             grid.min=-20, grid.max=20,
             values.radar = c("z = -20", "z = 0", "z = +20"),
             group.point.size = 3,
-            base.size = 36,
-            axis.label.size = 12,
-            grid.label.size = 12,
+            base.size = 20,
+            axis.label.size = size,
+            grid.label.size = size,
             fill=T,
             fill.alpha=.05,
             group.colours=brewer.rdylbu(5)[c(1,2,5)],
             background.circle.colour = "white",
             gridline.mid.colour = "grey",
-            legend.text.size = 36,
+            legend.text.size = 20,
             legend.position = "left"
     )
 }
 
 
+plot_cell_gene_corrs <- function(corrs, sort=CT, ncol=3) {
+    corrs %>%
+    mutate(cell_type = factor(cell_type, ordered=T, levels=unique(.$cell_type))) %>%
+    arrange({{ sort }}) %>%
+    mutate(gene = factor(gene, ordered=T, levels=unique(.$gene))) %>%
+    gather(map, r, -cell_type, -gene) %>%
+    mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
+    ggplot() +
+    facet_wrap(~cell_type, ncol=ncol, scales='free') +
+    geom_raster(aes(map, gene, fill=r)) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100))) +
+    theme_minimal() +
+    theme(text=element_text(size=15),
+          axis.text.x=element_text(size=15),
+          strip.text.x=element_text(size=20)
+         )
+}
 
 
+plot_cell_maps_scatters <- function(cell_maps_scatters, cell_maps_corrs) {
+    cell_maps_corrs <- cell_maps_corrs %>% 
+    rownames_to_column('cell_type') %>%
+    mutate(cell_type = factor(cell_type, ordered=T, levels=unique(.$cell_type))) %>%
+    gather(G, r, -cell_type) %>%
+    mutate(G = factor(G, ordered=T, levels=unique(.$G))) %>%
+    mutate(label = paste('r =', round(r, 3)))
+
+    cell_maps_scatters %>%
+    mutate(cell_type = factor(cell_type, ordered=T, levels=unique(.$cell_type))) %>%
+    mutate(G = factor(G, ordered=T, levels=unique(.$G))) %>%
+    ggplot(aes(x=g_score, y=cell_score)) + 
+    facet_grid(cell_type~G, switch='y') + 
+    geom_point(alpha=.5) +
+    geom_smooth(method='lm', color='skyblue') +
+    geom_text(data=cell_maps_corrs, x=1, y=.65, aes(label=label), size=6) +
+    xlab('') + ylab('') +
+    theme_minimal() +
+    theme(aspect.ratio=1, 
+          strip.placement='outside', 
+          strip.text.y.left=element_text(angle=0, size=20),
+          strip.text.x=element_text(size=20),
+          panel.grid=element_blank(),
+          panel.border=element_rect(color='grey', fill='transparent')
+         )
+}
+
+plot_cell_gene_scatters <- function(cell_gene_scatters, cell_gene_corrs) {
+    cell_gene_corrs <- cell_gene_corrs %>% 
+    mutate(cell_type = factor(cell_type, ordered=T, levels=unique(.$cell_type))) %>%
+    select(-gene) %>%
+    gather(G, r, -cell_type) %>%
+    mutate(label = paste('r =', round(r, 3)))
+
+    cell_gene_scatters %>%
+    mutate(cell_type = factor(cell_type, ordered=T, levels=unique(.$cell_type))) %>%
+    ggplot(aes(x=map_corr, y=weight)) + 
+    facet_grid(cell_type~G, switch='y') + 
+    geom_point(alpha=.5) +
+    geom_smooth(method='lm', color='purple') +
+    # geom_text(data=cell_gene_corrs, x=-0.5, y=.05, aes(label=label), size=6) +
+    xlab('') + ylab('') +
+    theme_minimal() +
+    theme(aspect.ratio=1, 
+          strip.placement='outside', 
+          strip.text.y.left=element_text(angle=0, size=20),
+          strip.text.x=element_text(size=20),
+          panel.grid=element_blank(),
+          panel.border=element_rect(color='grey', fill='transparent')
+         )
+}
 
 
 
@@ -176,6 +297,36 @@ plot_revigo_data <- function(revigo_R, text_threshold=.15, title='') {
 
 ########### OLD
 
+plot_enrichments_bubble <- function(enrichments, n=10, facet='v') {
+    
+    if (facet=='v') {
+        p <- enrichments %>%
+        ggplot(aes(enrichment, neglogFDR)) + 
+        facet_wrap(~G, scales='free_x')
+    } else {
+        p <- enrichments %>%
+        ggplot(aes(enrichment, neglogFDR)) + 
+        facet_wrap(~G, scales='free')
+    }
+    
+    p +
+    # geom_point(aes(size=n_genes), alpha=.8, fill=brewer.blues(5)[2], shape=21) +
+    geom_point(aes(size=n_genes, fill=direction), alpha=.8, shape=21) +
+    geom_text_repel(aes(label=description), data = enrichments %>% filter(rank < n), force=100, force_pull=.1, nudge_y=-.1, size=9) +
+    scale_y_continuous(name='FDR p-value', breaks=c(-log10(0.05),2,3,4,5), labels=function(x) 10^(-x)) +
+    scale_size_continuous(name='# genes', range=c(1,20)) +
+    scale_fill_manual(values=brewer.rdbu(5)[c(2,4)], guide='none') +
+    xlab('Enrichment Ratio') +
+    theme_minimal() + 
+    theme(panel.grid = element_blank(),
+          panel.border = element_rect(fill=NA),
+          # legend.position=c(.9,.9),
+          legend.position='bottom',
+          strip.text.y = element_text(size=36, angle=0)
+         )
+    
+}
+                       
 
 plot_enrichment_nulls <- function(true_scores, null_scores, null_p, how='mean') {
 

@@ -32,30 +32,10 @@ def get_age_groups():
         # '21 pcw': '19-37 pcw',
         # '24 pcw': '19-37 pcw',
         # '37 pcw': '19-37 pcw',
-        
-        # '12 pcw': '12-13 pcw',
-        # '13 pcw': '12-13 pcw',
-        
-#         # '16 pcw': '16-37 pcw',
-#         # '17 pcw': '16-37 pcw',
-#         # '19 pcw': '16-37 pcw',
-#         # '21 pcw': '16-37 pcw',
-#         # '24 pcw': '16-37 pcw',
-#         # '37 pcw': '16-37 pcw',
-        
-        # '16 pcw': '16-19 pcw',
-        # '17 pcw': '16-19 pcw',
-        # '19 pcw': '16-19 pcw',
-        # '21 pcw': '21-37 pcw',
-        # '24 pcw': '21-37 pcw',
-        # '37 pcw': '21-37 pcw',
-        
-        # '4 mos': 'Birth-3 yrs',
-        # '10 mos': 'Birth-3 yrs',
-        # '1 yrs': 'Birth-3 yrs',
-        # '2 yrs': 'Birth-3 yrs',
-        # '3 yrs': 'Birth-3 yrs',
-        # '4 yrs': 'Birth-3 yrs',
+        # '4 mos': '4 mos',
+        # '1 yrs': '1 yrs',
+        # '2 yrs': '2 yrs',
+        # '3 yrs': '3 yrs',
         # '8 yrs': '8-13 yrs',
         # '11 yrs': '8-13 yrs',
         # '13 yrs': '8-13 yrs',
@@ -69,6 +49,7 @@ def get_age_groups():
         # '40 yrs': '18-40 yrs',   
         
         # # Simple groupings ...
+        '8 pcw': 'Pre-Birth',
         '12 pcw': 'Pre-Birth',
         '13 pcw': 'Pre-Birth',
         '16 pcw': 'Pre-Birth',
@@ -164,13 +145,14 @@ def get_hcp_bs_mapping(bs_cortex_mapping,
     return hcp_bs_mapping
     
 
-def get_mapped_scores(version, hcp_bs_mapping):
+def get_mapped_scores(version, hcp_bs_mapping, mean=True):
     """
     Get gradient scores in mapped Brainspan regions
     """
     # Get gradients filtered to HCP regions matched in brainspan
     scores_filtered = (
      version.scores
+     .iloc[:,:3]
      .join(get_labels_hcp())
      .rename_axis('id')
      .join(hcp_bs_mapping.set_index('region'), on='label')
@@ -183,7 +165,10 @@ def get_mapped_scores(version, hcp_bs_mapping):
      .apply(lambda x: (x-np.mean(x))/np.std(x))
     )
     
-    return scores_cortex
+    if mean:
+        return scores_cortex
+    else:
+        return scores_filtered
 
     
 # def get_mapped_pcs(pc_version, hcp_base, hcp_bs_mapping):
@@ -246,33 +231,17 @@ def clean_brainspan(bs_exp, bs_col, bs_row, bs_cortex_mapping):
     return bs_clean
 
 
-def aggregate_brainspan_by_age(bs_clean, normalize=True,
-                               merge_small_brains=False):
+def aggregate_brainspan_by_age(bs_clean, normalize=True):
     """
     Aggregate Brainspan donor brains by ages
-    Optionally merge brains with few samples into larger age groups
-    Otherwise drop them
-    Optionally merge by brain before aggregating
+    Drop donors with <=3 samples
     """
-    # Define dict for how to merge small brains
-    merge_dict = {
-                '9 pcw':'8 pcw', 
-                '25 pcw':'24 pcw', '26 pcw':'24 pcw', '35 pcw':'37 pcw',
-                 '4 yrs':'3 yrs', '15 yrs':'13 yrs', 
-                  '10 mos':'4 mos', '8 pcw':'12 pcw'
-                 }
-    # merge_dict_donors = {12833:13058, 12948:12288, 12949:12288, 12295:263195015}
-    if merge_small_brains:
-        bs_clean = (bs_clean
-        .reset_index()
-        .replace({
-            'age': merge_dict,
-            # 'donor_id': merge_dict_donors,
-        })
-        .set_index(['donor_id', 'age', 'structure_name'])
-                   )
-    else:
-        bs_clean = bs_clean.query("age not in @merge_dict.keys()")
+    # Drop brains with <= 3 samples
+    bs_age_counts = bs_clean.groupby(['age']).size()
+                #.loc[lambda x: x>0].sort_index(level=1)
+    bs_keep = bs_age_counts > 8
+    ix_keep = pd.IndexSlice[:, bs_keep[bs_keep].index.get_level_values('age')]
+    bs_clean = bs_clean.loc[ix_keep,:]
 
     # Optionally normalize by donor
     if normalize:
@@ -383,7 +352,36 @@ def get_cortex_scores(bs_scores, scores_cortex, age_groups, bs_cortex_mapping):
     return cortex_scores, cortex_corrs
 
 
+def make_brain_scores(version, hcp_bs_mapping, bs_scores):
+    """
+    Prepare brain scores for plotting comparison maps
+    """
+    ahba_scores_plot = (get_mapped_scores(version, hcp_bs_mapping, mean=False)
+                        .loc[:,[0,1,2,'label']]
+                        .set_axis(['G1','G2','G3', 'label'],axis=1)
+                  )
 
+    bs_scores_plot = (
+        bs_scores.loc['18 yrs':,:].groupby('cortex').mean()
+        .iloc[:,:3]
+        .join(hcp_bs_mapping.set_index('cortex')['region'])
+        .set_axis(['G1','G2','G3', 'label'],axis=1)
+    )
+
+    scores_plot = {
+        'BrainSpan':bs_scores_plot,
+        'AHBA':ahba_scores_plot
+    }
+
+    scores_plot = (
+        pd.concat(scores_plot).reset_index(0).rename({'level_0':'version'},axis=1)
+        .set_index(['version', 'label'])
+        .groupby('version')
+        .apply(lambda x: (x-np.mean(x))/np.std(x))
+        .reset_index()
+    )
+    
+    return scores_plot
 
 
 #########################################################

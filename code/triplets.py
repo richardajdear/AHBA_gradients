@@ -55,8 +55,9 @@ def filter_triplet_ds(triplets, ds_threshold=0, only_brain=False, use_gradientVe
             triplet_expression_ds = triplet_expression_ds.loc[:, brain_mask]
         
         # Use pcaVersion, or use gradientMaps
+        # Don't use marker genes in case they are not retained in triplet
         if use_gradientVersion:
-            triplets_ds[name] = gradientVersion(**kwargs).fit(triplet_expression_ds, message=False)
+            triplets_ds[name] = gradientVersion(marker_genes=[], **kwargs).fit(triplet_expression_ds, message=False)
         else:
             triplets_ds[name] = pcaVersion(triplet_expression_ds, message=False, **kwargs)
             

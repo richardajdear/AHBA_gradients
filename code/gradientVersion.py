@@ -12,7 +12,7 @@ from processing_helpers import *
 
 class gradientVersion():
     
-    def __init__(self, n_components=5, approach='pca', sparsity=0, kernel=None, gamma=None, **kwargs):
+    def __init__(self, n_components=5, approach='pca', sparsity=0, kernel=None, gamma=None, marker_genes=['NEFL', 'LGALS1', 'SYT6'], **kwargs):
         """
         Initialize
         """
@@ -21,6 +21,7 @@ class gradientVersion():
         self.kernel = kernel
         self.sparsity=sparsity
         self.gamma=gamma
+        self.marker_genes=marker_genes
         self.kw_emb = kwargs
         self.gradients = GradientMaps(n_components=n_components, approach=approach, kernel=kernel)
         
@@ -33,6 +34,7 @@ class gradientVersion():
             data_dir = "~/rds/rds-cam-psych-transc-Pb9UGUlrwWc/Cam_LIBD/AHBA_data/abagen-data/expression/"):
         """
         Fit to data
+        Marker genes is a list of genes to define the gradient direction, if gradient n is inversely aligned to marker n, the gradient will be flipped
         """
         # If expression is given as a string name, read the file
         if isinstance(expression, str):
@@ -47,23 +49,29 @@ class gradientVersion():
         # Fit gradients
         self.gradients.fit(X.values, sparsity=self.sparsity, gamma=self.gamma, **self.kw_emb)
         
-        # Store outputs
+        # Align gradients to marker genes
+        scores = pd.DataFrame(self.gradients.gradients_, index=X.index)
+        for i, marker in enumerate(self.marker_genes):
+            r_ = X.loc[:,marker].corr(scores.loc[:,i])
+            if r_ < 0:
+                scores.loc[:,i] *= -1
+        
+        self.scores = scores
         self.expression = X
-        self.scores = pd.DataFrame(self.gradients.gradients_, index=X.index)
         self.var = self.gradients.lambdas_
         self.weights = self.fit_weights()
     
         if message:
-            print(f"New gradients version: method={self.approach}, kernel={self.kernel}, data={expression}")
+            print(f"New gradients version: method={self.approach}, kernel={self.kernel}, sparsity={self.sparsity}, data={expression}")
         
         return self
     
-    def clean_scores(self, flips = [1]):
+    def clean_scores(self, scores=None):
         """
-        Normalize G1-3 scores, flip as needed, add labels x
+        Normalize G1-3 scores, add labels x
         """
-        flips = [-1 if i in flips else 1 for i in range(3)]
-        scores = self.scores.iloc[:,:3] * flips
+        if scores is None:
+            scores = self.scores
         
         if self.scores.shape[0]>=120:
             labels = get_labels_hcp()
@@ -73,15 +81,32 @@ class gradientVersion():
             labels = get_labels_dx()
         
         scores = (scores
+                  .iloc[:,:3]
                   .set_axis(['G'+str(i+1) for i in range(3)],axis=1)
                   .apply(lambda x: (x-np.mean(x))/np.std(x))
                   .rename_axis('id')
                   .join(labels)
                  )
         return scores
-        
     
-    def fit_weights(self, expression=None, independent=True, sort=False, save_name=None, overwrite=True, flips = [0,2], normalize=False):
+    
+    def score_from(self, other, clean=True):
+        """
+        Score from other weights
+        """
+        gene_intersection = set(self.expression.columns).intersection(other.weights.index)
+        expression_ = self.expression.loc[:,gene_intersection]
+        weights_ = other.weights.loc[gene_intersection, :]
+        
+        scores = expression_ @ weights_
+        
+        if clean:
+            scores = self.clean_scores(scores=scores)
+            
+        return scores
+
+    
+    def fit_weights(self, expression=None, scores=None, independent=True, normalize=False, sort=False, save_name=None, overwrite=True):
         """
         Get gene weights from PLS
         Use other expression matrix if provided, otherwise use self
@@ -95,7 +120,7 @@ class gradientVersion():
             X = expression.dropna(axis=0, how='all').dropna(axis=1, how='any')
             # Make sure X will match onto Y
             X = X.loc[set(X.index).intersection(self.scores.index), :]
-            
+        
         # Fit each component independently
         if independent:
             pls_weights = np.zeros((X.shape[1], 5))
@@ -111,9 +136,12 @@ class gradientVersion():
         if normalize:
             pls_weights = StandardScaler().fit_transform(pls_weights)
         
-        # Make dataframe and flip as needed
-        flips = [-1 if i in flips else 1 for i in range(5)]
-        pls_weights = pd.DataFrame(pls_weights, index=X.columns) * flips
+        # Make dataframe and align to marker genes
+        pls_weights = pd.DataFrame(pls_weights, index=X.columns)
+        for i, marker in enumerate(self.marker_genes):
+            # If the marker for a component is negative, flip that component
+            if pls_weights.loc[marker, i] < 0:
+                pls_weights.loc[:,i] *= -1
         
         # Save to self
         if overwrite:
