@@ -3,8 +3,213 @@
 import numpy as np, pandas as pd
 from scipy.stats import percentileofscore
 from statsmodels.stats.multitest import multipletests
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 
 from processing_helpers import *
+
+
+### Functions to compute enrichment from a set of genes, with or without weights
+
+
+def shuffle_gene_weights(weights, n=100, rank=False):
+    """
+    Make 'naive' null model by randomizing gene weights / ranks
+    """
+    null_weights = np.repeat(weights.values[:,:3,np.newaxis], n, axis=2)
+    # null_weights = np.take_along_axis(null_weights, np.random.randn(*null_weights.shape).argsort(axis=0), axis=0)
+    for g in range(3):
+        for i in range(n):
+            np.random.shuffle(null_weights[:,g,i])
+    
+    if rank:
+        null_ranks = null_weights.argsort(axis=0).argsort(axis=0)
+        return null_ranks
+    else:
+        return null_weights
+
+
+def match_genes(gene_labels, weights):
+    """
+    Make mask of which genes from each gene list are in the PCs
+    """
+    genes = weights.index
+    gene_masks = {}
+    for l in gene_labels['label'].unique():
+        matches = np.isin(genes, gene_labels.query("label == @l")['gene'])
+        if sum(matches)>0:
+            gene_masks[l] = matches
+    return gene_masks
+
+
+def compute_enrichments(weights, null_weights, gene_labels, how='mean', norm=True, posneg=None):
+    """
+    Compute scores for each gene label, either mean, or median rank
+    """
+    gene_masks = match_genes(gene_labels, weights)
+    
+    weights = weights.copy().values
+    nulls = null_weights.copy()
+    # Take absolute values of standardized weights
+    if norm:
+        weights = StandardScaler().fit_transform(weights)
+        for i in range(nulls.shape[2]):
+            nulls[:,:,i] = StandardScaler().fit_transform(nulls[:,:,i])
+            
+    if posneg =='abs':
+        weights = np.abs(weights)
+        nulls = np.abs(nulls)
+    elif posneg=='pos':
+        weights = np.where(weights<0, np.nan, weights)
+        nulls = np.where(nulls<0, np.nan, nulls)
+    elif posneg=='neg':
+        weights = np.where(weights>0, np.nan, weights)
+        nulls = np.where(nulls>0, np.nan, nulls)
+
+    true_enrichments = {}
+    null_enrichments = {}
+    
+    for label, mask in gene_masks.items():
+        if how == 'mean':
+            true_enrichments[label] = pd.Series(np.nanmean(weights[mask, :], axis=0))
+            null_enrichments[label] = pd.DataFrame(np.nanmean(nulls[mask, :, :], axis=0)).T
+        elif how == 'median':
+            true_ranks = weights.argsort(0).argsort(0)
+            true_enrichments[label] = pd.Series(np.nanmedian(true_ranks[mask, :], axis=0))
+            null_enrichments[label] = pd.DataFrame(np.nanmedian(nulls[mask, :, :], axis=0)).T
+
+    true_enrichments = pd.concat(true_enrichments).unstack(1).set_axis(['G1','G2','G3'], axis=1)
+    null_enrichments = pd.concat(null_enrichments).set_axis(['G1','G2','G3'], axis=1).reset_index(level=0).rename({'level_0':'label'}, axis=1)
+    
+    return true_enrichments, null_enrichments
+    
+    
+def compute_null_p(true_enrichments, null_enrichments, adjust='fdr_bh', order=None):
+    """
+    Compute null p values
+    """
+    null_pct = np.zeros(true_enrichments.shape)
+    for m, label in enumerate(true_enrichments.index):
+        for i in range(3):
+            nulls_ = null_enrichments.set_index('label').loc[label].iloc[:,i]
+            true_ = true_enrichments.iloc[m, i]
+            pct = percentileofscore(nulls_, true_)/100
+            null_pct[m, i] = pct
+            
+    true_mean = true_enrichments.stack().rename('true_mean')
+
+    null_mean = (null_enrichments
+                 .groupby('label').agg(['mean','std'])
+                 .stack(0)
+                 .rename_axis([None,None])
+                 .set_axis(['null_mean', 'null_std'], axis=1)
+                )
+            
+    null_p = (pd.DataFrame(null_pct, 
+                           index=true_enrichments.index, 
+                           columns=true_enrichments.columns)
+              .stack().rename('pct').to_frame()
+              .join(true_mean)
+              .join(null_mean)
+              .assign(z = lambda x: (x['true_mean'] - x['null_mean'])/x['null_std'])
+              .assign(pos = lambda x: [pct > 0.5 for pct in x['pct']])
+              .assign(p = lambda x: [(1-pct)*2 if pct>0.5 else pct*2 for pct in x['pct']]) # x2 for bidirectional
+             )
+    
+    # Apply multiple comparisons
+    if adjust is not None:
+        null_p = (null_p
+             .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
+             .assign(sig = lambda x: x['q'] < .05)
+             # .assign(q_abs = lambda x: [1-q if pos else q for pos, q in zip(x['pos'], x['q'])])
+            )
+    else:
+        null_p = (null_p
+             .assign(q = lambda x: x['p'])
+             .assign(sig = lambda x: x['q'] < .05)
+            )
+    
+    null_p = (null_p
+              .reset_index()
+              .rename({'level_0':'label', 'level_1':'G'}, axis=1)
+             )
+    
+    # Fix order of gene labels
+    if order is None:
+        order = true_enrichments.index
+    null_p = (null_p
+              .assign(label = lambda x: pd.Categorical(x['label'], ordered=True, categories=order))
+              .sort_values('label')
+         )
+
+    return null_p
+
+
+
+def make_gene_maps(version, gene_labels, atlas='hcp', normalize='std', method='mean', order=None, use_weights=True):
+    gene_maps = {}
+    for label in gene_labels['label'].unique():
+        gene_labels_ = gene_labels.set_index('label').loc[label]
+        if len(gene_labels_)== 1: 
+            gene_labels_ = gene_labels_.to_frame().T
+        mask = set(gene_labels_['gene']).intersection(version.expression.columns)
+        if len(mask) == 0:
+            continue
+        gene_label_expression_ = version.expression.loc[:, mask]
+
+        if 'weight' in gene_labels.columns and use_weights:
+            gene_label_weights = gene_labels_.set_index('gene').loc[mask, 'weight']
+            gene_label_expression_ = gene_label_expression_ * gene_label_weights 
+        
+        # Mean expression
+        gene_mean = gene_label_expression_.mean(axis=1)
+        gene_eigengene = PCA(n_components=1).fit_transform(gene_label_expression_.dropna(axis=1)).squeeze()
+        gene_eigengene = pd.Series(gene_eigengene, index=gene_label_expression_.index)
+        corr = gene_mean.corr(gene_eigengene)
+        # print(f"label={label}: corr(mean expression, eigengene) = {corr}")
+        if corr < 0:
+            gene_eigengene *= -1
+        
+        if method=='mean':
+            gene_maps[label] = gene_mean
+        elif method=='eigengene':
+            gene_maps[label] = gene_eigengene
+
+    gene_maps = pd.concat(gene_maps, axis=1)
+    
+    if order is not None:
+        gene_maps = gene_maps.loc[:,order]
+    
+    if normalize == 'std':
+        gene_maps = gene_maps.apply(lambda x: (x-np.mean(x))/np.std(x))
+    elif normalize == 'fisher':
+        gene_maps = gene_maps.apply(lambda x: 0.5*(1 + (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x)) ))
+    
+    if atlas == 'hcp':
+        gene_maps = gene_maps.join(get_labels_hcp()).set_index('label')
+    elif atlas == 'dk':
+        gene_maps = gene_maps.join(get_labels_dk()).set_index('label')
+        
+    return gene_maps
+
+
+
+
+def make_gene_corrs(genes, version, maps):
+    genes = set(genes).intersection(version.expression.columns)
+    gene_maps = (version.expression.loc[:,genes]
+                 .join(get_labels_hcp()).set_index('label'))
+
+    corrs = (pd.concat([gene_maps, maps], axis=1)
+             .corr().iloc[:len(genes),len(genes):]
+             .reset_index(drop=True)
+            )
+    
+    for col in corrs:
+        corrs[col] = corrs[col].sort_values(ignore_index=True)
+        
+    return corrs
+
 
 
 ### STRING enrichments
@@ -84,6 +289,8 @@ def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include
 
 
 
+
+
 def get_cell_genes(which='wen', include=None, subtype=False, combine_layers=False, combine_ex_in=False):
     """
     Read cell genes table
@@ -93,18 +300,16 @@ def get_cell_genes(which='wen', include=None, subtype=False, combine_layers=Fals
         path = '../data/wen_cell_genes.csv'
         cell_genes = (
             pd.read_csv(path)
-            .set_axis(['Gene','Class'],axis=1)
-            .loc[lambda x: np.isin(x['Class'], ['purple','brown','blue'])]
-            .replace({'Class':{
+            .set_axis(['gene','label'],axis=1)
+            .loc[lambda x: np.isin(x['label'], ['purple','brown','blue'])]
+            .replace({'label':{
                 'purple':'Neurons', 'brown':'Synapses', 'blue':'Glia'
             }})
+            .set_index('label').loc[['Neurons','Synapses','Glia'],:].reset_index()
         )
     elif which == 'zeng':
         path = '../data/zeng_layers.csv'
-        cell_genes = (
-            pd.read_csv(path)
-            .set_axis(['Class','Gene'],axis=1)
-        )
+        cell_genes = pd.read_csv(path).set_axis(['label','gene'], axis=1)
     elif which == 'jakob':
         path="../data/jakob_cell_genes.csv"
         cell_genes = pd.read_csv(path)
@@ -135,22 +340,24 @@ def get_cell_genes(which='wen', include=None, subtype=False, combine_layers=Fals
             cell_genes = cell_genes.query("Class != 'Neuro'")
             
         cell_genes = (cell_genes
-         # .drop('Class', axis=1).assign(Class = lambda x: x['Type'])
-         .melt(id_vars=['Type', 'Paper', 'Cluster', 'Class'], value_name='Gene')
-         .loc[lambda x: x['Gene'].notnull(), ['Class', 'Gene']]
+         .melt(id_vars=['Type', 'Paper', 'Cluster', 'Class'], value_name='gene')
+         .loc[lambda x: x['gene'].notnull(), ['Class', 'gene']]
+         .rename({'Class':'label'}, axis=1)
          .drop_duplicates()
-         # .loc[lambda x: ~np.isin(x['Class'], ['Neuro', 'Per'])]
-         .loc[lambda x: ~np.isin(x['Class'], ['Per'])]
-         .sort_values(['Class', 'Gene'])
+         .loc[lambda x: ~np.isin(x['label'], ['Per'])]
+         .sort_values(['label', 'gene'])
          # .groupby('Class').apply(lambda x: x.sample(frac=.1))
         )
 
     return cell_genes
 
 
-def get_cell_genes_weighted():
+
+
+
+def get_cell_genes_weighted(which=None, normalize=True):
     """
-    x
+    Read genes table with weights
     """
     
     lake_ex = pd.read_csv("../data/lake_ex.csv")
@@ -161,187 +368,31 @@ def get_cell_genes_weighted():
     
     def clean_lake(df, normalize = True):
         df = (df
-         .rename({'cluster':'Class'}, axis=1)
-         .melt(id_vars=['Class', 'Gene'], var_name='which', value_name='weight')
-         .loc[lambda x: x['Class'] == x['which']].drop('which', axis=1)
+         .rename({'cluster':'label', 'Gene':'gene'}, axis=1)
+         .melt(id_vars=['label', 'gene'], var_name='which', value_name='weight')
+         .loc[lambda x: x['label'] == x['which']].drop('which', axis=1)
          .dropna()
         )
         
         if normalize:
             df = (df
-                 .set_index('Gene')
-                 # .assign(weight = lambda x: x.groupby('Class').transform(lambda y: (y-np.mean(y))/np.std(y)))
-                 .assign(weight = lambda x: x.groupby('Class').transform(lambda y: fisher_norm(y)))
+                 .set_index('gene')
+                 # .assign(weight = lambda x: x.groupby('label').transform(lambda y: (y-np.mean(y))/np.std(y)))
+                 .assign(weight = lambda x: x.groupby('label').transform(lambda y: fisher_norm(y)))
                  .fillna(1)
                  .reset_index()
                  )
         return df
     
-    lake_ex = clean_lake(lake_ex, normalize=True)
-    lake_in = clean_lake(lake_in, normalize=True)
+    lake_ex = clean_lake(lake_ex, normalize=normalize)
+    lake_in = clean_lake(lake_in, normalize=normalize)
     
-    return pd.concat([lake_ex, lake_in])
+    if which=='ex':
+        return lake_ex
+    elif which=='in':
+        return lake_in
+    else:
+        return pd.concat([lake_ex, lake_in])
 
 
-def match_cell_genes(cell_genes, weights):
-    """
-    Check which genes are in the PCs
-    """
-    genes = weights.index
-    cell_types = cell_genes['Class'].unique()
-    gene_masks = {}
-    for c in cell_types:
-        gene_masks[c] = np.isin(genes, cell_genes.query("Class == @c")['Gene'])
-    return gene_masks
 
-
-def shuffle_gene_weights(weights, n=100, rank=False):
-    null_weights = np.repeat(weights.values[:,:,np.newaxis], n, axis=2)
-    # null_weights = np.take_along_axis(null_weights, np.random.randn(*null_weights.shape).argsort(axis=0), axis=0)
-    for g in range(3):
-        for i in range(n):
-            np.random.shuffle(null_weights[:,g,i])
-    
-    nulls = {'weights': null_weights}
-    
-    if rank:
-        null_ranks = null_weights.argsort(axis=0).argsort(axis=0)
-        nulls.update({'ranks':null_ranks})
-    
-    return nulls
-
-def compute_cell_scores(weights, nulls, gene_masks, how='mean'):
-    """
-    Compute cell scores, either mean, or median rank
-    """
-    true_scores = {}
-    null_scores = {}
-    
-    for name, m in gene_masks.items():
-        if how == 'mean':
-            true_scores[name] = weights.iloc[m, :].mean(axis=0)
-            null_scores[name] = pd.DataFrame(nulls['weights'][m, :, :].mean(axis=0)).T
-        elif how == 'median':
-            true_ranks = weights.values.argsort(0).argsort(0)
-            true_scores[name] = pd.Series(np.median(true_ranks[m, :], axis=0))
-            null_scores[name] = pd.DataFrame(np.median(nulls['ranks'][m, :, :], axis=0)).T
-
-    true_scores = pd.concat(true_scores).unstack(1).set_axis(['G1','G2','G3'], axis=1)
-    null_scores = pd.concat(null_scores).set_axis(['G1','G2','G3'], axis=1).reset_index(level=0).rename({'level_0':'m'}, axis=1)
-    
-    return true_scores, null_scores
-    
-def compute_null_p(true_scores, null_scores, adjust=None, order=None):
-    """
-    Compute null p values
-    """
-    null_pct = np.zeros(true_scores.shape)
-    for m, name in enumerate(true_scores.index):
-        for i in range(3):
-            _nulls = null_scores.set_index('m').loc[name].iloc[:,i]
-            _score = true_scores.iloc[m, i]
-            pct = percentileofscore(_nulls, _score)/100
-            null_pct[m, i] = pct
-            
-    true_mean = true_scores.stack().rename('true_mean')
-
-    null_mean = (null_scores
-                 .groupby('m').agg(['mean','std'])
-                 .stack(0)
-                 .rename_axis([None,None])
-                 .set_axis(['null_mean', 'null_std'], axis=1)
-                )
-            
-    null_p = (pd.DataFrame(null_pct, 
-                           index=true_scores.index, 
-                           columns=true_scores.columns)
-              .stack().rename('pct').to_frame()
-              .join(true_mean)
-              .join(null_mean)
-              .assign(z = lambda x: (x['true_mean'] - x['null_mean'])/x['null_std'])
-              .assign(pos = lambda x: [pct > 0.5 for pct in x['pct']])
-              .assign(p = lambda x: [(1-pct)*2 if pct>0.5 else pct*2 for pct in x['pct']]) # x2 for bidirectional
-              
-             )
-    
-    if adjust is not None:
-        null_p = (null_p
-             .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
-             .assign(sig = lambda x: x['q'] < .05)
-             # .assign(q_abs = lambda x: [1-q if pos else q for pos, q in zip(x['pos'], x['q'])])
-            )
-    
-    
-    null_p = (null_p
-              .reset_index()
-              .rename({'level_0':'celltype', 'level_1':'G'}, axis=1)
-             )
-    
-    if order is not None:
-        null_p = (null_p
-                  .assign(celltype = lambda x: pd.Categorical(x['celltype'],
-                                                  ordered=True,
-                                                  categories=order))
-                  .sort_values('celltype')
-             )
-    
-    return null_p
-
-
-from sklearn.decomposition import PCA
-
-def make_cell_maps(version, cell_genes, atlas='hcp', normalize = 'std', method='eigengene', order=None, use_weights=True):
-    cell_maps = {}
-    for celltype in cell_genes.Class.unique():
-        cell_genes_ = cell_genes.set_index('Class').loc[celltype]
-        if len(cell_genes_)== 1: 
-            cell_genes_ = cell_genes_.to_frame().T
-        mask = set(cell_genes_.Gene).intersection(version.expression.columns)
-        if len(mask) == 0:
-            continue
-        cell_gene_expression_ = version.expression.loc[:, mask]
-
-        if 'weight' in cell_genes.columns and use_weights:
-            cell_gene_weights = cell_genes_.set_index('Gene').loc[mask, 'weight']
-            cell_gene_expression_ = cell_gene_expression_ * cell_gene_weights 
-        
-        # Mean expression
-        cell_mean = cell_gene_expression_.mean(axis=1)
-        cell_eigengene = PCA(n_components=1).fit_transform(cell_gene_expression_).squeeze()
-        cell_eigengene = pd.Series(cell_eigengene, index=cell_gene_expression_.index)
-        corr = cell_mean.corr(cell_eigengene)
-        # print(f"Class={celltype}: corr(mean expression, eigengene) = {corr}")
-        if corr < 0:
-            cell_eigengene *= -1
-        
-        if method=='mean':
-            cell_maps[celltype] = cell_mean
-        elif method=='eigengene':
-            cell_maps[celltype] = cell_eigengene
-
-    cell_maps = pd.concat(cell_maps, axis=1)
-    
-    if order is not None:
-        cell_maps = cell_maps.loc[:,order]
-    
-    if normalize == 'std':
-        cell_maps = cell_maps.apply(lambda x: (x-np.mean(x))/np.std(x))
-    elif normalize == 'fisher':
-        cell_maps = cell_maps.apply(lambda x: 0.5*(1 + (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x)) ))
-    
-    if atlas == 'hcp':
-        cell_maps = cell_maps.join(get_labels_hcp()).set_index('label')
-    elif atlas == 'dk':
-        cell_maps = cell_maps.join(get_labels_dk()).set_index('label')
-        
-    return cell_maps
-
-
-def make_gene_corrs(genes, version, maps):
-    genes = set(genes).intersection(version.expression.columns)
-    gene_maps = (version.expression.loc[:,genes]
-                 .join(get_labels_hcp()).set_index('label'))
-
-    corrs = (pd.concat([gene_maps, maps], axis=1)
-             .corr().iloc[:len(genes),len(genes):])
-    return corrs

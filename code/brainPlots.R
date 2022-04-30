@@ -8,25 +8,22 @@ suppressMessages(library(scales))
 library(patchwork)
 library(pals)
 
-plot_dk <- function(scores_df, title="", switch=NULL, flip=F) {
+plot_dk <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0) {
+    if (!"version" %in% colnames(scores_df)) {
+        scores_df <- scores_df %>% mutate(version = '')
+    }
+    
     df <- scores_df %>% 
-        # rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
         gather('component', 'score', -version, -label) %>%
         group_by(component, version)
     
-    if (flip) {
-        df <- df %>% mutate(component = factor(component,  levels=c('G1','G3','G2'), ordered=T))
-    }
-    
     m <- pmax(
-#         df %>% filter(component=='G1') %>% .$score %>% quantile(.95) %>% abs,
-#         df %>% filter(component=='G1') %>% .$score %>% quantile(.05) %>% abs
         df %>% .$score %>% quantile(.99) %>% abs,
         df %>% .$score %>% quantile(.01) %>% abs
     )
     
-    ggplot(df) + 
+    p <- ggplot(df) + 
     geom_brain(
         atlas=dk,
         hemi='left',
@@ -35,10 +32,11 @@ plot_dk <- function(scores_df, title="", switch=NULL, flip=F) {
         show.legend=T
         ) + 
     theme_void() +
-    facet_grid(component~version, switch=switch) +
+    # facet_grid(component~version, switch=switch) +
     theme(legend.position='bottom', 
           strip.text.x=element_text(vjust=1),
           strip.text.y.left = element_text(angle = 0),
+          panel.spacing.x = unit(spacing_x, 'lines'),
           plot.title=element_text(hjust=0.5)) +
     #   scale_fill_cmocean(name='balance', limits=c(-m,m), oob=squish) +
 #     scale_fill_gradient2(low=muted('red'), high=muted('blue'), 
@@ -47,23 +45,28 @@ plot_dk <- function(scores_df, title="", switch=NULL, flip=F) {
                          labels=c(round(-m,2),0,round(m,2)), name=''
                         ) +
 ggtitle(title) + xlab("") + ylab("")
+    
+    if (facet=='h') {
+        p + facet_grid(component~version, switch=switch)
+    } else {
+        p + facet_grid(version~component, switch=switch)   
+    }
 }
 
 
 
-plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0) {
+plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
+                     colors=rev(brewer.rdbu(100))
+                    ) {
     df <- scores_df %>% 
-        # rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
         gather('component', 'score', -version, -region) %>%
         group_by(component, version)
 
     m <- pmax(
-#         df %>% filter(component=='G1') %>% .$score %>% quantile(.95) %>% abs,
-#         df %>% filter(component=='G1') %>% .$score %>% quantile(.05) %>% abs
-        df %>% .$score %>% quantile(.99) %>% abs,
-        df %>% .$score %>% quantile(.01) %>% abs
+        df %>% .$score %>% quantile(.99, na.rm=T) %>% abs,
+        df %>% .$score %>% quantile(.01, na.rm=T) %>% abs
     )
     
     p <- ggplot(df) + 
@@ -83,12 +86,12 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0) {
           plot.title=element_text(hjust=0.5)) +
     #   scale_fill_cmocean(name='balance', limits=c(-m,m), oob=squish) +
 #     scale_fill_gradient2(low=muted('red'), high=muted('blue'), 
-    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), 
+    scale_fill_gradientn(colors=colors, 
                          limits=c(-m,m), oob=squish, breaks=c(-m,0,m), 
                          labels=c(round(-m,2),0,round(m,2)), name=''
                         ) +
     coord_sf(clip='off') +
-ggtitle(title) + xlab("") + ylab("")
+    ggtitle(title) + xlab("") + ylab("")
     
     if (facet=='h') {
         p + facet_grid(component~version, switch=switch)

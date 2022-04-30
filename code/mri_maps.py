@@ -24,20 +24,20 @@ def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True, renam
     )
     
     selected_maps = {
-        'T1T2':'T1w/T2w',
-        'thickness':'Cortical Thickness',    
+        'T1T2':'Myelination (T1w/T2w)',
+        'thickness':'Cortical Thickness (CT)',    
         'G1_fMRI': 'fMRI PC1',
         'glasser_CMRO2':'Oxygen Metabolism (CMRO2)',
         'glasser_CMRGlu':'Glucose Metabolism (CMRGlu)',
-        'glasser_GI':'Glycolytic Index (CMRO2/CMRGlu)',
-        'hill.dev_remapped':'Developmental Expansion',
-        'hill.evo_remapped':'Evolutionary Expansion',
-        'externopyramidisation':'Externopyramidisation',
-        'glasser_CBF':'Cerebral Blood Flow',
+        'glasser_GI':'Glycolytic Index (AG)',
+        'hill.dev_remapped':'Developmental Expansion (Dev. Exp.)',
+        'hill.evo_remapped':'Evolutionary Expansion (Evo. Exp.)',
+        'externopyramidisation':'Externopyramidisation (Externo.)',
+        'glasser_CBF':'Cerebral Blood Flow (CBF)',
         # 'glasser_CBV':'Cerebral Blood Volume',
         # 'asl':'Arterial Spin Labelling',
-        'allom':'Allometric Scaling',        
-        'PC1_neurosynth': 'NeuroSynth PC1',
+        'allom':'Allometric Scaling (Allom.)',        
+        'PC1_neurosynth': 'NeuroSynth PC1 (NS PC1)',
         # 'x':'X axis',
         # 'y':'Y axis',
         # 'z':'Z axis'
@@ -57,7 +57,7 @@ def get_disorder_maps(data_dir="../data/lifespan_dx_DKatlas.csv"):
         pd.read_csv(data_dir, index_col=0)
         .apply(lambda x: (x-np.mean(x))/np.std(x))
         .sort_index(axis=1)
-        .rename_axis('region')#.reset_index()
+        .rename_axis('label')#.reset_index()
     )
     maps = maps.set_index(maps.index.str.replace(" ", ""))
     maps = maps.set_index('lh_' + maps.index)
@@ -115,7 +115,7 @@ def generate_spins(maps, n=10,
     np.save(outfile, spin_maps)
 
 def generate_spins_from_gradients(scores, n=10,
-                           outfile='../outputs/spin_gradients_1000.npy',
+                           outfile='../outputs/permutations/spin_gradients_1000.npy',
                            atlas='hcp'):
     
     if atlas == 'dk':
@@ -170,9 +170,13 @@ def generate_simulations(maps, n=10,
     
 def corr_nulls_from_maps(null_maps, scores, maps, method='pearson', pool=False, pool_frac=.1):
     """
-    Get correlations with  scores from null maps
+    Get correlations with scores from null maps
     """
     
+    # Drpp 'label' field if it exists
+    if 'label' in scores.columns:
+        scores = scores.drop('label', axis=1)
+        
     if pool:
         # Set dimensions for reshaping
         # Downsample nulls because of pooling
@@ -256,7 +260,7 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearson', pool=False
     
 
 
-def get_null_p(true_corrs, null_corrs, adjust=None):
+def get_null_p(true_corrs, null_corrs, adjust='fdr_bh', order=None):
     """
     Get p values
     """
@@ -301,6 +305,14 @@ def get_null_p(true_corrs, null_corrs, adjust=None):
               # .assign(map = lambda x: pd.Categorical(x['map'], ordered=True, categories=order))
              )
     
+    # Fix order of maps
+    if order is None:
+        order = true_corrs.index
+    null_p = (null_p
+              .assign(map = lambda x: pd.Categorical(x['map'], ordered=True, categories=order))
+              .sort_values('map')
+         )
+
     return null_p
 
 

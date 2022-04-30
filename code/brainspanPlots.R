@@ -11,14 +11,16 @@ mycolors = brewer.rdylbu(5)[c(1,2,5)]
 #               saturation(mycolors[4], delta(.4))) 
 
 
-plot_bs_mapping <- function(hcp_bs_mapping) {
+plot_bs_hcp_mapping <- function(hcp_bs_mapping) {
     
     n_colors <- hcp_bs_mapping$structure_name %>% n_distinct
     cols = cols25(n_colors)
 
     hcp_bs_mapping <- hcp_bs_mapping %>% 
-        mutate_at(vars(cortex), ~ factor(., levels=unique(.))) %>%
-        mutate(structure_name = replace_na(structure_name, '__NA__'))
+        mutate(structure_name = replace_na(structure_name, '__NA__')) %>%
+        # mutate_at(vars(structure_name), ~ factor(., levels=unique(.))) %>% 
+        rename(region=label)
+        
     
     ggplot(hcp_bs_mapping) + 
     geom_brain(atlas=glasser, hemi='left', mapping=aes(fill=structure_name, geometry=geometry, hemi=hemi, side=side, type=type)) +
@@ -31,6 +33,25 @@ plot_bs_mapping <- function(hcp_bs_mapping) {
                          # legend.position=c(1.3,.5))
 }
 
+plot_bs_dk_mapping <- function(dk_bs_mapping) {
+    
+    n_colors <- dk_bs_mapping$structure_name %>% n_distinct
+    cols = cols25(n_colors)
+
+    dk_bs_mapping <- dk_bs_mapping %>% 
+        # mutate_at(vars(cortex), ~ factor(., levels=unique(.))) %>%
+        mutate(structure_name = replace_na(structure_name, '__NA__'))
+    
+    ggplot(dk_bs_mapping) + 
+    geom_brain(atlas=dk, hemi='left', mapping=aes(fill=structure_name, geometry=geometry, hemi=hemi, side=side, type=type)) +
+    # guides(fill=guide_legend('')) +
+    scale_fill_manual(values=c('white', cols), guide='none') +
+    theme_void() + 
+    theme(text=element_text(size=20), legend.position='none',
+         plot.title=element_text(size=20, vjust=-1, hjust=.5)) +
+    ggtitle("BrainSpan regions matched to Desikan-Killiany")
+                         # legend.position=c(1.3,.5))
+}
 
 plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', rotate=F) {
     g <- bs_scores_corr %>% 
@@ -38,7 +59,7 @@ plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', ro
     ggplot() + geom_hline(yintercept=0, color='grey') + geom_vline(xintercept=xint, color='grey') +
     geom_line(aes(x=age, y=corr, color=G, group=G), size=1, alpha=1) + 
     geom_point(aes(x=age, y=corr, color=G), size=5) + 
-    xlab("Age") + ylab("r") +
+    xlab("Age") + ylab("Corr.") +
     scale_color_manual(values=mycolors) +
     scale_y_continuous(limits=c(0,1), breaks=seq(0,1,.25)) +
     # scale_color_manual(values=brewer.rdylbu(4)) +
@@ -77,17 +98,17 @@ plot_ahba_bs_corr <- function(df) {
 }
 
 
-plot_ahba_bs_scatter <- function(cortex_scores, cortex_corrs, facet='h', size=4) {
+plot_ahba_bs_scatter <- function(both_scores, corrs, facet='h', size=4) {
     # lim <- 2.8
     
-    g <- ggplot(cortex_scores, aes(AHBA, Brainspan)) + 
+    g <- ggplot(both_scores, aes(AHBA, Brainspan)) + 
     # xlim(c(-lim,lim)) + ylim(c(-lim,lim)) +
-    geom_point(aes(color=cortex), size=size) +
+    geom_point(aes(color=structure_name), size=size) +
     geom_smooth(method='lm', linetype=1, se=F, color='grey') +
     scale_color_manual(values=cols25(), guide='none') +
-    geom_text(data=data.frame(G=names(cortex_corrs), 
-                              label=paste("r =", round(cortex_corrs, 2)))
-              , aes(x=-1,y=1, label=label), size=8
+    geom_text(data=data.frame(G=names(corrs), 
+                              label=paste("r =", round(corrs, 2)))
+              , aes(x=-1,y=1, label=label), size=7
     ) +
     coord_fixed() +
     xlab('AHBA Score') + ylab('BrainSpan\nScore') +
@@ -114,21 +135,21 @@ plot_ahba_bs_scatter <- function(cortex_scores, cortex_corrs, facet='h', size=4)
 
 plot_hcp_bs_mapping <- function(hcp_bs_mapping) {
     hcp_bs_mapping <- hcp_bs_mapping %>% 
-        mutate_at(vars(cortex), ~ factor(., levels=unique(.)))
+        mutate_at(vars(structure_name), ~ factor(., levels=unique(.)))
     cols = as.character(cols25())
     
     
     g0 <- ggplot(hcp_bs_mapping) + 
-    geom_brain(atlas=glasser, mapping=aes(fill=cortex, geometry=geometry, hemi=hemi, side=side, type=type)) +
+    geom_brain(atlas=glasser, mapping=aes(fill=structure_name, geometry=geometry, hemi=hemi, side=side, type=type)) +
     guides(fill=guide_legend('')) +
     scale_fill_manual(values=cols) +
-    theme_void() + ggtitle('HCP cortex') + theme(text=element_text(size=20), plot.title=element_text(vjust=-1))
+    theme_void() + ggtitle('HCP') + theme(text=element_text(size=20), plot.title=element_text(vjust=-1))
 
     g1 <- ggplot(hcp_bs_mapping) + 
     geom_brain(atlas=glasser, mapping=aes(fill=structure_name, geometry=geometry, hemi=hemi, side=side, type=type)) +
     guides(fill=guide_legend('')) +
     scale_fill_manual(values=cols) +
-    theme_void() + ggtitle('Brainspan regions mapped to HCP cortex') + theme(text=element_text(size=20), plot.title=element_text(vjust=-1))
+    theme_void() + ggtitle('Brainspan regions mapped to HCP') + theme(text=element_text(size=20), plot.title=element_text(vjust=-1))
 
     g0/g1
 }

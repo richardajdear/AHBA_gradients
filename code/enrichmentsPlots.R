@@ -5,6 +5,118 @@ library(ggrepel)
 library(ggradar)
 
 
+plot_enrichment_bars <- function(null_p, xlab='z-score') {
+    
+    lim <- max(abs(null_p$z))*1.2
+    
+    null_p %>% 
+    mutate(sig = case_when(
+        q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
+        )) %>%
+    mutate(hjust=ifelse(z < 0, 1, 0)) %>%
+    ggplot(aes(x=z, y=label)) + 
+    facet_grid(.~G) +
+    geom_col(aes(fill=z)) +
+    geom_text(aes(label=sig, vjust=.7, hjust=hjust), size=6) +
+    # scale_alpha_manual(values=c(0.2,1)) +
+    geom_hline(yintercept=0) +
+    scale_y_discrete(limits=rev, name='') +
+    scale_x_continuous(limits=c(-lim,lim), breaks=round(0.5*c(-lim,0,lim)), name=xlab) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), guide='none', limits=c(-lim,lim)) +
+    # ggtitle("Mean weight of cell genes vs permutations") +
+    # coord_flip() +
+    theme_minimal() +
+    theme(panel.grid.minor=element_blank(),
+          plot.title=element_text(size=20),
+          axis.text=element_text(size=20),
+          text=element_text(size=20)
+         )
+    
+}
+
+
+plot_enrichment_bars_2 <- function(null_p, xlab='z-score') {
+    
+    lim <- max(abs(null_p$z))*1.2
+    
+    null_p %>% 
+    mutate(sig_label = case_when(
+        q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
+        )) %>%
+    mutate(hjust=ifelse(z < 0, 1, 0)) %>%
+    ggplot(aes(x=z, y=label)) + 
+    facet_grid(.~G) +
+    geom_col(aes(fill=posneg, alpha=sig), width=.8, position=position_dodge(width=.8)) +
+    geom_text(aes(label=sig_label, vjust=.7, hjust=hjust, group=posneg), position=position_dodge(width=.8), size=6) +
+    scale_alpha_manual(values=c(0.3,1), guide='none') +
+    scale_y_discrete(limits=rev, name='') +
+    scale_x_continuous(limits=c(-lim,lim), breaks=round(0.5*c(-lim,0,lim)), name=xlab) +
+    scale_fill_manual(values=rev(brewer.rdbu(10))[c(3,8)], name='Gradient\ndirection') +
+    # scale_fill_gradientn(colors=rev(brewer.rdbu(100)), guide='none', limits=c(-lim,lim)) +
+    # ggtitle("Mean weight of cell genes vs permutations") +
+    # coord_flip() +
+    coord_cartesian(clip='off') +
+    theme_minimal() +
+    theme(panel.grid.minor=element_blank(),
+          plot.title=element_text(size=20),
+          axis.text=element_text(size=20),
+          text=element_text(size=20)
+         )
+    
+}
+
+
+plot_enrichment_heatmaps <- function(null_p_versions, ncol=3) {
+    lim <- max(abs(null_p_versions$z))
+    
+    null_p_versions %>%
+    mutate(sig = case_when(
+        q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
+        )) %>%
+    mutate_at(vars(label), ~ factor(., levels=rev(unique(.)))) %>% 
+    mutate_at(vars(version), ~ factor(., levels=unique(.))) %>%         
+    ggplot(aes(x=G, y=label)) + 
+    facet_wrap(~version, ncol=ncol) +
+    geom_tile(aes(fill=z)) +
+    geom_text(aes(label=paste(round(z, digits = 2), '\n', round(q, digits=3), sig)), size=8) +
+    scale_fill_gradientn(colours=rev(brewer.rdbu(100)[20:80]), guide='colourbar', limits=c(-lim,lim)) +
+    guides(fill=guide_colourbar(title='z-score', barheight=10)) +
+    scale_x_discrete(position = "top") +
+    theme_minimal() + 
+    theme(panel.spacing=unit(1,'lines'), 
+          axis.title = element_blank(),
+          strip.text.x=element_text(size=20),
+          strip.placement='outside',
+          text=element_text(size=20)
+         ) +
+    coord_fixed()
+}
+
+
+plot_enrichment_heatmaps_2 <- function(null_p_versions, ncol=3) {
+    null_p_versions %>%
+    mutate(sig = case_when(
+        q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
+        )) %>%
+    mutate_at(vars(label), ~ factor(., levels=rev(unique(.)))) %>% 
+    mutate_at(vars(version), ~ factor(., levels=unique(.))) %>%     
+    ggplot(aes(x=G, y=label)) + 
+    facet_wrap(~version, ncol=ncol) +
+    geom_tile(aes(fill=true_mean)) +
+    geom_text(aes(label=paste(round(true_mean, digits = 2), '\n', round(q, digits=3), sig)), size=8) +
+    scale_fill_gradientn(colours=rev(brewer.rdbu(100)[20:80]), guide='colourbar') +
+    guides(fill=guide_colourbar(title='pearson r', barheight=10)) +
+    scale_x_discrete(position = "top") +
+    theme_minimal() + 
+    theme(panel.spacing=unit(1,'lines'), 
+          axis.title = element_blank(),
+          strip.text.x=element_text(size=20),
+          strip.placement='outside',
+          text=element_text(size=20)
+         ) +
+    coord_fixed()
+}
+
 plot_enrichments_v2 <- function(enrichments, size=4) {
     df <- enrichments %>%
     mutate(neglogFDR_fill = ifelse(direction=='top', -neglogFDR, neglogFDR)) %>%
@@ -63,49 +175,7 @@ plot_enrichments <- function(enrichments, size=4) {
          )
 }
 
-plot_cell_bars <- function(null_p) {
-    
-    lim <- max(abs(null_p$z))
-    
-    null_p %>% 
-    ggplot(aes(x=celltype, y=z, group=G, fill=G)) + 
-    geom_col(aes(alpha=sig), color='black', width=.5, position=position_dodge(.5)) +
-    # geom_point(aes(alpha=!sig), shape=21, size=5, position=position_dodge(.5)) +
-    # geom_point(aes(alpha=sig), fill='white', shape=21, size=5, position=position_dodge(.5), guide='none') +
-    scale_alpha_manual(values=c(0.2,1)) +
-    geom_hline(yintercept=0) +
-    scale_x_discrete(name='') +
-    scale_y_continuous(limits=c(-lim,lim), name='z-score') +
-    scale_fill_manual(values=brewer.rdylbu(5)[c(1,2,5)], name='') +
-    ggtitle("Mean weight of cell genes vs permutations") +
-    # coord_flip() +
-    theme_minimal() +
-    theme(panel.grid=element_blank(),
-          plot.title=element_text(size=20),
-          axis.text=element_text(size=20),
-          text=element_text(size=20)
-         )
-}
 
-plot_burt_bars <- function(cell_maps_corrs) {
-    cell_maps_corrs %>% 
-    rownames_to_column('gene') %>%
-    gather(map, corr, -gene) %>%
-    mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
-    mutate(gene = factor(gene, ordered=T, levels=unique(.$gene))) %>%
-    ggplot(aes(x=corr, y=gene, fill=corr)) +
-    facet_grid(.~map) +
-    geom_col() +
-    scale_y_discrete(limits=rev) +
-    scale_x_continuous(breaks=c(-.5,0,.5)) +
-    # scale_fill_manual(values=c('mediumpurple3', brewer.rdylbu(5)[c(1,2,5)]), guide='none') +
-    scale_fill_gradientn(values=rev(brewer.rdbu(100)), guide='none') +
-    xlab('Corr') + ylab('') +
-    theme_minimal() + 
-    theme(panel.grid.minor=element_blank(),
-          # panel.grid.major=element_line(color='lightgrey')
-         )
-}                  
 
 plot_cell_radar <- function(null_p, size=4) {
     null_p %>% 
@@ -133,16 +203,18 @@ plot_cell_gene_corrs <- function(corrs, sort=CT, ncol=3) {
     corrs %>%
     mutate(cell_type = factor(cell_type, ordered=T, levels=unique(.$cell_type))) %>%
     arrange({{ sort }}) %>%
-    mutate(gene = factor(gene, ordered=T, levels=unique(.$gene))) %>%
-    gather(map, r, -cell_type, -gene) %>%
+    # mutate(gene = factor(gene, ordered=T, levels=unique(.$gene))) %>%
+    gather(map, r, -cell_type, -rank) %>%
     mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
     ggplot() +
     facet_wrap(~cell_type, ncol=ncol, scales='free') +
-    geom_raster(aes(map, gene, fill=r)) +
+    geom_raster(aes(map, rank, fill=r)) +
     scale_fill_gradientn(colors=rev(brewer.rdbu(100))) +
+    ylab('ranked genes') +
     theme_minimal() +
     theme(text=element_text(size=15),
-          axis.text.x=element_text(size=15),
+          axis.text.y=element_blank(),
+          axis.text.x=element_text(size=10),
           strip.text.x=element_text(size=20)
          )
 }

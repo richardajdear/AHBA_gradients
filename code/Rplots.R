@@ -48,8 +48,8 @@ plot_weights_ds <- function(weights_ds) {
         theme_minimal() + 
         theme(
             panel.grid=element_blank(), 
-            strip.text.x = element_blank(),
-            axis.text = element_blank(),
+            # strip.text.x = element_blank(),
+            axis.title.y = element_text(angle=0, vjust=0.5, hjust=1),
             aspect.ratio = 1
         )
 }
@@ -113,7 +113,7 @@ plot_scatter_corrs <- function(scatter_corrs, xlab='', ylab='') {
     facet_grid(G~.) +
     geom_point(alpha=.2) +
     geom_smooth(method='lm', aes(color=G), se=F) +
-    geom_text(data=corrs, x=0, y=2.2, aes(label=label), size=6) +
+    geom_text(data=corrs, x=-1, y=2.2, aes(label=label), size=6) +
     xlab(xlab) + ylab(ylab) +
     scale_color_manual(values=mycolors) +
     guides(color='none') +
@@ -156,7 +156,7 @@ plot_weight_corrs <- function(weight_corrs) {
 
 plot_corrs <- function(df, facetting='h', xlab='', ylab='', size=8) {
     p <- df %>% 
-    filter(x<3, y<3) %>%
+    # filter(x<3, y<3) %>%
     mutate(
         x=recode(x, `0`='G1',`1`='G2',`2`='G3',`3`='G4',`4`='G5'),
         y=recode(y, `0`='G1',`1`='G2',`2`='G3',`3`='G4',`4`='G5')
@@ -166,7 +166,7 @@ plot_corrs <- function(df, facetting='h', xlab='', ylab='', size=8) {
     geom_tile(aes(x,y, fill=corr)) +
     geom_text(aes(x,y, label=sprintf("%0.2f", round(corr, digits = 2))), size=size) +
 #     scale_fill_gradient2(low=muted('red'),mid='white',high=muted('blue'), limits=c(-1,1)) +
-    scale_fill_gradientn(colours=brewer.rdbu(100)[20:80], limits=c(-1,1), guide='colourbar') +
+    scale_fill_gradientn(colours=rev(brewer.rdbu(100)[20:80]), limits=c(-1,1), guide='colourbar') +
     scale_y_discrete(limits=rev) +
     guides(fill=guide_colourbar(title='Corr.', barwidth=20)) +
     theme_minimal() + 

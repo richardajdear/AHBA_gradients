@@ -99,6 +99,59 @@ def get_bs_cortex_mapping():
     
     return bs_cortex_mapping
 
+
+def get_hcp_bs_mapping_v2():
+    """
+    Define mapping between individual HCP regions and BrainSpan
+    """
+    hcp_bs_mapping = (
+        pd.read_csv("../data/hcp_bs_mapping_v2.csv", index_col=None)
+        # .query("keep==1")
+        .assign(structure_name = lambda x: np.where(x['keep']==1, x['structure_name'], np.nan))
+               )
+    
+    return hcp_bs_mapping
+
+
+def get_dk_bs_mapping():
+    """
+    Define mapping between Brainspan regions and HCP cortex groups
+    """
+    dk_bs_mapping = {
+        'pericalcarine':'primary visual cortex (striate cortex, area V1/17)',
+        'inferior parietal':'posteroventral (inferior) parietal cortex',
+        'postcentral':'primary somatosensory cortex (area S1, areas 3,1,2)',
+        'precentral':'primary motor cortex (area M1, area 4)',
+        'caudal middle frontal':'dorsolateral prefrontal cortex',
+        'rostral middle frontal':'dorsolateral prefrontal cortex',
+        'pars orbitalis':'ventrolateral prefrontal cortex',
+        'pars opercularis':'ventrolateral prefrontal cortex',
+        'pars triangularis':'ventrolateral prefrontal cortex',
+        'rostral anterior cingulate':'anterior (rostral) cingulate (medial prefrontal) cortex',
+        'caudal anterior cingulate':'anterior (rostral) cingulate (medial prefrontal) cortex',
+        'frontal pole':'orbital frontal cortex',
+        'lateral orbitofrontal':'orbital frontal cortex',
+        'medial orbitofrontal':'orbital frontal cortex',
+        'inferior temporal':'inferolateral temporal cortex (area TEv, area 20)',
+        'fusiform':'inferolateral temporal cortex (area TEv, area 20)',
+        'transverse temporal':'primary auditory cortex (core)',
+        'superior temporal':'posterior (caudal) superior temporal cortex (area 22c)'
+    }
+
+    dk_bs_mapping = (
+        pd.DataFrame.from_dict(dk_bs_mapping, orient='index')
+        .assign(label = lambda x: 'lh_' + x.index.str.replace(' ',''))
+        .set_index('label')
+        .reindex(get_labels_dk()[:34])
+        .set_axis(['structure_name'], axis=1)
+        .assign(structure_name = lambda x: x['structure_name'].astype('string'))
+        .reset_index()
+    )
+    
+    return dk_bs_mapping
+
+
+
 def get_short_bs_names():
     """
     Short Brainspan region names for plotting
@@ -119,8 +172,7 @@ def get_short_bs_names():
     return bs_structure_name_short
 
 
-def get_hcp_bs_mapping(bs_cortex_mapping,
-                      hcp_info_file = "../data/parcellations/HCP-MMP1_UniqueRegionList.txt"):
+def get_hcp_bs_mapping(hcp_info_file = "../data/parcellations/HCP-MMP1_UniqueRegionList.txt"):
     """
     Get HCP regions mapped to Brainspan from Brainspan cortex mapping
     """
@@ -133,40 +185,40 @@ def get_hcp_bs_mapping(bs_cortex_mapping,
         choicelist = ['Motor', 'Somatosensory'], 
         default = x['cortex']
     )))
-    # Invert mapping
+    # Get bs cortex mapping and invert
+    bs_cortex_mapping = get_bs_cortex_mapping()
     cortex_bs_mapping = {v:k for k,v in bs_cortex_mapping.items()}
     # Explode BS regions to all HCP regions
     hcp_bs_mapping = (hcp_info
      .loc[lambda x: x['LR'] == 'L', ['region', 'cortex']]
-     .assign(structure_name = lambda x: x['cortex'].map(cortex_bs_mapping))
+     .assign(structure_name = lambda x: x['cortex'].map(cortex_bs_mapping).astype('string'))
      .assign(structure_name_short = lambda x: x['structure_name'].map(get_short_bs_names()))
      .sort_values('structure_name')
+     .rename({'region':'label'}, axis=1)
                      )
     return hcp_bs_mapping
     
 
-def get_mapped_scores(version, hcp_bs_mapping, mean=True):
+def get_mapped_scores(version, version_to_bs_mapping, mean=True):
     """
     Get gradient scores in mapped Brainspan regions
     """
     # Get gradients filtered to HCP regions matched in brainspan
     scores_filtered = (
-     version.scores
-     .iloc[:,:3]
-     .join(get_labels_hcp())
-     .rename_axis('id')
-     .join(hcp_bs_mapping.set_index('region'), on='label')
+     version.clean_scores()
+     .set_index('label')
+     .join(version_to_bs_mapping.set_index('label')['structure_name'])
      .dropna(axis=0)
     )
 
-    scores_cortex = (scores_filtered
-     .groupby('cortex')
+    scores_mean = (scores_filtered
+     .groupby('structure_name')
      .mean()
      .apply(lambda x: (x-np.mean(x))/np.std(x))
     )
     
     if mean:
-        return scores_cortex
+        return scores_mean
     else:
         return scores_filtered
 
@@ -205,17 +257,19 @@ def count_samples(bs_col, bs_cortex_mapping):
 
 
 
-def clean_brainspan(bs_exp, bs_col, bs_row, bs_cortex_mapping):
+def clean_brainspan(bs_exp, bs_col, bs_row, bs_mapping):
     """
     Clean up Brainspan data into dataframe
     """
+    mapped_regions = bs_mapping['structure_name'].dropna().unique()
+    
     # Join region data
     # Filter for only mapped regions (i.e. no subcortex)
     bs_mapped = (pd.concat([
         bs_exp.T,
         bs_col.set_index('column_num')[['donor_id', 'age', 'structure_name']]
     ], axis=1)
-     .loc[lambda x: np.isin(x['structure_name'], list(bs_cortex_mapping.keys()))] # filter for mapped regions
+     .loc[lambda x: np.isin(x['structure_name'], mapped_regions)] # filter for mapped regions
      .set_index(['donor_id', 'age', 'structure_name'])
      # .dropna(how='all')
     )
@@ -256,37 +310,37 @@ def aggregate_brainspan_by_age(bs_clean, normalize=True):
 
 
 
-def compute_brainspan_scores(bs_agg, version, bs_cortex_mapping=None, normalize=True):
+def compute_brainspan_scores(bs_agg, version, normalize=True):
     """
     Compute scores of AHBA gradients on donor-aggregated Brainspan
-    Relabel regions by HCP cortex names, adding in missing NA rows
+    Add in missing NA rows
     Optionally normalize by age
     """
-    # If version does not already have weights, fit them
-    if not hasattr(version, 'weights'):
-        version.fit_weights()
-    
     # Find matching genes
     gene_mask = version.weights.index.intersection(bs_agg.columns)
+    
     # Score PCs
-    bs_scores = (bs_agg.loc[:, gene_mask] @ version.weights.loc[gene_mask, :]).iloc[:, :5]
-    # Relabel
-    if bs_cortex_mapping is not None:
-        bs_scores = (bs_scores
-        .assign(cortex = lambda x: x.index.get_level_values(1).map(bs_cortex_mapping))
-        .reset_index().set_index(['age', 'cortex']).drop('structure_name',axis=1)
-        .groupby('age').apply(lambda x: x.droplevel(0).reindex(pd.CategoricalIndex(bs_cortex_mapping.values()))) # add missing rows as NaN
-        .rename_axis(['age', 'cortex'])
+    bs_scores = (bs_agg.loc[:, gene_mask] @ version.weights.loc[gene_mask, :]).iloc[:, :3].set_axis(['G1','G2','G3'], axis=1)
+    
+    # Add missing regions to each age as NA
+    bs_regions_index = pd.CategoricalIndex(
+        bs_scores.index.get_level_values(1).unique().dropna()
+    )
+    bs_scores = (bs_scores
+                 .groupby('age')
+                 .apply(lambda x: x.droplevel(0).reindex(bs_regions_index))
                  )
+    
     # Normalize by age
     if normalize:
         bs_scores = bs_scores.groupby('age').apply(lambda x: (x-np.mean(x))/np.std(x))
+        
     return bs_scores
 
 
-def correlate_bs_scores(bs_scores, scores_cortex, age_groups=None, rolling=None, plot=True):
+def correlate_brainspan_scores(bs_scores, ahba_scores, age_groups=None, rolling=None, plot=True):
     """
-    Correlate Brainspan gradient scores with HCP cortex gradient scores
+    Correlate Brainspan gradient scores with HCP gradient scores
     Take absolute correlation because PLS may invert scores
     Either by all ages, or in defined age groups
     Optionally melt for plotting
@@ -298,14 +352,14 @@ def correlate_bs_scores(bs_scores, scores_cortex, age_groups=None, rolling=None,
         .assign(age_group = lambda x: x['age'].map(age_groups))
         .assign(age = lambda x: pd.Categorical(x['age_group'], ordered=True, categories = x['age_group'].unique()))
         .drop('age_group', axis=1)
-        .groupby(['age', 'cortex']).mean() # agg into age groups
+        .groupby(['age', 'structure_name']).mean() # agg into age groups
                  )
 
     # Rolling average over ages if desired
     if rolling is not None:
         bs_scores = (bs_scores
         .reset_index()
-        .groupby(['cortex'])
+        .groupby(['structure_name'])
         .rolling(rolling, center=False, on='age', min_periods=1).mean()
         .set_index(['age'], append=True)
         .droplevel(level=1)
@@ -314,9 +368,8 @@ def correlate_bs_scores(bs_scores, scores_cortex, age_groups=None, rolling=None,
     # Correlate
     # Take absolute because PLS may invert
     bs_scores_corr = (bs_scores
-    .groupby('age').corrwith(scores_cortex)
+    .groupby('age').corrwith(ahba_scores)
     .abs() # take absolute
-    .iloc[:,:3].set_axis(['G1','G2','G3'], axis=1)
                   ) 
     # Clean up for plotting
     if plot:
@@ -326,47 +379,40 @@ def correlate_bs_scores(bs_scores, scores_cortex, age_groups=None, rolling=None,
     return bs_scores_corr
 
 
-def get_cortex_scores(bs_scores, scores_cortex, age_groups, bs_cortex_mapping):
+def combine_scores(bs_scores, ahba_scores_mapped, age_groups):
     """
     Combine AHBA and Brainspan cortex scores for scatter plot
     """
-    bs_scores_adult = (bs_scores
-     .reset_index().assign(age_group = lambda x: x['age'].map(age_groups))
-     .groupby(['age_group', 'cortex']).mean().loc['18-40 yrs', [0,1,2]]
-    )
+    bs_scores_adult = bs_scores.loc['18 yrs':,:].groupby('structure_name').mean()
 
-    cortex_scores = (pd.concat({'Brainspan':bs_scores_adult, 'AHBA':scores_cortex.iloc[:, :3]})
-     .reset_index().set_axis(['data', 'cortex', 'G1', 'G2', 'G3'], axis=1)
-     .melt(id_vars=['data', 'cortex'], var_name='G', value_name='score')
-     # swap back to Brainspan labels
-     .assign(cortex = lambda x: x['cortex'].map({v:k for k,v in bs_cortex_mapping.items()}))
-     .pivot(index=['G', 'cortex'], columns='data', values='score')
+    both_scores = (pd.concat({'Brainspan': bs_scores_adult, 'AHBA': ahba_scores_mapped})
+     .melt(ignore_index=False, var_name='G', value_name='score')
+     .set_index('G', append=True)
+     .unstack(0).droplevel(0, axis=1)
      .reset_index()
     )
-    
-    cortex_corrs = (cortex_scores
-                    .groupby('G').corr()
-                    .loc[(slice(None), 'AHBA'), 'Brainspan']
-                    .droplevel(1)
-                   )
-    return cortex_scores, cortex_corrs
+
+    corrs = (both_scores
+             .groupby('G').corr()
+             .loc[(slice(None), 'AHBA'), 'Brainspan']
+             .droplevel(1)
+            )
+    return both_scores, corrs
 
 
-def make_brain_scores(version, hcp_bs_mapping, bs_scores):
+def make_brain_plots(version, version_to_bs_mapping, bs_scores):
     """
     Prepare brain scores for plotting comparison maps
     """
-    ahba_scores_plot = (get_mapped_scores(version, hcp_bs_mapping, mean=False)
-                        .loc[:,[0,1,2,'label']]
-                        .set_axis(['G1','G2','G3', 'label'],axis=1)
+    ahba_scores_plot = (get_mapped_scores(version, version_to_bs_mapping, mean=False)
+                        .loc[:,['G1','G2','G3']].reset_index()
                   )
 
-    bs_scores_plot = (
-        bs_scores.loc['18 yrs':,:].groupby('cortex').mean()
-        .iloc[:,:3]
-        .join(hcp_bs_mapping.set_index('cortex')['region'])
-        .set_axis(['G1','G2','G3', 'label'],axis=1)
-    )
+    bs_scores_plot = (bs_scores
+                      .loc['18 yrs':,:].groupby('structure_name').mean()
+                      .apply(lambda x: (x-np.mean(x))/np.std(x))
+                      .join(version_to_bs_mapping.set_index('structure_name')['label'])
+                  )
 
     scores_plot = {
         'BrainSpan':bs_scores_plot,
@@ -376,8 +422,6 @@ def make_brain_scores(version, hcp_bs_mapping, bs_scores):
     scores_plot = (
         pd.concat(scores_plot).reset_index(0).rename({'level_0':'version'},axis=1)
         .set_index(['version', 'label'])
-        .groupby('version')
-        .apply(lambda x: (x-np.mean(x))/np.std(x))
         .reset_index()
     )
     

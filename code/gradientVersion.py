@@ -7,23 +7,32 @@ from sklearn.decomposition import PCA
 from sklearn.cross_decomposition import PLSCanonical, PLSRegression
 from sklearn.preprocessing import StandardScaler
 from brainspace.gradient import GradientMaps
+from brainsmash.mapgen.base import Base
+from neuromaps.images import annot_to_gifti
+from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
+
 from processing_helpers import *
+
+
 
 
 class gradientVersion():
     
-    def __init__(self, n_components=5, approach='pca', sparsity=0, kernel=None, gamma=None, marker_genes=['NEFL', 'LGALS1', 'SYT6'], **kwargs):
+    def __init__(self, n_components=5, approach='dm', sparsity=0, kernel='normalized_angle', marker_genes=['NEFL', 'LGALS1', 'SYT6'], **kwargs):
         """
         Initialize
         """
         self.n_components = n_components
+        self.marker_genes=marker_genes
+        
         self.approach = approach
         self.kernel = kernel
         self.sparsity=sparsity
-        self.gamma=gamma
-        self.marker_genes=marker_genes
-        self.kw_emb = kwargs
-        self.gradients = GradientMaps(n_components=n_components, approach=approach, kernel=kernel)
+        self.gradients = GradientMaps(n_components=n_components, approach=approach, kernel=kernel)    
+        
+        if approach == 'dm':
+            kwargs['alpha'] = kwargs.get('alpha', 1) # set alpha=1 as default, but only for approach = 'dm'
+        self.params = kwargs # set embedding-specific parameters
         
         self.expression = None
         self.scores = None
@@ -47,7 +56,7 @@ class gradientVersion():
         X = X.dropna(axis=0, how='all').dropna(axis=1, how='any')
         
         # Fit gradients
-        self.gradients.fit(X.values, sparsity=self.sparsity, gamma=self.gamma, **self.kw_emb)
+        self.gradients.fit(X.values, sparsity=self.sparsity, **self.params)
         
         # Align gradients to marker genes
         scores = pd.DataFrame(self.gradients.gradients_, index=X.index)
@@ -62,20 +71,21 @@ class gradientVersion():
         self.weights = self.fit_weights()
     
         if message:
-            print(f"New gradients version: method={self.approach}, kernel={self.kernel}, sparsity={self.sparsity}, data={expression}")
+            print(f"New gradients version: method={self.approach}, params={self.params}, kernel={self.kernel}, sparsity={self.sparsity}, data={expression}")
         
         return self
     
+    
     def clean_scores(self, scores=None):
         """
-        Normalize G1-3 scores, add labels x
+        Normalize G1-3 scores, add labels
         """
         if scores is None:
             scores = self.scores
         
-        if self.scores.shape[0]>=120:
+        if scores.shape[0]>=120:
             labels = get_labels_hcp()
-        elif self.scores.shape[0]<=34:
+        elif scores.shape[0]<=34:
             labels = get_labels_dk()
         else:
             labels = get_labels_dx()
@@ -106,19 +116,48 @@ class gradientVersion():
         return scores
 
     
-    def fit_weights(self, expression=None, scores=None, independent=True, normalize=False, sort=False, save_name=None, overwrite=True):
+    def score_in_dk(self, clean=True,
+                    hcp_img_path = "../data/parcellations/lh.HCPMMP1.annot",
+                    dk_img_path = "../data/parcellations/lh.aparc.annot"
+                   ):
+        """
+        Project HCP scores to a different parcellation using annot files
+        """
+        hcp_img = annot_to_gifti(hcp_img_path)
+        dk_img = annot_to_gifti(dk_img_path)
+        
+        scores_dk = np.zeros((34,3))
+        for i in range(3):
+            # Re-index gradient null values with NA
+            g_hcp = self.scores[i].reindex(range(1,181)).values
+            # Use HCP parcellation image to project HCP data to fsaverage
+            g_fsaverage = parcels_to_vertices(g_hcp, hcp_img)
+            # Use DK parcellation image to project fsaverage data into DK
+            g_dk = vertices_to_parcels(g_fsaverage, dk_img)
+            # Add to outputs
+            scores_dk[:,i] = g_dk
+        
+        # Convert to dataframe
+        scores_dk = pd.DataFrame.from_records(scores_dk, index=list(range(1,35)))
+        
+        if clean:
+            scores = self.clean_scores(scores=scores_dk)
+        
+        return scores
+    
+    
+    def fit_weights(self, expression=None, independent=True, normalize=False, sort=False, save_name=None, overwrite=True):
         """
         Get gene weights from PLS
         Use other expression matrix if provided, otherwise use self
         If independent==True, fit each component separately
-        Flip weight gradients as needed
         """
         # Use own expression matrix as X, or use matching regions in another expression matrix
         if expression is None:
             X = self.expression
         else:
             X = expression.dropna(axis=0, how='all').dropna(axis=1, how='any')
-            # Make sure X will match onto Y
+            # Make sure X will match onto regions in Y
             X = X.loc[set(X.index).intersection(self.scores.index), :]
         
         # Fit each component independently
@@ -154,7 +193,70 @@ class gradientVersion():
             return self.sort_weights(pls_weights)
         else:
             return pls_weights
+
         
+        
+    def make_null_scores(self, n=10, atlas='hcp', dist_mat=None, save_name=None):
+        """
+        Generate null maps using brainsmash
+        """
+        # Choose distance matric that matches parcellation
+        if atlas == 'hcp' and dist_mat is None:
+            dist_mat=np.loadtxt("../data/LeftParcelGeodesicDistmat.txt")
+        elif atlas == 'dk':
+            dist_mat=np.loadtxt("../data/LeftParcelGeodesicDistmat_DK.txt")
+        # Filter distance matrix to non-null regions
+        scores = self.clean_scores()
+        inds = [i-1 for i in scores.index]
+        dist_mat = dist_mat[inds,:][:,inds]
+
+        null_scores = np.zeros([scores.shape[0], 3, n])
+
+        for m in range(3):
+            base_map = scores.iloc[:,m].values
+            base = Base(x=base_map, D=dist_mat)
+            nulls = base(n)
+            null_scores[:,m,:] = nulls.swapaxes(0,1)
+
+        if save_name is not None:
+            outfile = "../outputs/permutations/" + save_name + '.npy'
+            np.save(outfile, null_scores)
+        
+        return null_scores
+        
+        
+    
+    def make_null_weights(self, null_scores, save_name = None):
+        """
+        Generate null weights from PLS on null maps x 
+        """
+        n_genes = self.weights.shape[0]
+        n = null_scores.shape[2]
+        null_weights = np.zeros((n_genes, 3, n))
+        
+        X = self.expression
+        
+        for i in range(3):
+            # Get index of marker gene to align PLS signs
+            marker_ix = X.columns.tolist().index(self.marker_genes[i])
+            for m in range(n):
+                Y = null_scores[:,i,m]
+                nan_mask = np.isnan(Y)
+                Y_nan = Y[~nan_mask]
+                X_nan = X.values[~nan_mask, :]
+                
+                _null_weights = PLSCanonical(n_components=1).fit(X_nan,Y_nan).x_weights_.squeeze()
+                # Flip output if needed
+                if _null_weights[marker_ix] < 0:
+                    _null_weights *= -1
+                null_weights[:,i,m] = _null_weights
+        
+        if save_name is not None:
+            outfile = "../outputs/permutations/" + save_name + '.npy'
+            np.save(outfile, null_weights)
+        
+        return null_weights
+                
         
         
     def sort_weights(self, gene_weights):
@@ -172,6 +274,9 @@ class gradientVersion():
         
         return pd.concat(gene_ranks, axis=1)
 
+
+
+    
                 
     def correlate(self, a,b):
         n = a.shape[1]
@@ -420,86 +525,86 @@ class gradientVersion():
 #     # Project two sets of coefs into roi-space of this pcaVersion and get correlation
 #     # Coefs could be from this or other pcaVersions
 #     # Rotates scores2 onto scores1
-    def score_and_corr(self, version1, version2, procrustes=False):
+#     def score_and_corr(self, version1, version2, procrustes=False):
         
-        scores1 = self.score_from(version1)
+#         scores1 = self.score_from(version1)
         
-        if not procrustes:
-            scores2 = self.score_from(version2)
-        elif procrustes:
-            scores2 = self.expression @ (version1.rotate_other_coefs(version2).T)
+#         if not procrustes:
+#             scores2 = self.score_from(version2)
+#         elif procrustes:
+#             scores2 = self.expression @ (version1.rotate_other_coefs(version2).T)
         
-        return (
-            pd.concat([scores1, scores2],axis=1)
-            .corr().iloc[:5,5:]
-        )
+#         return (
+#             pd.concat([scores1, scores2],axis=1)
+#             .corr().iloc[:5,5:]
+#         )
     
     
 
-    def varimax(self):
-        """
-        Apply varimax to self and return rotation matrix R
-        """
-        L,R = rotate_factors(self.loadings.values, method='varimax')
-        p,k = L.shape
-        return R
+#     def varimax(self):
+#         """
+#         Apply varimax to self and return rotation matrix R
+#         """
+#         L,R = rotate_factors(self.loadings.values, method='varimax')
+#         p,k = L.shape
+#         return R
     
-    def quartimax(self, how='loadings'):
-        """
-        Apply quartimax to self and return rotation matrix R
-        """
-        if how=='loadings':
-            L,R = rotate_factors(self.loadings.values, method='quartimax')
-        elif how=='scores':
-            L,R = rotate_factors(self.U.values, method='quartimax')
-        p,k = L.shape
-        return R
+#     def quartimax(self, how='loadings'):
+#         """
+#         Apply quartimax to self and return rotation matrix R
+#         """
+#         if how=='loadings':
+#             L,R = rotate_factors(self.loadings.values, method='quartimax')
+#         elif how=='scores':
+#             L,R = rotate_factors(self.U.values, method='quartimax')
+#         p,k = L.shape
+#         return R
 
     
-    def procrustes(self, other, varimax=False, gamma=1, q=100):
-        """
-        Apply procrustes rotation to self to match target other and return rotation matrix
-        """
-        if not varimax:
-            L1 = self.loadings
-            L2 = other.loadings
-        elif varimax:
-            L1 = self.loadings @ self.varimax(gamma=gamma, q=q)
-            L2 = other.loadings @ other.varimax(gamma=gamma, q=q)
+#     def procrustes(self, other, varimax=False, gamma=1, q=100):
+#         """
+#         Apply procrustes rotation to self to match target other and return rotation matrix
+#         """
+#         if not varimax:
+#             L1 = self.loadings
+#             L2 = other.loadings
+#         elif varimax:
+#             L1 = self.loadings @ self.varimax(gamma=gamma, q=q)
+#             L2 = other.loadings @ other.varimax(gamma=gamma, q=q)
         
-        p,k = L1.shape
-        R, _ = orthogonal_procrustes(L1, L2)
-#         coefs_rotated = (self.coefs.T @ R_dim5).set_axis(list(range(1,6)),axis=1)
-        return R
+#         p,k = L1.shape
+#         R, _ = orthogonal_procrustes(L1, L2)
+# #         coefs_rotated = (self.coefs.T @ R_dim5).set_axis(list(range(1,6)),axis=1)
+#         return R
 
     
-    def corr_loadings(self, other, varimax=False, quartimax=False, gamma=1, q=100, procrustes=False, target=None):
-        """
-        Get correlation df of top 5 components with another version x
-        Optionally apply varimax first
-        Optionally Procrustes-rotate self onto other or onto target, with or without varimax
-        """
+#     def corr_loadings(self, other, varimax=False, quartimax=False, gamma=1, q=100, procrustes=False, target=None):
+#         """
+#         Get correlation df of top 5 components with another version x
+#         Optionally apply varimax first
+#         Optionally Procrustes-rotate self onto other or onto target, with or without varimax
+#         """
         
-        if varimax:
-            L1 = self.loadings @ self.varimax(gamma=gamma, q=q)
-            L2 = other.loadings @ other.varimax(gamma=gamma, q=q)
-        elif quartimax:
-            L1 = self.loadings @ self.quartimax()
-            L2 = other.loadings @ other.quartimax()
-        else:
-            L1 = self.loadings
-            L2 = other.loadings
+#         if varimax:
+#             L1 = self.loadings @ self.varimax(gamma=gamma, q=q)
+#             L2 = other.loadings @ other.varimax(gamma=gamma, q=q)
+#         elif quartimax:
+#             L1 = self.loadings @ self.quartimax()
+#             L2 = other.loadings @ other.quartimax()
+#         else:
+#             L1 = self.loadings
+#             L2 = other.loadings
         
-        if procrustes and target is None:
-            L1 = L1 @ self.procrustes(other, varimax=varimax, gamma=gamma, q=q)
-        elif procrustes and target is not None:
-            L1 = L1 @ self.procrustes(target, varimax=varimax, gamma=gamma, q=q)
-            L2 = L2 @ other.procrustes(target, varimax=varimax, gamma=gamma, q=q)
+#         if procrustes and target is None:
+#             L1 = L1 @ self.procrustes(other, varimax=varimax, gamma=gamma, q=q)
+#         elif procrustes and target is not None:
+#             L1 = L1 @ self.procrustes(target, varimax=varimax, gamma=gamma, q=q)
+#             L2 = L2 @ other.procrustes(target, varimax=varimax, gamma=gamma, q=q)
         
-        return (
-            pd.concat([L1.iloc[:,:5], L2.iloc[:,:5]],axis=1) # only look at top 5 components
-            .corr().iloc[:5,5:]
-        )
+#         return (
+#             pd.concat([L1.iloc[:,:5], L2.iloc[:,:5]],axis=1) # only look at top 5 components
+#             .corr().iloc[:5,5:]
+#         )
     
     
 

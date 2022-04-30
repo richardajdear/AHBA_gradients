@@ -16,7 +16,7 @@ mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 
 
 
-plot_maps <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colorscale='symmetric', spacing=0) {
+plot_maps <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colorscale='symmetric', spacing=0, facet='w') {
     df <- maps %>%
         rownames_to_column %>%
         mutate(region = recode(rowname,'7Pl'='7PL')) %>% 
@@ -43,14 +43,14 @@ plot_maps <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colo
         m_max <- colorscale[2]
     }
     
-    ggplot(df) + 
+    p <- ggplot(df) + 
     geom_brain(
         atlas=glasser,
         mapping=aes(fill=value, geometry=geometry, hemi=hemi, side=side, type=type),
         colour='grey', size=.1,
         show.legend=T
         ) + 
-    facet_wrap(~map, ncol=ncol, dir="v") +
+    # facet_wrap(~map, ncol=ncol, dir="v") +
     scale_fill_gradientn(
         colors=colors, 
         limits=c(m_min,m_max), oob=squish, breaks=c(m_min,m_max), 
@@ -64,10 +64,18 @@ plot_maps <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colo
           strip.text.x=element_text(vjust=1, size=20),
           plot.title=element_text(hjust=0.5)) +
 ggtitle(title) + xlab("") + ylab("")
+    
+    if (facet=='h') {
+        p + facet_grid(.~map)
+    } else if (facet=='v') {
+        p + facet_grid(map~.)
+    } else if (facet=='w') {
+        p + facet_wrap(~map, ncol=ncol, dir="v")
+    }
 }
 
 
-plot_maps_dk <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colorscale='symmetric', spacing=0) {
+plot_maps_dk <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colorscale='symmetric', spacing=0, facet='w') {
     df <- maps %>%
         rownames_to_column %>%
         rename(label = rowname) %>%
@@ -90,14 +98,13 @@ plot_maps_dk <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), c
         m_min <- df %>% .$value %>% quantile(.01)
     }
     
-    ggplot(df) + 
+    p <- ggplot(df) + 
     geom_brain(
         atlas=dk,
         mapping=aes(fill=value, geometry=geometry, hemi=hemi, side=side, type=type),
         colour='grey', size=.1,
         show.legend=T
         ) + 
-    facet_wrap(~map, ncol=ncol, dir="v") +
     scale_fill_gradientn(
         colors=colors, 
         limits=c(m_min,m_max), oob=squish, breaks=c(m_min,0,m_max), 
@@ -109,13 +116,22 @@ plot_maps_dk <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), c
           panel.spacing.x=unit(spacing,'lines'),
           panel.spacing.y=unit(spacing,'lines'),
           strip.text.x=element_text(vjust=1, size=20),
+          strip.text.y.left=element_text(vjust=.5, size=10, angle=0),
           plot.title=element_text(hjust=0.5)) +
 ggtitle(title) + xlab("") + ylab("")
+    
+    if (facet=='h') {
+        p + facet_grid(.~map)
+    } else if (facet=='v') {
+        p + facet_grid(map~., switch='y')
+    } else if (facet=='w') {
+        p + facet_wrap(~map, ncol=ncol, dir="v")
+    }
 }
 
 
 
-plot_corrs <- function(null_p, size=6) {
+plot_map_corrs <- function(null_p, size=6) {
     lim <- max(abs(null_p$true_mean))
     
     null_p %>%
@@ -126,7 +142,7 @@ plot_corrs <- function(null_p, size=6) {
     ggplot(aes(x=G, y=map_name)) +
     geom_raster(aes(fill=true_mean)) + 
     geom_text(aes(label=p_level), vjust=.5, hjust=.5, size=size, color='white') +
-    scale_fill_gradientn(colors=brewer.rdbu(100)[10:90], name='Corr', 
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)[10:90]), name='Corr', 
                     limits=c(-lim,lim), breaks=round(c(-lim,lim),1)) +
     scale_x_discrete(position='top') +
     guides(fill=guide_colorbar(barwidth=5)) +
@@ -163,7 +179,7 @@ plot_pca_weights <- function(pca_weights, size=6) {
 }
 
 
-plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, which=NULL) {
+plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs) {
     df <- maps_scatter %>%
     gather(G, G_score, -label, -map, -map_score)
 
@@ -173,16 +189,16 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, which=NULL) {
     mutate(r_label=paste('r =', round(true_mean,2), sig_label)) %>%
     mutate(x=-1, y=2)
 
-    if (!is.null(which) ) {
-        df <- df %>% filter(map %in% which)
-        corrs <- corrs %>% filter(map %in% which)
-    }
+    # if (!is.null(which) ) {
+    #     df <- df %>% filter(map %in% which)
+    #     corrs <- corrs %>% filter(map %in% which)
+    # }
     
     df %>%
     mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
     ggplot(aes(y=G_score, x=map_score)) +
     facet_grid(map~G, switch='y') +
-    geom_point(alpha=.3) + 
+    geom_point(alpha=.3) +
     geom_smooth(method='lm', color=brewer.puor(5)[5]) +
     geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=6, hjust=0.5, vjust=0.5) +
     # geom_text(data=corrs, aes(label=p_label, x=x, y=y), size=6, hjust=0, vjust=1) +
@@ -190,7 +206,8 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, which=NULL) {
     # xlim(c(-3,3)) + ylim(c(-3,3)) +
     xlab('') + ylab('') +
     theme_minimal() +
-    theme(strip.placement='outside',
+    theme(
+    # strip.placement='outside',
           strip.text.x=element_text(size=20),
           strip.text.y.left=element_text(angle=0, size=20),
           panel.grid.minor=element_blank(),
@@ -215,7 +232,7 @@ plot_both_scores_scatter <- function(both_scores_scatter) {
     
     both_scores_scatter %>%
     ggplot(aes(x=`AHBA DM`, y=`MRI PCA`)) +
-    facet_grid(.~G, switch='y',scales='free') +
+    facet_grid(.~G, switch='x', scales='free') +
     geom_point(alpha=.3) +
     geom_smooth(method='lm', color=brewer.rdbu(5)[5]) +
     geom_text(data=corr, aes(label=paste('r =', r), x=x, y=y), size=6, hjust=0.5, vjust=0.5) +
@@ -223,7 +240,7 @@ plot_both_scores_scatter <- function(both_scores_scatter) {
     xlab('') + ylab('') +
     theme_minimal() +
     theme(strip.placement='outside',
-          strip.text.x=element_blank(),
+          strip.text.x=element_text(size=20),
           strip.text.y.left=element_text(angle=0, size=20),
           axis.title.y = element_text(angle=0, vjust=0.5),
           panel.grid.minor=element_blank(),
@@ -323,18 +340,19 @@ plot_corr_versions <- function(corr_versions, size=6) {
     
     corr_versions %>%
     mutate(map = factor(map, ordered=T, levels=rev(unique(.$map)))) %>%
+    mutate(version = factor(version, ordered=T, levels=unique(.$version))) %>%
     mutate(p_level=ifelse(p<0.001, '***',
                    ifelse(p<0.01, '**',
                    ifelse(p<0.05, '*','')))) %>%
     mutate(p_sig = paste(round(p,3), p_level)) %>%
     ggplot(aes(x=G, y=map)) +
     facet_grid(.~version) +
-    geom_tile(aes(fill=true_mean)) + 
+    geom_raster(aes(fill=true_mean)) + 
     geom_tile(aes(color=sig), fill='transparent', size=2) + 
     geom_text(aes(label=round(true_mean,2)), vjust=-.5, size=size) +
     geom_text(aes(label=p_sig), vjust=1, size=size) +
     scale_fill_gradientn(colors=brewer.rdbu(100)[10:90], name='Corr', limits=c(-lim,lim)) +
-    scale_color_manual(values=c(NA, 'green'), labels=c('', 'FDR sig'), name='') +
+    scale_color_manual(values=c('transparent', 'green'), labels=c('', 'FDR sig'), name='') +
     guides(fill=guide_colorbar(barwidth=10)) +
     xlab('') + ylab('') +
     coord_fixed() +
@@ -347,6 +365,37 @@ plot_corr_versions <- function(corr_versions, size=6) {
 }
 
 
+plot_corr_versions_2 <- function(corr_versions, size=6) {
+    lim <- max(abs(corr_versions$true_mean))
+    
+    corr_versions %>%
+    mutate(map = factor(map, ordered=T, levels=rev(unique(.$map)))) %>%
+    mutate(version = factor(version, ordered=T, levels=unique(.$version))) %>%
+    mutate(q_level=ifelse(q<0.001, '***',
+                   ifelse(q<0.01, '**',
+                   ifelse(q<0.05, '*','')))) %>%
+    mutate(q_sig = paste(round(q,3), q_level)) %>%
+    ggplot(aes(x=G, y=map)) +
+    facet_grid(.~version) +
+    geom_raster(aes(fill=true_mean)) + 
+    # geom_tile(aes(color=sig), fill='transparent', size=2) + 
+    geom_text(aes(label=round(true_mean,2)), vjust=-.5, size=size) +
+    geom_text(aes(label=q_sig), vjust=1, size=size) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)[20:80]), name='Corr', limits=c(-lim,lim)) +
+    scale_color_manual(values=c('transparent', 'green'), labels=c('', 'FDR sig'), name='') +
+    guides(fill=guide_colorbar(barwidth=10)) +
+    xlab('') + ylab('') +
+    coord_fixed() +
+    theme_minimal() +
+    theme(panel.grid=element_blank(),
+          text = element_text(size=20),
+          legend.title=element_text(vjust=1),
+          legend.position='bottom'
+         )
+}
+                    
+                    
+                    
 plot_null_corrs <- function(corrs, null_corrs, null_p) {
 
     null_corrs <- null_corrs %>% gather(G, corr, -map)
