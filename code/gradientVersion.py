@@ -76,7 +76,7 @@ class gradientVersion():
         return self
     
     
-    def clean_scores(self, scores=None):
+    def clean_scores(self, scores=None, abs=False):
         """
         Normalize G1-3 scores, add labels
         """
@@ -95,9 +95,12 @@ class gradientVersion():
                   .set_axis(['G'+str(i+1) for i in range(3)],axis=1)
                   .apply(lambda x: (x-np.mean(x))/np.std(x))
                   .rename_axis('id')
-                  .join(labels)
                  )
-        return scores
+        
+        if abs:
+            scores = scores.abs()
+        
+        return scores.join(labels)
     
     
     def score_from(self, other, clean=True):

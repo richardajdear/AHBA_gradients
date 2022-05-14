@@ -5,6 +5,7 @@ from scipy.stats import percentileofscore
 from statsmodels.stats.multitest import multipletests
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
+import gseapy as gp
 
 from processing_helpers import *
 
@@ -211,6 +212,29 @@ def make_gene_corrs(genes, version, maps):
     return corrs
 
 
+### GO enrichment
+
+def get_target_enrichments(target, background,
+                                      FDR_threshold=0.05
+                                     ):
+    results = gp.enrichr(gene_list=target,
+           background=background,
+           gene_sets="../data/c5.go.bp.v7.5.1.symbols.gmt",
+           organism='human',
+           cutoff=0.05,
+           outdir='../outputs/enrichr',
+           no_plot=True,
+           verbose=True).results
+    
+    results = (results
+               .loc[lambda x: x['Adjusted P-value'] < FDR_threshold]
+               .loc[:, ['Term', 'Overlap', 'Adjusted P-value']]
+               .set_axis(['term', 'overlap', 'fdr'], axis=1)
+               .sort_values('fdr')
+               .assign(term = lambda x: x['term'].str[5:].str.lower().str.replace('_',' '))
+              )
+    
+    return results
 
 ### STRING enrichments
 
@@ -352,8 +376,12 @@ def get_cell_genes(which='wen', include=None, subtype=False, combine_layers=Fals
     return cell_genes
 
 
-
-
+def split_synaptic(gene_labels):
+    synapse_genes = pd.read_csv("../data/synaptome_all.csv", usecols=['gene_symbol']).dropna().iloc[:1886]
+    synapse_genes = pd.DataFrame({'label':'Synapse', 'gene':synapse_genes['gene_symbol']})
+    gene_labels = gene_labels.loc[lambda x: ~np.isin(x['gene'], synapse_genes['gene'])]
+    gene_labels = pd.concat([gene_labels, synapse_genes])
+    return gene_labels
 
 def get_cell_genes_weighted(which=None, normalize=True):
     """

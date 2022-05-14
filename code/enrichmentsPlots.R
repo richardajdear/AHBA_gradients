@@ -70,18 +70,19 @@ plot_enrichment_heatmaps <- function(null_p_versions, ncol=3) {
     lim <- max(abs(null_p_versions$z))
     
     null_p_versions %>%
-    mutate(sig = case_when(
-        q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
+    mutate(sig_label = case_when(
+        p < .001 ~ '***',p < .01 ~ '**',p < .05 ~ '*', TRUE ~ ''
         )) %>%
     mutate_at(vars(label), ~ factor(., levels=rev(unique(.)))) %>% 
     mutate_at(vars(version), ~ factor(., levels=unique(.))) %>%         
     ggplot(aes(x=G, y=label)) + 
     facet_wrap(~version, ncol=ncol) +
-    geom_tile(aes(fill=z)) +
-    geom_text(aes(label=paste(round(z, digits = 2), '\n', round(q, digits=3), sig)), size=8) +
+    geom_tile(aes(fill=z, color=sig), size=2) +
+    geom_text(aes(label=paste(round(z, digits = 2), '\n', round(p, digits=3), sig_label)), size=8) +
+    scale_color_manual(values=c('transparent','green'), name='FDR sig') +
     scale_fill_gradientn(colours=rev(brewer.rdbu(100)[20:80]), guide='colourbar', limits=c(-lim,lim)) +
     guides(fill=guide_colourbar(title='z-score', barheight=10)) +
-    scale_x_discrete(position = "top") +
+    # scale_x_discrete(position = "top") +
     theme_minimal() + 
     theme(panel.spacing=unit(1,'lines'), 
           axis.title = element_blank(),
@@ -93,19 +94,20 @@ plot_enrichment_heatmaps <- function(null_p_versions, ncol=3) {
 }
 
 
-plot_enrichment_heatmaps_2 <- function(null_p_versions, ncol=3) {
+plot_enrichment_heatmaps_2 <- function(null_p_versions, ncol=3, fill_name='pearson r') {
     null_p_versions %>%
-    mutate(sig = case_when(
-        q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
+    mutate(sig_label = case_when(
+        p < .001 ~ '***',p < .01 ~ '**',p < .05 ~ '*', TRUE ~ ''
         )) %>%
     mutate_at(vars(label), ~ factor(., levels=rev(unique(.)))) %>% 
     mutate_at(vars(version), ~ factor(., levels=unique(.))) %>%     
     ggplot(aes(x=G, y=label)) + 
     facet_wrap(~version, ncol=ncol) +
-    geom_tile(aes(fill=true_mean)) +
-    geom_text(aes(label=paste(round(true_mean, digits = 2), '\n', round(q, digits=3), sig)), size=8) +
+    geom_tile(aes(fill=true_mean, color=sig), size=1) +
+    geom_text(aes(label=paste(round(true_mean, digits = 2), '\n', round(p, digits=3), sig_label)), size=8) +
+    scale_color_manual(values=c('transparent','green'), name='FDR sig') +
     scale_fill_gradientn(colours=rev(brewer.rdbu(100)[20:80]), guide='colourbar') +
-    guides(fill=guide_colourbar(title='pearson r', barheight=10)) +
+    guides(fill=guide_colourbar(title=fill_name, barheight=10)) +
     scale_x_discrete(position = "top") +
     theme_minimal() + 
     theme(panel.spacing=unit(1,'lines'), 
@@ -116,6 +118,78 @@ plot_enrichment_heatmaps_2 <- function(null_p_versions, ncol=3) {
          ) +
     coord_fixed()
 }
+
+
+
+
+plot_weight_scatters_with_labels <- function(weights_labels, title='') {
+
+    weights <- weights_labels %>% rownames_to_column('gene') %>% rename(G1=`0`, G2=`1`, G3=`2`) 
+    df <- rbind(
+        weights %>% select(gene, label, contains('cluster'), x=G1, y=G3) %>% mutate(which='G1 v G2'),
+        weights %>% select(gene, label, contains('cluster'), x=G1, y=G2) %>% mutate(which='G1 v G3'),
+        weights %>% select(gene, label, contains('cluster'), x=G2, y=G3) %>% mutate(which='G2 v G3')
+    ) %>% 
+    arrange(label, which) %>%
+    mutate(which = factor(which, ordered=T, levels=unique(.$which)),
+           label = factor(label, ordered=T, levels=unique(.$label)),
+          )
+
+    lim <- max(abs(weights %>% pivot_longer(G1:G3, names_to='G', values_to='weight') %>% .$weight))
+
+    df_axs <- rbind(
+        data.frame(x=c(-lim, 0), y=c(0, lim), ax=c('G1', 'G2'), which='G1 v G2', hjust=c(.5,1.2), vjust=-0.3),
+        data.frame(x=c(-lim, 0), y=c(0, lim), ax=c('G1', 'G3'), which='G1 v G3', hjust=c(.5,1.2), vjust=-0.3),
+        data.frame(x=c(-lim, 0), y=c(0, lim), ax=c('G2', 'G3'), which='G2 v G3', hjust=c(.5,1.2), vjust=-0.3)
+    ) %>%
+    mutate(which = factor(which, ordered=T, levels=unique(.$which)),
+           ax = factor(ax, ordered=T, levels=unique(.$ax)),
+          )
+    
+    if (!'cluster' %in% colnames(df)) {
+        df <- df %>% mutate(cluster=label)
+    }
+    
+    ggplot(df%>%filter(label!='none')) + 
+    facet_grid(which~label) + 
+    geom_hline(yintercept=0) + geom_vline(xintercept=0) +
+    geom_text(data=df_axs, aes(x=x, y=y, label=ax, hjust=hjust, vjust=vjust), size=5) +
+    geom_point(data=df%>%select(-label), aes(x,y), size=.2, color='lightgrey', alpha=.2) +
+    geom_point(aes(x,y, color=cluster), size=.6, alpha=.5) +
+    scale_color_manual(values=brewer.set1(10)) +
+    scale_x_continuous(limits=c(-lim,lim)) + 
+    scale_y_continuous(limits=c(-lim,lim)) +
+    coord_cartesian(clip='off') +
+    theme_void() + 
+    ggtitle(title) +
+    theme(aspect.ratio=1,
+          text = element_text(size=16),
+          panel.spacing=unit(2,'lines'),
+          strip.text.y = element_blank(),
+          strip.text.x.top = element_text(size=20, vjust=3),
+          # strip.placement='outside', 
+          strip.clip='off',
+          # plot.margin = margin(t=10),
+          # strip.placement='outside',
+          legend.position='bottom',
+          plot.title=element_text(size=24,hjust=0.5,vjust=5)
+         )
+    
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 plot_enrichments_v2 <- function(enrichments, size=4) {
     df <- enrichments %>%

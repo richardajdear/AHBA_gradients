@@ -185,7 +185,9 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs) {
 
     corrs <- maps_scatter_corrs %>%
     mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
-    mutate(sig_label = ifelse(q<0.001, '***', '')) %>%
+    mutate(sig_label=ifelse(q<0.001, '***',
+                   ifelse(q<0.01, '**',
+                   ifelse(q<0.05, '*','')))) %>%
     mutate(r_label=paste('r =', round(true_mean,2), sig_label)) %>%
     mutate(x=-1, y=2)
 
@@ -371,19 +373,26 @@ plot_corr_versions_2 <- function(corr_versions, size=6) {
     corr_versions %>%
     mutate(map = factor(map, ordered=T, levels=rev(unique(.$map)))) %>%
     mutate(version = factor(version, ordered=T, levels=unique(.$version))) %>%
-    mutate(q_level=ifelse(q<0.001, '***',
-                   ifelse(q<0.01, '**',
-                   ifelse(q<0.05, '*','')))) %>%
-    mutate(q_sig = paste(round(q,3), q_level)) %>%
+    mutate(sig_label = case_when(
+        p < .001 ~ '***',p < .01 ~ '**',p < .05 ~ '*', TRUE ~ ''
+        )) %>%
+    # mutate(p_sig = paste(round(q,3), q_level)) %>%
     ggplot(aes(x=G, y=map)) +
     facet_grid(.~version) +
     geom_raster(aes(fill=true_mean)) + 
-    # geom_tile(aes(color=sig), fill='transparent', size=2) + 
-    geom_text(aes(label=round(true_mean,2)), vjust=-.5, size=size) +
-    geom_text(aes(label=q_sig), vjust=1, size=size) +
-    scale_fill_gradientn(colors=rev(brewer.rdbu(100)[20:80]), name='Corr', limits=c(-lim,lim)) +
-    scale_color_manual(values=c('transparent', 'green'), labels=c('', 'FDR sig'), name='') +
-    guides(fill=guide_colorbar(barwidth=10)) +
+    
+    geom_tile(aes(fill=true_mean, color=sig), size=1) +
+    geom_text(aes(label=paste(round(true_mean, digits = 2), '\n', round(p, digits=3), sig_label)), size=8) +
+    scale_color_manual(values=c('transparent','green'), name='FDR sig') +
+    scale_fill_gradientn(colours=rev(brewer.rdbu(100)[20:80]), guide='colourbar') +
+    guides(fill=guide_colourbar(title='Pearson r', barwidth=10)) +
+    
+#     geom_tile(aes(color=q_sig), fill='transparent', size=2) + 
+#     geom_text(aes(label=round(true_mean,2)), vjust=-.5, size=size) +
+#     geom_text(aes(label=p), vjust=1, size=size) +
+#     scale_fill_gradientn(colors=rev(brewer.rdbu(100)[20:80]), name='Corr', limits=c(-lim,lim)) +
+#     scale_color_manual(values=c('transparent', 'green'), labels=c('', 'FDR sig'), name='') +
+#     guides(fill=guide_colorbar(barwidth=10)) +
     xlab('') + ylab('') +
     coord_fixed() +
     theme_minimal() +

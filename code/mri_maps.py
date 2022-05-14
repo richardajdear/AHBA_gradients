@@ -55,7 +55,7 @@ def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True, renam
 def get_disorder_maps(data_dir="../data/lifespan_dx_DKatlas.csv"):
     maps = (
         pd.read_csv(data_dir, index_col=0)
-        .apply(lambda x: (x-np.mean(x))/np.std(x))
+        # .apply(lambda x: (x-np.mean(x))/np.std(x))
         .sort_index(axis=1)
         .rename_axis('label')#.reset_index()
     )
@@ -79,8 +79,12 @@ def get_corrs(scores, maps, method='pearson', atlas='hcp'):
     return corrs
 
 
-def generate_shuffles(maps, n_shuffles=1000,
+def generate_shuffles(maps, n=1000,
                       outfile='../outputs/shuffle_maps_1000.npy'):
+    
+    if 'label' in maps.columns:
+        maps = maps.drop('label', axis=1)
+    
     shuffle_maps = np.repeat(maps.values[:,:,np.newaxis], 1000, axis=2)
     for i in range(shuffle_maps.shape[2]):
         np.random.shuffle(shuffle_maps[:,:,i])

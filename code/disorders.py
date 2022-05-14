@@ -5,8 +5,8 @@ from enrichments import *
 from mri_maps import *
 from gradientVersion import *
 
-def get_gandal_genes(which='rnaseq'):
-    disorders = ['ASD', 'MDD', 'SCZ', 'BD']
+def get_gandal_genes(which='microarray'):
+    disorders = ['ASD', 'MDD', 'SCZ']
     if which == 'microarray':
 
         gandal_genes = (pd.read_csv("../data/gandal_genes_microarray.csv")
@@ -28,11 +28,31 @@ def get_gandal_genes(which='rnaseq'):
                         # .loc[lambda x: x.groupby('gene')['rank'].max()>1]
                         # .sort_index()
                        )
+        
+    for d in disorders:
+        gandal_genes[f'{d}.sig'] = gandal_genes[f'{d}.FDR'] < .05
 
     return gandal_genes
 
 
-def get_gene_corr(weights, null_weights, gandal_genes, sig_thresh=1, disorders = ['ASD', 'MDD', 'SCZ']):
+def get_rare_genes():
+    rare_genes = pd.read_csv("../data/rare_genes_konrad.csv").melt(var_name='label',value_name='gene').dropna()
+    return rare_genes
+
+
+def np_pearson_corr(x, y):
+    """
+    Fast pearson correlation (don't cross-correlate all the nulls with each other)
+    """
+    xv = x - x.mean(axis=0)
+    yv = y - y.mean(axis=0)
+    xvss = (xv * xv).sum(axis=0)
+    yvss = (yv * yv).sum(axis=0)
+    result = np.matmul(xv.transpose(), yv) / np.sqrt(np.outer(xvss, yvss))
+    # bound the values to -1 to 1 in the event of precision issues
+    return np.maximum(np.minimum(result, 1.0), -1.0)
+
+def get_gene_corr(weights, null_weights, gandal_genes, sig_thresh=1, adjust='fdr_bh', disorders = ['ASD', 'MDD', 'SCZ']):
     """
     Correlate gene weights with log2FC
     """
@@ -47,33 +67,32 @@ def get_gene_corr(weights, null_weights, gandal_genes, sig_thresh=1, disorders =
         # Don't overwrite the input data in the loop!
         genes_log2FC = gandal_genes.copy()            
 
-        # Filter for significant genes only
-        genes_log2FC = genes_log2FC.loc[lambda x: x[f'{d}.FDR'] < sig_thresh, :]            
-
-        # Find matching genes that have non-null differential expression for this disorder
-        genes_log2FC = genes_log2FC.loc[lambda x: ~np.isnan(x[f'{d}.log2FC'])]
-        genes = set(weights.index).intersection(genes_log2FC.index)
-        gene_mask = np.isin(weights.index, list(genes))
-        genes_log2FC = genes_log2FC.loc[genes,:]
-
-        # Extract differential expression
-        genes_log2FC = genes_log2FC.loc[:, f'{d}.log2FC']
-
-        true = np.corrcoef(x=genes_log2FC.values, y=weights.loc[genes, :].values, rowvar=False)[:1,1:]
-
+        # Take only significant genes
+        genes_log2FC = genes_log2FC.loc[lambda x: x[f'{d}.FDR']<sig_thresh, f'{d}.log2FC']
+        
+        # Find matching genes and filter differential expression
+        genes_matched = set(weights.index).intersection(genes_log2FC.index)
+        genes_log2FC = genes_log2FC.loc[genes_matched].values
+        # Also filter true and null weights
+        # np.searchsorted to find indices of matched genes in same order as genes_matched
+        genes_idxs = np.searchsorted(weights.index, list(genes_matched))
+        true = weights.values[genes_idxs, :]
+        nulls = null_weights[genes_idxs, :, :]
+        
+        # For each PC, get the correlation of the true weights and all the nulls
+        true_corr_disorder = np.zeros(3)
         null_corr_disorder = np.zeros((null_weights.shape[2], 3))
         for i in range(3):
-            nulls = null_weights[gene_mask, i, :]
-            corr = np.corrcoef(x=genes_log2FC.values, y=nulls, rowvar=False)[1:,:1]
-            null_corr_disorder[:, i] = corr.squeeze()
-
-        true_corrs[d] = pd.DataFrame(true)
-        null_corrs[d] = pd.DataFrame(null_corr_disorder)
+            true_corr_disorder[i] = np_pearson_corr(genes_log2FC, true[:,i]).squeeze()
+            null_corr_disorder[:, i] = np_pearson_corr(genes_log2FC, nulls[:,i,:]).squeeze()
+        
+        true_corrs[d] = pd.DataFrame(true_corr_disorder).T
+        null_corrs[d] = pd.DataFrame(null_corr_disorder) 
 
     true_corrs = pd.concat(true_corrs).set_axis(['G1','G2','G3'], axis=1).droplevel(1)
     null_corrs = pd.concat(null_corrs).set_axis(['G1','G2','G3'], axis=1).reset_index(level=0).rename({'level_0':'label'}, axis=1)
 
-    null_p = compute_null_p(true_corrs, null_corrs, adjust='fdr_bh')
+    null_p = compute_null_p(true_corrs, null_corrs, adjust=adjust)
     return null_p
 
 
@@ -82,11 +101,13 @@ def get_gene_map_corr(version, null_scores, gandal_genes, posneg, method='mean',
     
     disorders = [d for d in disorders if f'{d}.log2FC' in gandal_genes.columns]
 
+    gene_log2FC = gandal_genes.copy()
+    
     # Set non sig changes to 0
     for d in disorders:
-        gandal_genes[f'{d}.log2FC'] = np.where(gandal_genes[f'{d}.FDR'] >= sig_thresh, 0, gandal_genes[f'{d}.log2FC'])
+        gene_log2FC[f'{d}.log2FC'] = np.where(gene_log2FC[f'{d}.FDR'] >= sig_thresh, 0, gene_log2FC[f'{d}.log2FC'])
 
-    gene_log2FC = (gandal_genes
+    gene_log2FC = (gene_log2FC
                      .loc[:, [f'{d}.log2FC' for d in disorders]]
                      .rename({f'{d}.log2FC':f'{d}' for d in disorders}, axis=1)
                      .melt(ignore_index=False, var_name='label', value_name='weight')
@@ -112,7 +133,7 @@ def get_gene_map_corr(version, null_scores, gandal_genes, posneg, method='mean',
     return null_corrs_p
 
 
-def get_gene_sig(weights, null_weights, gandal_genes, posneg=None, posneg_weights=None, disorders = ['ASD', 'MDD', 'SCZ']):
+def get_gene_sig(weights, null_weights, gandal_genes, posneg=None, posneg_weights=None, disorders = ['ASD', 'MDD', 'SCZ'], combine=None):
     genes_sig_dict = {}
     
     for d in disorders:
@@ -137,7 +158,17 @@ def get_gene_sig(weights, null_weights, gandal_genes, posneg=None, posneg_weight
 
     # Combine across disorders
     genes_sig = pd.concat(genes_sig_dict).reset_index(0).rename({'gene_name':'gene','level_0':'label'},axis=1)
-
+    
+    # Take superset if desired
+    if combine=='union':
+        genes_sig['label'] = '-'.join(genes_sig['label'].unique())
+        genes_sig = genes_sig.drop_duplicates()
+    if combine=='ASD-SCZ intersection':
+        ASD_genes = genes_sig.loc[lambda x: x['label'] == 'ASD', 'gene']
+        SCZ_genes = genes_sig.loc[lambda x: x['label'] == 'SCZ', 'gene']
+        intersection = set(ASD_genes).intersection(SCZ_genes)
+        genes_sig = genes_sig.set_index('gene').loc[intersection, :].assign(label = 'ASD-SCZ\nintersection').reset_index()
+    
     true_mean, null_mean = compute_enrichments(weights, null_weights, genes_sig, posneg=posneg_weights)
     null_p = compute_null_p(true_mean, null_mean, adjust='fdr_bh')
 
@@ -148,54 +179,54 @@ def get_gene_dot(weights, null_weights, gandal_genes, posneg=None, posneg_weight
     """
     x
     """
-    weights_genes = weights.index
-    weights = weights.copy().values
-    nulls = null_weights.copy()
-    
+    weights = weights.copy()
+    null_weights = null_weights.copy()
     if posneg_weights =='abs':
         weights = np.abs(weights)
-        nulls = np.abs(nulls)
+        null_weights = np.abs(null_weights)
     elif posneg_weights=='pos':
-        weights = np.where(weights<0, 0, weights)
-        nulls = np.where(nulls<0, 0, nulls)
+        weights = pd.DataFrame(np.where(weights<0, 0, weights), index=weights.index)
+        null_weights = np.where(null_weights<0, 0, null_weights)
     elif posneg_weights=='neg':
-        weights = np.where(weights>0, 0, weights)
-        nulls = np.where(nulls>0, 0, nulls)
+        weights = pd.DataFrame(np.where(weights>0, 0, weights), index=weights.index)
+        null_weights = np.where(null_weights>0, 0, null_weights)    
     
     true_dot = {}
     null_dot = {}
     for d in disorders:
         # Skip if disorder not present
         if f'{d}.log2FC' not in gandal_genes.columns:
-            continue
-
+            continue          
+            
         # Don't overwrite the input data in the loop!
         genes_log2FC = gandal_genes.copy()           
             
-        # Filter for significant genes only
-        genes_log2FC = genes_log2FC.loc[lambda x: x[f'{d}.FDR'] < sig_thresh, :]            
-            
-        # Find matching genes that have non-null differential expression for this disorder
-        genes_log2FC = genes_log2FC.loc[lambda x: ~np.isnan(x[f'{d}.log2FC'])]
-        matched_genes = set(weights_genes).intersection(genes_log2FC.index)
-        gene_mask = np.isin(weights_genes, list(matched_genes))
+        # Take only significant genes
+        genes_log2FC = genes_log2FC.loc[lambda x: x[f'{d}.FDR']<sig_thresh, f'{d}.log2FC']
+
+        # Find matching genes and filter differential expression
+        genes_matched = set(weights.index).intersection(genes_log2FC.index)
+        genes_log2FC = genes_log2FC.loc[genes_matched].values
+        # Also filter true and null weights
+        # np.searchsorted to find indices of matched genes in same order as genes_matched
+        genes_idxs = np.searchsorted(weights.index, list(genes_matched))
+        true = weights.values[genes_idxs, :]
+        nulls = null_weights[genes_idxs, :, :]
         
-        # Extract differential expression
-        genes_log2FC = genes_log2FC.loc[matched_genes, f'{d}.log2FC']
+        # Clip or take absolute
         if posneg == 'pos':
-            genes_log2FC = genes_log2FC.clip(lower=0)
+            genes_log2FC = genes_log2FC.clip(min=0)
         elif posneg == 'neg':
-            genes_log2FC = genes_log2FC.clip(upper=0)*-1
+            genes_log2FC = genes_log2FC.clip(max=0)*-1
         elif posneg == 'abs':
             genes_log2FC = genes_log2FC.abs()
 
-        # Filter weights for matching genes
-        weights_matched = weights[gene_mask, :3]
-        null_weights_matched = np.swapaxes(nulls[gene_mask, :, :], 0, 2)
+        # Swap nulls axes for dot product
+        nulls = np.swapaxes(nulls[:, :, :], 0, 2)
                 
         # Compute dot product
-        true_dot[d] = pd.Series(weights_matched.T @ genes_log2FC)
-        null_dot[d] = pd.DataFrame(np.dot(null_weights_matched, genes_log2FC))
+        true_dot[d] = pd.Series(true.T @ genes_log2FC)
+        null_dot[d] = pd.DataFrame(np.dot(nulls, genes_log2FC))
 
     true_dot = pd.concat(true_dot).unstack(1).set_axis(['G1','G2','G3'], axis=1)
     null_dot = pd.concat(null_dot).set_axis(['G1','G2','G3'], axis=1).reset_index(level=0).rename({'level_0':'label'}, axis=1)
