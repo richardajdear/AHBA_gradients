@@ -58,6 +58,10 @@ ggtitle(title) + xlab("") + ylab("")
 plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
                      colors=rev(brewer.rdbu(100))
                     ) {
+        if (!"version" %in% colnames(scores_df)) {
+        scores_df <- scores_df %>% mutate(version = '')
+    }
+    
     df <- scores_df %>% 
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
@@ -95,6 +99,8 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
     
     if (facet=='h') {
         p + facet_grid(component~version, switch=switch)
+    } else if (facet=='w') {
+        p + facet_wrap(~component, ncol=1)
     } else {
         p + facet_grid(version~component, switch=switch)   
     }

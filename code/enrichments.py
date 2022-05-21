@@ -215,7 +215,8 @@ def make_gene_corrs(genes, version, maps):
 ### GO enrichment
 
 def get_target_enrichments(target, background,
-                                      FDR_threshold=0.05
+                                      p_threshold=0.05,
+                                      FDR_threshold=1
                                      ):
     results = gp.enrichr(gene_list=target,
            background=background,
@@ -227,10 +228,11 @@ def get_target_enrichments(target, background,
            verbose=True).results
     
     results = (results
-               .loc[lambda x: x['Adjusted P-value'] < FDR_threshold]
-               .loc[:, ['Term', 'Overlap', 'Adjusted P-value']]
-               .set_axis(['term', 'overlap', 'fdr'], axis=1)
-               .sort_values('fdr')
+               .loc[:, ['Term', 'Overlap', 'P-value', 'Adjusted P-value']]
+               .set_axis(['term', 'overlap', 'p', 'fdr'], axis=1)
+               .sort_values('p')
+               .loc[lambda x: x['p'] < p_threshold]
+               .loc[lambda x: x['fdr'] < FDR_threshold]
                .assign(term = lambda x: x['term'].str[5:].str.lower().str.replace('_',' '))
               )
     
@@ -248,7 +250,7 @@ def clean_enrichment(file, direction=None, clean_terms=True, filter_001=True):
     if clean_terms:
         # Combine antigen terms
         enrichment.replace({'term description': "Antigen processing.*"}, 'Antigen processing', regex=True, inplace=True)
-        enrichment.drop_duplicates('term description', inplace=True)
+        # enrichment.drop_duplicates('term description', inplace=True)
         # Shorten other names
         replacements = {
             'Negative regulation of cytokine production involved in immune response': 'Regulation of cytokine production',
@@ -258,10 +260,15 @@ def clean_enrichment(file, direction=None, clean_terms=True, filter_001=True):
             'Positive regulation of extrinsic apoptotic signaling pathway': 'Regulation of apoptotic signaling pathway',
             'multicellular organism': '',
             'Establishment of protein localization to': 'Protein localization to',
-            'Nuclear-transcribed mrna catabolic process,.*':'mRNA catabolic process'
+            'Nuclear-transcribed mrna catabolic process,.*':'mRNA catabolic process',
+            'Energy derivation by oxidation of organic compounds':'Energy derivation by oxidation',
+            'Negative regulation of gene expression, epigenetic':'Regulation of gene expression, epigenetic',
+            'Cellular process involved in reproduction in':'Cellular process involved in reproduction',
+            'Regulation of dendritic spine development':'Regulation of dendritic spine dev.'
         }
         enrichment.replace(replacements, inplace=True, regex=True)
         
+        enrichment.drop_duplicates('term description', inplace=True)
     
     if direction is not None:
         enrichment = enrichment.loc[lambda x: x['direction'] == direction]
@@ -284,7 +291,7 @@ def clean_enrichment(file, direction=None, clean_terms=True, filter_001=True):
     return enrichment
 
 
-def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include_g1=False, directed=False):
+def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include_g1=False, directed=False, top_n=None, **kwargs):
     """
     Combine enrichments
     """
@@ -293,13 +300,13 @@ def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include
         directions = {k:None for k in directions.keys()}
     
     d = {
-        'G2': clean_enrichment(dir_ + version_ + '/g2' + '.enrichment.' + type_ + '.tsv', direction = directions['G2']),
-        'G3': clean_enrichment(dir_ + version_ + '/g3' + '.enrichment.' + type_ + '.tsv', direction = directions['G3'])
+        'G2': clean_enrichment(dir_ + version_ + '/g2' + '.enrichment.' + type_ + '.tsv', direction = directions['G2'], **kwargs),
+        'G3': clean_enrichment(dir_ + version_ + '/g3' + '.enrichment.' + type_ + '.tsv', direction = directions['G3'], **kwargs)
     }
     
     if include_g1:
         d.update({
-            'G1': clean_enrichment(dir_ + version_ + '/g1' + '.enrichment.' + type_ + '.tsv', direction = directions['G1'])
+            'G1': clean_enrichment(dir_ + version_ + '/g1' + '.enrichment.' + type_ + '.tsv', direction = directions['G1'], **kwargs)
         })
     
     df = (pd.concat(d)
@@ -308,6 +315,13 @@ def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include
     
     if directed:
         df['direction'] = 'bottom'
+    
+    if top_n is not None:
+        df = (df
+               .assign(rank = lambda x: x.groupby(['G','direction'])['neglogFDR'].rank(method='first',ascending=False))
+             .loc[lambda x: x['rank']<=top_n]
+             .assign(rank = lambda x: top_n+1-x['rank'])
+            )
     
     return df
 

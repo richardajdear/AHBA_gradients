@@ -36,35 +36,40 @@ plot_ds_dist_hcp <- function(df_stability) {
 }
 
 
-plot_weights_ds <- function(weights_ds) {
+plot_weights_ds <- function(weights_ds, ncol=3) {
     df <- weights_ds %>% select(G1:G3, ds) %>% gather(G, weight, -ds)
 
     ggplot(df, aes(x=weight, y=ds)) + 
-        facet_grid(.~G) +
+        facet_wrap(~G, ncol=ncol) +
         # geom_point(color=mycolors[5], alpha=.5, size=1) +
-        geom_point(aes(color=weight), size=1) +
+        geom_point(aes(color=weight), size=.01) +
         scale_color_gradientn(colors=mycolorscale, guide='none') +
-        xlab('Gene weights from PLS') + ylab("DS") +
+    # scale_y_continuous(breaks=c(-.02,0,.02)) + 
+    # scale_x_continuous(limits=c(0.1,.8), breaks=c(.1,.8)) +   
+        xlab('Gene weight') + ylab("Gene DS") +
         theme_minimal() + 
         theme(
             panel.grid=element_blank(), 
-            # strip.text.x = element_blank(),
-            axis.title.y = element_text(angle=0, vjust=0.5, hjust=1),
+            axis.text = element_blank(),
+            strip.text = element_blank(),
+            # axis.title.y = element_text(angle=0, vjust=0.5, hjust=1),
             aspect.ratio = 1
         )
 }
 
-plot_weights_dist <- function(weights_ds) {
+plot_weights_dist <- function(weights_ds, ncol=1) {
     df <- weights_ds %>% select(G1:G3, ds) %>% gather(G, weight, -ds)
 
     ggplot(df) +
-        facet_grid(.~G) +
-        geom_density(aes(weight), size=1, alpha=.8, color=mycolors[5]) +
+        facet_wrap(.~G, ncol=ncol) +
+        geom_density(aes(weight), size=.2, alpha=.8, color=mycolors[3]) +
         # geom_density(size=1, alpha=.8, aes(color=stat(x))) +
         # stat_density_ridges(geom = "density_ridges_gradient", calc_ecdf = TRUE, scale=.8, size=.2, fill='transparent',
                        # aes(x=weight, y=1, color=stat(ecdf))) +
         # scale_color_gradientn(colors=rev(brewer.rdbu(100)[15:85]), guide='none') +
-        theme_void()
+    coord_flip() +
+        theme_void() +
+        theme(strip.text=element_blank())
 }
 
 

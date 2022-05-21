@@ -5,23 +5,23 @@ library(ggrepel)
 library(ggradar)
 
 
-plot_enrichment_bars <- function(null_p, xlab='z-score') {
+plot_enrichment_bars <- function(null_p, xlab='Corr') {
     
-    lim <- max(abs(null_p$z))*1.2
+    lim <- max(abs(null_p$true_mean))
     
     null_p %>% 
     mutate(sig = case_when(
         q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
         )) %>%
     mutate(hjust=ifelse(z < 0, 1, 0)) %>%
-    ggplot(aes(x=z, y=label)) + 
+    ggplot(aes(x=true_mean, y=label)) + 
     facet_grid(.~G) +
-    geom_col(aes(fill=z)) +
+    geom_col(aes(fill=true_mean)) +
     geom_text(aes(label=sig, vjust=.7, hjust=hjust), size=6) +
     # scale_alpha_manual(values=c(0.2,1)) +
     geom_hline(yintercept=0) +
     scale_y_discrete(limits=rev, name='') +
-    scale_x_continuous(limits=c(-lim,lim), breaks=round(0.5*c(-lim,0,lim)), name=xlab) +
+    scale_x_continuous(limits=1.2*c(-lim,lim), breaks=round(0.5*c(-lim,0,lim),1), name=xlab) +
     scale_fill_gradientn(colors=rev(brewer.rdbu(100)), guide='none', limits=c(-lim,lim)) +
     # ggtitle("Mean weight of cell genes vs permutations") +
     # coord_flip() +
@@ -31,28 +31,28 @@ plot_enrichment_bars <- function(null_p, xlab='z-score') {
           axis.text=element_text(size=20),
           text=element_text(size=20)
          )
-    
 }
 
 
-plot_enrichment_bars_2 <- function(null_p, xlab='z-score') {
+plot_enrichment_bars_z <- function(null_p, xlab='z-score') {
     
-    lim <- max(abs(null_p$z))*1.2
+    lim <- max(abs(null_p$z))
     
     null_p %>% 
-    mutate(sig_label = case_when(
+    mutate(label=factor(label, ordered=T, levels=unique(.$label))) %>%
+    mutate(sig = case_when(
         q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
         )) %>%
     mutate(hjust=ifelse(z < 0, 1, 0)) %>%
     ggplot(aes(x=z, y=label)) + 
     facet_grid(.~G) +
-    geom_col(aes(fill=posneg, alpha=sig), width=.8, position=position_dodge(width=.8)) +
-    geom_text(aes(label=sig_label, vjust=.7, hjust=hjust, group=posneg), position=position_dodge(width=.8), size=6) +
-    scale_alpha_manual(values=c(0.3,1), guide='none') +
+    # geom_vline(xintercept=0) +
+    geom_col(aes(fill=z)) +
+    geom_text(aes(label=sig, vjust=.7, hjust=hjust), size=6) +
+    # scale_alpha_manual(values=c(0.2,1)) +
     scale_y_discrete(limits=rev, name='') +
     scale_x_continuous(limits=c(-lim,lim), breaks=round(0.5*c(-lim,0,lim)), name=xlab) +
-    scale_fill_manual(values=rev(brewer.rdbu(10))[c(3,8)], name='Gradient\ndirection') +
-    # scale_fill_gradientn(colors=rev(brewer.rdbu(100)), guide='none', limits=c(-lim,lim)) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), guide='none', limits=c(-lim,lim)) +
     # ggtitle("Mean weight of cell genes vs permutations") +
     # coord_flip() +
     coord_cartesian(clip='off') +
@@ -62,8 +62,8 @@ plot_enrichment_bars_2 <- function(null_p, xlab='z-score') {
           axis.text=element_text(size=20),
           text=element_text(size=20)
          )
-    
 }
+
 
 
 plot_enrichment_heatmaps <- function(null_p_versions, ncol=3) {
@@ -122,13 +122,14 @@ plot_enrichment_heatmaps_2 <- function(null_p_versions, ncol=3, fill_name='pears
 
 
 
-plot_weight_scatters_with_labels <- function(weights_labels, title='') {
+plot_weight_scatters_with_labels <- function(weights_labels, title='', colors=brewer.set1(10)) {
 
-    weights <- weights_labels %>% rownames_to_column('gene') %>% rename(G1=`0`, G2=`1`, G3=`2`) 
+    weights <- weights_labels %>% rename(G1=`0`, G2=`1`, G3=`2`) %>%
+                select(label, contains('cluster'), contains('log2FC'), G1:G3)
     df <- rbind(
-        weights %>% select(gene, label, contains('cluster'), x=G1, y=G3) %>% mutate(which='G1 v G2'),
-        weights %>% select(gene, label, contains('cluster'), x=G1, y=G2) %>% mutate(which='G1 v G3'),
-        weights %>% select(gene, label, contains('cluster'), x=G2, y=G3) %>% mutate(which='G2 v G3')
+        weights %>% rename(x=G1, y=G2) %>% select(-G3) %>% mutate(which='G1 v G2'),
+        weights %>% rename(x=G1, y=G3) %>% select(-G2) %>% mutate(which='G1 v G3'),
+        weights %>% rename(x=G2, y=G3) %>% select(-G1) %>% mutate(which='G2 v G3')
     ) %>% 
     arrange(label, which) %>%
     mutate(which = factor(which, ordered=T, levels=unique(.$which)),
@@ -136,27 +137,31 @@ plot_weight_scatters_with_labels <- function(weights_labels, title='') {
           )
 
     lim <- max(abs(weights %>% pivot_longer(G1:G3, names_to='G', values_to='weight') %>% .$weight))
-
+    
     df_axs <- rbind(
-        data.frame(x=c(-lim, 0), y=c(0, lim), ax=c('G1', 'G2'), which='G1 v G2', hjust=c(.5,1.2), vjust=-0.3),
-        data.frame(x=c(-lim, 0), y=c(0, lim), ax=c('G1', 'G3'), which='G1 v G3', hjust=c(.5,1.2), vjust=-0.3),
-        data.frame(x=c(-lim, 0), y=c(0, lim), ax=c('G2', 'G3'), which='G2 v G3', hjust=c(.5,1.2), vjust=-0.3)
+        data.frame(x=c(-lim, 0), y=c(0, lim), ax=c('G1', 'G2'), which='G1 v G2', hjust=c(.5,1.2), vjust=c(-0.3,0)),
+        data.frame(x=c(-lim, 0), y=c(0, lim), ax=c('G1', 'G3'), which='G1 v G3', hjust=c(.5,1.2), vjust=c(-0.3,0)),
+        data.frame(x=c(-lim, 0), y=c(0, lim), ax=c('G2', 'G3'), which='G2 v G3', hjust=c(.5,1.2), vjust=c(-0.3,0))
     ) %>%
     mutate(which = factor(which, ordered=T, levels=unique(.$which)),
            ax = factor(ax, ordered=T, levels=unique(.$ax)),
           )
     
-    if (!'cluster' %in% colnames(df)) {
-        df <- df %>% mutate(cluster=label)
+    if ('cluster' %in% colnames(df)) {
+        df <- df %>% mutate(colors=cluster)
+    } else if (!'log2FC' %in% colnames(df)) {
+        df <- df %>% mutate(colors=label)
+    } else {
+        df <- df %>% mutate(colors=log2FC)
+        color_p95 <- quantile(abs(weights$log2FC), .95, na.rm=T)
     }
     
-    ggplot(df%>%filter(label!='none')) + 
+    p <- ggplot(df%>%filter(label!='none')) + 
     facet_grid(which~label) + 
     geom_hline(yintercept=0) + geom_vline(xintercept=0) +
     geom_text(data=df_axs, aes(x=x, y=y, label=ax, hjust=hjust, vjust=vjust), size=5) +
-    geom_point(data=df%>%select(-label), aes(x,y), size=.2, color='lightgrey', alpha=.2) +
-    geom_point(aes(x,y, color=cluster), size=.6, alpha=.5) +
-    scale_color_manual(values=brewer.set1(10)) +
+    geom_point(data=df%>%select(-label), aes(x,y), size=.2, color='lightgrey', alpha=.3) +
+    geom_point(aes(x,y, color=colors), size=.6, alpha=.7) +
     scale_x_continuous(limits=c(-lim,lim)) + 
     scale_y_continuous(limits=c(-lim,lim)) +
     coord_cartesian(clip='off') +
@@ -172,18 +177,18 @@ plot_weight_scatters_with_labels <- function(weights_labels, title='') {
           # plot.margin = margin(t=10),
           # strip.placement='outside',
           legend.position='bottom',
-          plot.title=element_text(size=24,hjust=0.5,vjust=5)
+          plot.title=element_text(size=24,hjust=0.5,vjust=3)
          )
     
+    if ('cluster' %in% colnames(df)) {
+        p + scale_color_manual(values=colors)
+    } else if ('log2FC' %in% colnames(df)) {
+        p + scale_color_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-color_p95, color_p95), name='log2FC')
+    } else {
+        p + scale_color_manual(values=colors)
+    }
+    
 }
-
-
-
-
-
-
-
-
 
 
 
@@ -202,12 +207,12 @@ plot_enrichments_v2 <- function(enrichments, size=4) {
 
     df %>%
     ggplot() + 
-    facet_wrap(~G, switch='x') +
+    facet_wrap(~G) +
     coord_flip(clip='off') +
     geom_col(aes(x=rank, y=neglogFDR, fill=neglogFDR_fill), alpha=.2) +
     geom_text(aes(x=rank, y=0, label=description, hjust=0), size=size) +
     theme_minimal() +
-    ylab('-log(FDR)') + xlab('') +
+    ylab('FDR') + xlab('') +
     scale_y_continuous(breaks=c(0,2,4), labels=c(0, 0.01, 0.0001)) +
     scale_fill_gradientn(colors=rev(brewer.rdbu(200)), guide='none',
                          limits=c(-lim,lim)) +
@@ -215,8 +220,10 @@ plot_enrichments_v2 <- function(enrichments, size=4) {
           panel.grid=element_blank(),
           panel.spacing=unit(10,'lines'),
           strip.placement='outside',
+          strip.text=element_text(size=20),
           legend.position=c(0.1,0.8),
-          text=element_text(size=20)
+          text=element_text(size=20),
+          axis.line.y = element_line(arrow = grid::arrow(length = unit(0.3, "cm"),                   ends = "both"))
          )
 }
 
@@ -506,4 +513,36 @@ plot_enrichment_nulls <- function(true_scores, null_scores, null_p, how='mean') 
         strip.text.y.left = element_text(size=30, angle=0), 
         strip.text.x = element_text(size=30, angle=0), 
         text = element_text(size=30))
+}
+                       
+                       
+
+plot_enrichment_bars_2 <- function(null_p, xlab='z-score') {
+    
+    lim <- max(abs(null_p$z))*1.2
+    
+    null_p %>% 
+    mutate(sig_label = case_when(
+        q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
+        )) %>%
+    mutate(hjust=ifelse(z < 0, 1, 0)) %>%
+    ggplot(aes(x=z, y=label)) + 
+    facet_grid(.~G) +
+    geom_col(aes(fill=posneg, alpha=sig), width=.8, position=position_dodge(width=.8)) +
+    geom_text(aes(label=sig_label, vjust=.7, hjust=hjust, group=posneg), position=position_dodge(width=.8), size=6) +
+    scale_alpha_manual(values=c(0.3,1), guide='none') +
+    scale_y_discrete(limits=rev, name='') +
+    scale_x_continuous(limits=c(-lim,lim), breaks=round(0.5*c(-lim,0,lim)), name=xlab) +
+    scale_fill_manual(values=rev(brewer.rdbu(10))[c(3,8)], name='Gradient\ndirection') +
+    # scale_fill_gradientn(colors=rev(brewer.rdbu(100)), guide='none', limits=c(-lim,lim)) +
+    # ggtitle("Mean weight of cell genes vs permutations") +
+    # coord_flip() +
+    coord_cartesian(clip='off') +
+    theme_minimal() +
+    theme(panel.grid.minor=element_blank(),
+          plot.title=element_text(size=20),
+          axis.text=element_text(size=20),
+          text=element_text(size=20)
+         )
+    
 }
