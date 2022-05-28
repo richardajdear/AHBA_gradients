@@ -6,7 +6,7 @@ from mri_maps import *
 from gradientVersion import *
 
 def get_gandal_genes(which='microarray'):
-    disorders = ['ASD', 'MDD', 'SCZ']
+    disorders = ['ASD', 'SCZ', 'MDD']
     if which == 'microarray':
 
         gandal_genes = (pd.read_csv("../data/gandal_genes_microarray.csv")
@@ -33,6 +33,41 @@ def get_gandal_genes(which='microarray'):
         gandal_genes[f'{d}.sig'] = gandal_genes[f'{d}.FDR'] < .05
 
     return gandal_genes
+
+
+def get_gene_weights_with_labels(weights, gandal_genes, 
+                                 disorders = ['ASD','SCZ','MDD']):
+    gandal_fdr = (gandal_genes
+                  .loc[:,[f'{d}.FDR' for d in disorders]]
+                  .melt(ignore_index=False, var_name='disorder', value_name='FDR')
+                  # .loc[lambda x: x['FDR']]
+                  .assign(disorder = lambda x: 
+                          x['disorder'].str.replace('.FDR','', regex=False))
+                  .set_index('disorder', append=True)
+                 )
+
+    gandal_log2FC = (gandal_genes
+                  .loc[:,[f'{d}.log2FC' for d in disorders]]
+                  .melt(ignore_index=False, var_name='disorder', value_name='log2FC')
+                  .assign(disorder = lambda x: 
+                          x['disorder'].str.replace('.log2FC','', regex=False))
+                  .set_index('disorder', append=True)
+                  .join(gandal_fdr)
+                  .reset_index('disorder')
+                  .loc[lambda x: x['FDR'] < 0.05]
+                 )
+
+    weights_labels = (weights
+                      .join(gandal_log2FC)     
+                      .rename({'disorder':'label'}, axis=1)                   
+                      .fillna({'label':'none'})
+                      .assign(cluster = lambda x: 
+                              np.select([x['log2FC']>0,x['log2FC']<0],
+                                        ['upregulated','downregulated'], 
+                                        default=None)
+                             )
+                     )
+    return weights_labels
 
 
 def get_rare_genes():

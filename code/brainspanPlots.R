@@ -2,7 +2,8 @@
 
 library(pals)
 library(shades)
-mycolors = brewer.rdylbu(5)[c(1,2,5)]
+# mycolors = brewer.rdylbu(5)[c(1,2,5)]
+mycolors=brewer.set1(4)[c(1,4,2)]
 # mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 # mycolors = saturation(c(brewer.rdylbu(5)[1:2],brewer.rdylbu(6)[4:6]), delta(.2))
 # mycolors2 = c(mycolors[1:2], saturation(mycolors[3], delta(.4)))
@@ -11,7 +12,7 @@ mycolors = brewer.rdylbu(5)[c(1,2,5)]
 #               saturation(mycolors[4], delta(.4))) 
 
 
-plot_bs_hcp_mapping <- function(hcp_bs_mapping) {
+plot_bs_hcp_mapping <- function(hcp_bs_mapping,title='',xlab='') {
     
     n_colors <- hcp_bs_mapping$structure_name %>% n_distinct
     cols = cols25(n_colors)
@@ -23,17 +24,19 @@ plot_bs_hcp_mapping <- function(hcp_bs_mapping) {
         
     
     ggplot(hcp_bs_mapping) + 
-    geom_brain(atlas=glasser, hemi='left', mapping=aes(fill=structure_name, geometry=geometry, hemi=hemi, side=side, type=type)) +
+    geom_brain(atlas=glasser, hemi='left', mapping=aes(fill=structure_name, geometry=geometry, hemi=hemi, side=side, type=type), position=position_brain(side+hemi~.)) +
     # guides(fill=guide_legend('')) +
+    xlab(xlab) +
     scale_fill_manual(values=c('white', cols), guide='none') +
     theme_void() + 
     theme(text=element_text(size=20), legend.position='none',
+          axis.title.x=element_text(size=20, color='grey7'),
          plot.title=element_text(size=20, vjust=-1, hjust=.5)) +
-    ggtitle("BrainSpan regions matched to HCP-MMP1.0")
+    ggtitle(title)
                          # legend.position=c(1.3,.5))
 }
 
-plot_bs_dk_mapping <- function(dk_bs_mapping) {
+plot_bs_dk_mapping <- function(dk_bs_mapping,title='',xlab='') {
     
     n_colors <- dk_bs_mapping$structure_name %>% n_distinct
     cols = cols25(n_colors)
@@ -45,11 +48,13 @@ plot_bs_dk_mapping <- function(dk_bs_mapping) {
     ggplot(dk_bs_mapping) + 
     geom_brain(atlas=dk, hemi='left', mapping=aes(fill=structure_name, geometry=geometry, hemi=hemi, side=side, type=type)) +
     # guides(fill=guide_legend('')) +
+    xlab(xlab) +
     scale_fill_manual(values=c('white', cols), guide='none') +
     theme_void() + 
     theme(text=element_text(size=20), legend.position='none',
+          axis.title.x=element_text(size=20, color='grey7'),
          plot.title=element_text(size=20, vjust=-1, hjust=.5)) +
-    ggtitle("BrainSpan regions matched to Desikan-Killiany")
+    ggtitle(title)
                          # legend.position=c(1.3,.5))
 }
 
@@ -67,6 +72,7 @@ plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', ro
     theme_minimal() + 
     theme(panel.grid.minor = element_blank(),
           axis.title=element_text(angle=0),
+          axis.text=element_text(size=16, color='grey7'),
           # legend.position = c(.95, .9),
           # legend.position=element_blank(),
           legend.title = element_blank()
@@ -118,6 +124,7 @@ plot_ahba_bs_scatter <- function(both_scores, corrs, facet='h', size=4) {
     theme(panel.grid.minor=element_blank(),
           axis.text = element_blank(),
           strip.text.x = element_blank(),
+          strip.text.y = element_text(size=20, margin=margin(l=0, r=0)),          
           axis.title.x = element_text(size=20, angle=0),
           axis.title.y = element_text(size=20, angle=0, vjust=0.5),
           aspect.ratio=1

@@ -50,7 +50,7 @@ class gradientVersion():
             X = pd.read_csv(data_dir + expression + '.csv', index_col=0)
         else:
             X = expression
-            expression = ''
+            expression = '' # for printing output
             
         # Clean data: drop regions with all nulls, and genes with any nulls
         X = X.dropna(axis=0, how='all').dropna(axis=1, how='any')

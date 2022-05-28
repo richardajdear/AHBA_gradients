@@ -55,10 +55,11 @@ plot_maps <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colo
         colors=colors, 
         limits=c(m_min,m_max), oob=squish, breaks=c(m_min,m_max), 
         labels=c(round(m_min,2),round(m_max,2)), 
-        name=''
+        name='Z-score'
     ) +
     theme_void() + 
     theme(legend.position='bottom',
+          legend.title=element_text(vjust=1),
           panel.spacing.x=unit(spacing,'lines'),
           panel.spacing.y=unit(spacing,'lines'),
           strip.text.x=element_text(vjust=1, size=20),
@@ -113,6 +114,7 @@ plot_maps_dk <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), c
     ) +
     theme_void() + 
     theme(legend.position='bottom',
+          # text=element_text(color='grey30'),
           panel.spacing.x=unit(spacing,'lines'),
           panel.spacing.y=unit(spacing,'lines'),
           strip.text.x=element_text(vjust=1, size=20),
@@ -142,15 +144,15 @@ plot_map_corrs <- function(null_p, size=6) {
     ggplot(aes(x=G, y=map_name)) +
     geom_raster(aes(fill=true_mean)) + 
     geom_text(aes(label=p_level), vjust=.5, hjust=.5, size=size, color='white') +
-    scale_fill_gradientn(colors=rev(brewer.rdbu(100)[10:90]), name='Corr', 
-                    limits=c(-lim,lim), breaks=round(c(-lim,lim),1)) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)[10:90]), name='Corr.', 
+                        limits=c(-lim,lim), breaks=c(-floor(lim*10)/10,floor(lim*10)/10)) +
     scale_x_discrete(position='top') +
     guides(fill=guide_colorbar(barwidth=5)) +
     xlab('') + ylab('') +
     coord_fixed() +
     theme_minimal() +
     theme(panel.grid=element_blank(),
-          axis.text = element_text(size=20),
+          axis.text = element_text(size=20, color='grey7'),
           legend.title=element_text(vjust=1),
           legend.position='bottom'
          )
@@ -172,41 +174,41 @@ plot_pca_weights <- function(pca_weights, size=6) {
     coord_fixed() +
     theme_minimal() +
     theme(panel.grid=element_blank(),
-          axis.text = element_text(size=20),
+          axis.text = element_text(size=20, color='black'),
           legend.title=element_text(vjust=1),
           legend.position='bottom'
          )
 }
 
 
-plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs) {
-    df <- maps_scatter %>%
-    gather(G, G_score, -label, -map, -map_score)
+plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet=T, x=0, y=0,size=8,
+                             xlab='', ylab='') {
+    df <- maps_scatter
+    # gather(G, G_score, -label, -map, -map_score)
 
     corrs <- maps_scatter_corrs %>%
     mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
     mutate(sig_label=ifelse(q<0.001, '***',
                    ifelse(q<0.01, '**',
                    ifelse(q<0.05, '*','')))) %>%
-    mutate(r_label=paste('r =', round(true_mean,2), sig_label)) %>%
-    mutate(x=-1, y=2)
+    mutate(r_label=paste('r =', round(true_mean,2), sig_label))
+    # mutate(x=-1, y=2)
 
     # if (!is.null(which) ) {
     #     df <- df %>% filter(map %in% which)
     #     corrs <- corrs %>% filter(map %in% which)
     # }
     
-    df %>%
+    p <- df %>%
     mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
-    ggplot(aes(y=G_score, x=map_score)) +
-    facet_grid(map~G, switch='y') +
+    ggplot(aes(x=G_score, y=map_score)) +
     geom_point(alpha=.3) +
     geom_smooth(method='lm', color=brewer.puor(5)[5]) +
-    geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=6, hjust=0.5, vjust=0.5) +
+    geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0.5, vjust=0.5) +
     # geom_text(data=corrs, aes(label=p_label, x=x, y=y), size=6, hjust=0, vjust=1) +
-    scale_x_continuous(breaks=0) + scale_y_continuous(breaks=0) +
+    scale_x_continuous(breaks=0, position='top') + scale_y_continuous(breaks=0) +
     # xlim(c(-3,3)) + ylim(c(-3,3)) +
-    xlab('') + ylab('') +
+    xlab(xlab) + ylab(ylab) +
     theme_minimal() +
     theme(
     # strip.placement='outside',
@@ -214,30 +216,46 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs) {
           strip.text.y.left=element_text(angle=0, size=20),
           panel.grid.minor=element_blank(),
           axis.text = element_blank(),
+          axis.title.y = element_text(angle=0, vjust=.5),
           plot.title = element_text(hjust=0.5, vjust=1, size=20),
           aspect.ratio=1,
           text=element_text(size=20)
          )
+    
+    if (facet) {
+        p + facet_grid(map~G, switch='y')
+    } else {
+        p
+    }
 }
 
 
 
 
-plot_both_scores_scatter <- function(both_scores_scatter) {
-    corr <- both_scores_scatter %>% 
-        select(-label) %>% 
-        group_by(G) %>% 
-        summarize(cor(`MRI PCA`, `AHBA DM`, use='p')) %>%
-        rename_with(function(x) c('G','r'), everything()) %>%
-        mutate(r = round(r, 2)) %>%
-        mutate(x=-1, y=2)
+plot_maps_pca_scatter <- function(maps_pca_scatter, maps_pca_corrs, size=7) {
+    # corr <- both_scores_scatter %>% 
+    #     select(-label) %>% 
+    #     group_by(G) %>% 
+    #     summarize(cor(`MRI PCA`, `AHBA DM`, use='p')) %>%
+    #     rename_with(function(x) c('G','r'), everything()) %>%
+    #     mutate(r = round(r, 2)) %>%
+    #     mutate(x=-1, y=2)
     
-    both_scores_scatter %>%
+    
+    corrs <- maps_pca_corrs %>%
+    mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
+    mutate(sig_label=ifelse(q<0.001, '***',
+                   ifelse(q<0.01, '**',
+                   ifelse(q<0.05, '*','')))) %>%
+    mutate(r_label=paste('r =', round(true_mean,2), sig_label)) %>%
+    mutate(x=-1, y=2)
+    
+    maps_pca_scatter %>%
     ggplot(aes(x=`AHBA DM`, y=`MRI PCA`)) +
     facet_grid(.~G, switch='x', scales='free') +
     geom_point(alpha=.3) +
-    geom_smooth(method='lm', color=brewer.rdbu(5)[5]) +
-    geom_text(data=corr, aes(label=paste('r =', r), x=x, y=y), size=6, hjust=0.5, vjust=0.5) +
+    geom_smooth(method='lm', color=brewer.set1(5)[4]) +
+    geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0.5, vjust=0.5) +
     scale_x_continuous(breaks=0) + scale_y_continuous(breaks=0) +
     xlab('') + ylab('') +
     theme_minimal() +
@@ -257,9 +275,9 @@ plot_both_scores_scatter <- function(both_scores_scatter) {
 plot_ahba_mri_brains <- function(scores_df, colors=rev(brewer.rdbu(100))) {
     df <- scores_df %>% 
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
-        gather('component', 'score', -version, -region) %>%
+        gather('component', 'score', -region) %>%
         mutate(component = factor(component, ordered=T, levels=unique(.$component))) %>%
-        group_by(component, version)
+        group_by(component)
 
     m <- pmax(
         df %>% .$score %>% quantile(.99) %>% abs,
@@ -287,7 +305,7 @@ plot_ahba_mri_brains <- function(scores_df, colors=rev(brewer.rdbu(100))) {
     coord_sf(clip='off') +
     xlab("") + ylab("")
     
-    p + facet_grid(version~component, switch='y')
+    p + facet_wrap(~component)
     
     # if (facet=='h') {
     #     p + facet_grid(component~version, switch=switch)
@@ -302,38 +320,38 @@ plot_ahba_mri_brains <- function(scores_df, colors=rev(brewer.rdbu(100))) {
 ##########################################
                     
 
-plot_map_scatters <- function(corrs, null_corrs, null_p) {
-    corrs <- corrs %>% rownames_to_column('map') %>% gather(G, corr, -map)
-    # null_corrs <- null_corrs %>% gather(G, corr, -map)
-    null_p <- null_p %>% rownames_to_column('map') %>% gather(G, p, -map) %>% mutate(sig = p<.05)
+# plot_map_scatters <- function(corrs, null_corrs, null_p) {
+#     corrs <- corrs %>% rownames_to_column('map') %>% gather(G, corr, -map)
+#     # null_corrs <- null_corrs %>% gather(G, corr, -map)
+#     null_p <- null_p %>% rownames_to_column('map') %>% gather(G, p, -map) %>% mutate(sig = p<.05)
 
-    null_corrs %>% 
-    left_join(null_p, by = c('map', 'G')) %>% 
-    ggplot() + 
-    facet_grid(factor(map, levels=unique(null_p$map))~G, switch='y') +
-    # geom_histogram(aes(corr, alpha=sig)) +
-    geom_density(aes(corr, alpha=sig), color=mycolors[5], fill=mycolors[4]) +
-    scale_alpha_manual(values=c(.2,1), guide='none') +
-    ylim(c(-.6, NA)) +
-    ylab('') + 
-    geom_point(data=corrs, aes(x=corr, y=0), color=mycolors[1], size=5) +
-    # geom_vline(data=corrs, aes(xintercept=corr), color='red') +
-    geom_text(data=corrs, aes(label=paste0('r=',round(corr,2)), x=.4, y=1.4), size=8, hjust=0) +
-    geom_text(data=null_p, aes(label=paste0('p=',round(p,2)), x=.4, y=.8), size=8, hjust=0) +
-    # ggtitle('Distribution of map correlations over spin permutations') +
-    theme_void() + theme(strip.text = element_blank())
-}
+#     null_corrs %>% 
+#     left_join(null_p, by = c('map', 'G')) %>% 
+#     ggplot() + 
+#     facet_grid(factor(map, levels=unique(null_p$map))~G, switch='y') +
+#     # geom_histogram(aes(corr, alpha=sig)) +
+#     geom_density(aes(corr, alpha=sig), color=mycolors[5], fill=mycolors[4]) +
+#     scale_alpha_manual(values=c(.2,1), guide='none') +
+#     ylim(c(-.6, NA)) +
+#     ylab('') + 
+#     geom_point(data=corrs, aes(x=corr, y=0), color=mycolors[1], size=5) +
+#     # geom_vline(data=corrs, aes(xintercept=corr), color='red') +
+#     geom_text(data=corrs, aes(label=paste0('r=',round(corr,2)), x=.4, y=1.4), size=8, hjust=0) +
+#     geom_text(data=null_p, aes(label=paste0('p=',round(p,2)), x=.4, y=.8), size=8, hjust=0) +
+#     # ggtitle('Distribution of map correlations over spin permutations') +
+#     theme_void() + theme(strip.text = element_blank())
+# }
 
-plot_maps_combined <- function(maps, corrs, null_corrs, null_p) {
-    g1 <- plot_null_corrs(corrs, null_corrs, null_p)
-    g2 <- plot_hcp_wide(scores_plot, spacing=0) + guides(fill='none')
-    g3 <- plot_maps(maps, colors=rev(brewer.puor(100)), ncol=1) + guides(fill='none')
+# plot_maps_combined <- function(maps, corrs, null_corrs, null_p) {
+#     g1 <- plot_null_corrs(corrs, null_corrs, null_p)
+#     g2 <- plot_hcp_wide(scores_plot, spacing=0) + guides(fill='none')
+#     g3 <- plot_maps(maps, colors=rev(brewer.puor(100)), ncol=1) + guides(fill='none')
 
-    (
-        ((plot_spacer() | g2) + plot_layout(widths=c(1,2))) / 
-        ((g3 | g1) + plot_layout(widths=c(1,2)))
-    ) + plot_layout(heights=c(1.2,12))       
-}
+#     (
+#         ((plot_spacer() | g2) + plot_layout(widths=c(1,2))) / 
+#         ((g3 | g1) + plot_layout(widths=c(1,2)))
+#     ) + plot_layout(heights=c(1.2,12))       
+# }
 
 
 

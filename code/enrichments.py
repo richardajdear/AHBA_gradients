@@ -264,7 +264,9 @@ def clean_enrichment(file, direction=None, clean_terms=True, filter_001=True):
             'Energy derivation by oxidation of organic compounds':'Energy derivation by oxidation',
             'Negative regulation of gene expression, epigenetic':'Regulation of gene expression, epigenetic',
             'Cellular process involved in reproduction in':'Cellular process involved in reproduction',
-            'Regulation of dendritic spine development':'Regulation of dendritic spine dev.'
+            'Regulation of dendritic spine development':'Dendritic spine development',
+            'Regulation of dendrite development':'Dendrite development',
+            'Serotonin receptor signaling pathway':'Serotonin receptor signaling'
         }
         enrichment.replace(replacements, inplace=True, regex=True)
         
@@ -329,7 +331,7 @@ def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include
 
 
 
-def get_cell_genes(which='wen', include=None, subtype=False, combine_layers=False, combine_ex_in=False):
+def get_cell_genes(which='wen', include=None, subtype=False, combine_layers=False, combine_ex_in=False, add_synapses=False):
     """
     Read cell genes table
     """
@@ -387,15 +389,18 @@ def get_cell_genes(which='wen', include=None, subtype=False, combine_layers=Fals
          # .groupby('Class').apply(lambda x: x.sample(frac=.1))
         )
 
+        if add_synapses:
+            synapse_genes = get_synapse_genes()
+            # cell_genes = cell_genes.loc[lambda x: ~np.isin(x['gene'], synapse_genes['gene'])]
+            cell_genes = pd.concat([cell_genes, synapse_genes])
+        
     return cell_genes
 
 
-def split_synaptic(gene_labels):
+def get_synapse_genes():
     synapse_genes = pd.read_csv("../data/synaptome_all.csv", usecols=['gene_symbol']).dropna().iloc[:1886]
-    synapse_genes = pd.DataFrame({'label':'Synapse', 'gene':synapse_genes['gene_symbol']})
-    gene_labels = gene_labels.loc[lambda x: ~np.isin(x['gene'], synapse_genes['gene'])]
-    gene_labels = pd.concat([gene_labels, synapse_genes])
-    return gene_labels
+    synapse_genes = pd.DataFrame({'label':'Synapses', 'gene':synapse_genes['gene_symbol']})
+    return synapse_genes
 
 def get_cell_genes_weighted(which=None, normalize=True):
     """

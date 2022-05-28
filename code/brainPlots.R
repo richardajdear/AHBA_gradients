@@ -34,7 +34,7 @@ plot_dk <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0) {
     theme_void() +
     # facet_grid(component~version, switch=switch) +
     theme(legend.position='bottom', 
-          strip.text.x=element_text(vjust=1),
+          strip.text.x=element_text(size=20, vjust=1),
           strip.text.y.left = element_text(angle = 0),
           panel.spacing.x = unit(spacing_x, 'lines'),
           plot.title=element_text(hjust=0.5)) +
@@ -48,6 +48,8 @@ ggtitle(title) + xlab("") + ylab("")
     
     if (facet=='h') {
         p + facet_grid(component~version, switch=switch)
+    } else if (facet=='w') {
+        p + facet_wrap(~component, ncol=1)
     } else {
         p + facet_grid(version~component, switch=switch)   
     }

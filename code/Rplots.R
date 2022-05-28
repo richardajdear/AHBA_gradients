@@ -9,7 +9,8 @@ suppressMessages(library(tidyverse))
 
 # mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 # mycolorscale = brightness(rev(brewer.rdbu(100)[15:85]), delta(-.2))
-mycolors = brewer.rdylbu(5)[c(1,2,5)]
+# mycolors = brewer.rdylbu(5)[c(1,2,5)]
+mycolors = brewer.set1(5)[c(1,4,2)]
 mycolorscale = brightness(rev(brewer.rdbu(100)), delta(-.1))
 
 
@@ -73,27 +74,28 @@ plot_weights_dist <- function(weights_ds, ncol=1) {
 }
 
 
-plot_triplets_v2 <- function(triplets_plot_v2, facet='h') {
+plot_triplets_v2 <- function(triplets_plot_v2, facet='h', threshold=0.6, colors=mycolors) {
 
     p <- triplets_plot_v2 %>%
     filter(component <= 3) %>%
     ggplot(aes(x=DS, y=corr_abs)) +
-        geom_hline(yintercept=0.5, color=mycolors[1], linetype='dashed') +
+        geom_hline(yintercept=threshold, color=mycolors[1], linetype='dashed') +
         geom_jitter(aes(color=component), width=0.01) +
         geom_smooth(aes(group=component, fill=component, color=component), method='loess', span=1) +
         # geom_ribbon(aes(group=component, fill=component, ymin=ymin, ymax=ymax), alpha=.3) +
-        scale_color_manual(values=mycolors, name='',labels=c('G1','G2','G3')) +
-        scale_fill_manual(values=mycolors, name='',labels=c('G1','G2','G3')) +
+        scale_color_manual(values=colors, name='',labels=c('G1','G2','G3')) +
+        scale_fill_manual(values=colors, name='',labels=c('G1','G2','G3')) +
         scale_x_reverse(
-            breaks=c(.1,.3,.5,.7,.9), #minor_breaks=seq(0,.9,.1),
-            labels=c('90%','70%','50%','30%','10%'),
+            breaks=c(0.1,.5,.9), #minor_breaks=seq(0,.9,.1),
+            labels=c('90%','50%','10%'),
             name='% of genes retained by differential stability filter'
         ) +
-        scale_y_continuous(breaks=seq(0,1,.25), 
+        scale_y_continuous(breaks=seq(0,1,.2), 
                            # position='right',
-                           name='Correlation between triplets') +
+                           name='Inter-triplet correlation (abs.)') +
         theme_minimal() + 
         theme(panel.grid.minor=element_blank(),
+            axis.text=element_text(size=20, color='grey7', family='Calibri'),
               # legend.position=c(.9,.3),
               legend.position='bottom',
               # axis.text.y = element_text(margin=margin(r=-1)),
@@ -107,21 +109,22 @@ plot_triplets_v2 <- function(triplets_plot_v2, facet='h') {
     }
 }
 
-plot_scatter_corrs <- function(scatter_corrs, xlab='', ylab='') {
-    corrs <- hcp_scatter %>% group_by(G) %>% 
+plot_scatter_corrs <- function(versions_scatter, xlab='', ylab='', size=6) {
+    corrs <- versions_scatter %>% group_by(G) %>% 
     summarize(cor(x, y, use='p')) %>%
     rename_with(function(x) c('G','r'), everything()) %>%
-    mutate(label=paste('r =', round(r,3)))
+    mutate(label=paste('r =', round(r,3), '***'))
 
-    hcp_scatter %>%
+    versions_scatter %>%
     ggplot(aes(x=x, y=y)) + 
     facet_grid(G~.) +
     geom_point(alpha=.2) +
     geom_smooth(method='lm', aes(color=G), se=F) +
-    geom_text(data=corrs, x=-1, y=2.2, aes(label=label), size=6) +
+    geom_text(data=corrs, x=-2, y=2.3, aes(label=label), size=size, hjust=0) +
     xlab(xlab) + ylab(ylab) +
     scale_color_manual(values=mycolors) +
     guides(color='none') +
+    coord_cartesian(clip='off') +
     theme_minimal() + 
     theme(
         # panel.border=element_rect(fill='transparent', color='grey'),
@@ -296,11 +299,11 @@ plot_xyz <- function(df, component=G1, title='G1', colors=brewer.set1(5)) {
 plot_var_exp <- function(df_var) {
     ggplot(df_var) + 
     geom_line(aes(PC, var, color=which, group=which),size=1) + 
-    scale_color_manual(values=brewer.blues(3), name='') +
+    scale_color_manual(values=brewer.rdbu(4)[c(1,4)], name='') +
     theme_minimal() +
     theme(panel.grid.minor = element_blank()) +
     theme(legend.position=c(.6,.8), legend.title=element_blank()) +
-    ylab('Variance Explained') + xlab('') + ylim(c(0,.4))
+    ylab('Variance Explained') + xlab('') #+ ylim(c(0,.4))
 }
 
 

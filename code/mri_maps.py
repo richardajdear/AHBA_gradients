@@ -14,7 +14,7 @@ from nilearn.input_data import NiftiLabelsMasker
 
 
 
-def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True, rename=True):
+def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True):
     maps = (
         pd.read_csv(data_dir)
         .apply(lambda x: (x-np.mean(x))/np.std(x))
@@ -23,31 +23,28 @@ def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True, renam
         # .rename_axis('region')#.reset_index()
     )
     
-    selected_maps = {
-        'T1T2':'Myelination (T1w/T2w)',
-        'thickness':'Cortical Thickness (CT)',    
-        'G1_fMRI': 'fMRI PC1',
-        'glasser_CMRO2':'Oxygen Metabolism (CMRO2)',
-        'glasser_CMRGlu':'Glucose Metabolism (CMRGlu)',
-        'glasser_GI':'Glycolytic Index (AG)',
-        'hill.dev_remapped':'Developmental Expansion (Dev. Exp.)',
-        'hill.evo_remapped':'Evolutionary Expansion (Evo. Exp.)',
-        'externopyramidisation':'Externopyramidisation (Externo.)',
-        'glasser_CBF':'Cerebral Blood Flow (CBF)',
-        # 'glasser_CBV':'Cerebral Blood Volume',
-        # 'asl':'Arterial Spin Labelling',
-        'allom':'Allometric Scaling (Allom.)',        
-        'PC1_neurosynth': 'NeuroSynth PC1 (NS PC1)',
+    selected_maps = [
+        'T1T2',
+        'thickness',
+        'glasser_CMRO2',
+        'glasser_CMRGlu',
+        'glasser_GI',
+        'hill.dev_remapped',
+        'hill.evo_remapped',
+        'externopyramidisation',
+        'glasser_CBF',
+        # 'glasser_CBV',
+        # 'asl',
+        'allom',
+        'G1_fMRI',        
+        'PC1_neurosynth',
         # 'x':'X axis',
         # 'y':'Y axis',
         # 'z':'Z axis'
-    }
-
+    ]
     
     if filter:
-        maps = maps.loc[:, list(selected_maps.keys())]
-        if rename:
-            maps = maps.set_axis(selected_maps.values(), axis=1)
+        maps = maps.loc[:, selected_maps]
         
     return maps
 
@@ -63,6 +60,17 @@ def get_disorder_maps(data_dir="../data/lifespan_dx_DKatlas.csv"):
     maps = maps.set_index('lh_' + maps.index)
  
     return maps
+
+def get_brainchart_maps(data="../data/Peaks_Table_2_2.csv"):
+    maps = (
+        pd.read_csv(data, index_col=0)
+        .drop('Nboot',axis=1)
+        .set_index('feat')
+        .rename_axis('label')
+    )
+    maps = maps.set_index('lh_' + maps.index)
+ 
+    return maps    
 
 
 def get_corrs(scores, maps, method='pearson', atlas='hcp'):
@@ -155,6 +163,9 @@ def generate_simulations(maps, n=10,
     """
     Generate null maps using brainsmash
     """
+    
+    if 'label' in maps.columns:
+        maps=maps.drop('label', axis=1)
     
     if atlas == 'hcp' and dist_mat is None:
         dist_mat="../data/LeftParcelGeodesicDistmat.txt"
@@ -302,6 +313,11 @@ def get_null_p(true_corrs, null_corrs, adjust='fdr_bh', order=None):
              .assign(sig = lambda x: x['q'] < .05)
              # .assign(q_abs = lambda x: [1-q if pos else q for pos, q in zip(x['pos'], x['q'])])
             )
+    else:
+        null_p = (null_p
+             .assign(q = lambda x: x['p'])
+             .assign(sig = lambda x: x['p'] < .05)
+                 )
     
     null_p = (null_p
               .reset_index()
@@ -325,15 +341,16 @@ def maps_pca(maps, short_names=None):
     """
     Run PCA on maps
     """
+    cols = ['MRI PC1','MRI PC2','MRI PC3']
     pca = PCA(n_components=3).fit(maps)
     pca_scores = (pd.DataFrame(pca.transform(maps), 
                                index=maps.index, 
-                               columns=['PC1','PC2','PC3']
+                               columns=cols
                               )
                   .apply(lambda x: (x-np.mean(x))/np.std(x))
                  )
     pca_weights = pd.DataFrame(pca.components_.T, 
-                               columns=['PC1','PC2','PC3'], 
+                               columns=cols, 
                                index=maps.columns)
     
     if short_names is not None:
