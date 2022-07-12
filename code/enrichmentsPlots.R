@@ -48,7 +48,7 @@ plot_enrichment_bars_z <- function(null_p, xlab='z-score') {
     facet_grid(.~G) +
     # geom_vline(xintercept=0) +
     geom_col(aes(fill=z)) +
-    geom_text(aes(label=sig, vjust=.7, hjust=hjust), size=6) +
+    geom_text(aes(label=sig, vjust=.7, hjust=hjust), size=8) +
     # scale_alpha_manual(values=c(0.2,1)) +
     scale_y_discrete(limits=rev, name='') +
     scale_x_continuous(limits=c(-lim,lim), breaks=round(0.5*c(-lim,0,lim)), name=xlab) +

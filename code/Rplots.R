@@ -74,39 +74,45 @@ plot_weights_dist <- function(weights_ds, ncol=1) {
 }
 
 
-plot_triplets_v2 <- function(triplets_plot_v2, facet='h', threshold=0.6, colors=mycolors) {
+plot_triplets_v2 <- function(triplets_plot_v2, facet='h', threshold=0.6, colors=mycolors, smooth=T,
+                            xlab='% of genes retained by differential stability filter') {
 
     p <- triplets_plot_v2 %>%
     filter(component <= 3) %>%
     ggplot(aes(x=DS, y=corr_abs)) +
         geom_hline(yintercept=threshold, color=mycolors[1], linetype='dashed') +
         geom_jitter(aes(color=component), width=0.01) +
-        geom_smooth(aes(group=component, fill=component, color=component), method='loess', span=1) +
         # geom_ribbon(aes(group=component, fill=component, ymin=ymin, ymax=ymax), alpha=.3) +
         scale_color_manual(values=colors, name='',labels=c('G1','G2','G3')) +
         scale_fill_manual(values=colors, name='',labels=c('G1','G2','G3')) +
-        scale_x_reverse(
-            breaks=c(0.1,.5,.9), #minor_breaks=seq(0,.9,.1),
-            labels=c('90%','50%','10%'),
-            name='% of genes retained by differential stability filter'
+        scale_x_continuous(
+            breaks=c(0,.5,.9), minor_breaks=c(.3,.7),
+            labels=c('100%','50%','10%'),
+            name=xlab
         ) +
         scale_y_continuous(breaks=seq(0,1,.2), 
                            # position='right',
                            name='Inter-triplet correlation (abs.)') +
         theme_minimal() + 
-        theme(panel.grid.minor=element_blank(),
+        theme(
+            panel.grid.minor.y=element_blank(),
             axis.text=element_text(size=20, color='grey7', family='Calibri'),
               # legend.position=c(.9,.3),
               legend.position='bottom',
               # axis.text.y = element_text(margin=margin(r=-1)),
               panel.spacing=unit(2,'lines')
              )
+
+    if (smooth) {
+        p <- p + geom_smooth(aes(group=component, fill=component, color=component), method='loess', span=1)
+    }    
     
     if (facet=='h') {
         p + facet_grid(.~method)
     } else if (facet=='w') {
         p + facet_wrap(~method)
     }
+    
 }
 
 plot_scatter_corrs <- function(versions_scatter, xlab='', ylab='', size=6) {
@@ -136,7 +142,7 @@ plot_scatter_corrs <- function(versions_scatter, xlab='', ylab='', size=6) {
     )
 }
 
-plot_weight_corrs <- function(weight_corrs) {
+plot_weight_corrs <- function(weight_corrs, spacing=8, ylab='') {
     weight_corrs %>% 
     mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
     mutate_at(vars(y), ~ factor(., levels=rev(unique(.)))) %>% 
@@ -144,20 +150,21 @@ plot_weight_corrs <- function(weight_corrs) {
     facet_rep_grid(.~version, repeat.tick.labels=T) + #, switch='x') +
     geom_tile(aes(x,y, fill=corr)) +
     geom_text(aes(x,y, label=sprintf("%0.2f", round(corr, digits = 2))), size=10) +
-    scale_fill_gradientn(colours=brewer.rdbu(100)[20:80], limits=c(-1,1), guide='colourbar') +
-    guides(fill=guide_colourbar(title='Corr.', barheight=10)) +
+    scale_fill_gradientn(colours=rev(brewer.rdbu(100)[20:80]), limits=c(-1,1), guide='colourbar') +
+    guides(fill=guide_colourbar(title='Gene weight correlation', barwidth=20)) +
     scale_x_discrete(position = "top") +
     theme_minimal() + 
-    theme(panel.spacing=unit(14,'lines'), 
+    theme(panel.spacing=unit(spacing,'lines'), 
           # axis.title.y=element_text(angle=0),
           strip.text.y=element_text(size=36),
           strip.text.x=element_text(size=36),
-          strip.placement='outside'
-#           legend.title.align = 0.5
+          strip.placement='outside',
+          legend.position='bottom',
+          legend.title = element_text(vjust=.5)
          ) +
     coord_fixed() + 
     xlab('') +
-    ylab('HCP, top 50% genes,\n3+ donor regions')
+    ylab('')
 }
 
 
@@ -200,6 +207,23 @@ plot_corrs <- function(df, facetting='h', xlab='', ylab='', size=8) {
     }        
 }
 
+
+plot_atlas_score_dots <- function(atlas_mean_scores_sig_colors) {
+    atlas_mean_scores_sig_colors %>% 
+    mutate(sig = case_when(q<0.001 ~ '***', q<0.01 ~ '**', q<0.05 ~ '*', TRUE ~ '')) %>%
+    ggplot(aes(x=mean, y=G)) +
+      facet_wrap(~atlas, ncol=3) +
+      geom_point(aes(fill=I(color)), color='grey50', size=7, shape=21, alpha=.8) +
+      geom_text(aes(label=sig), size=8, vjust=-.5) +
+      scale_y_discrete(limits=rev, name='') +
+      scale_x_continuous(breaks=c(-1,0,1), name='Mean axis z-score in atlas region') +
+      coord_cartesian(clip='off') +
+      theme_minimal() + 
+      theme(panel.grid.minor=element_blank(),
+            panel.spacing=unit(2,'lines'),
+            axis.text=element_text(size=22, color='grey7', family='Calibri')
+           )
+}
 
 
 plot_violins <- function(df, classes=vonEconomo, 
@@ -299,7 +323,7 @@ plot_xyz <- function(df, component=G1, title='G1', colors=brewer.set1(5)) {
 plot_var_exp <- function(df_var) {
     ggplot(df_var) + 
     geom_line(aes(PC, var, color=which, group=which),size=1) + 
-    scale_color_manual(values=brewer.rdbu(4)[c(1,4)], name='') +
+    scale_color_manual(values=cols25(10), name='') +
     theme_minimal() +
     theme(panel.grid.minor = element_blank()) +
     theme(legend.position=c(.6,.8), legend.title=element_blank()) +

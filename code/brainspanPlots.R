@@ -64,14 +64,14 @@ plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', ro
     ggplot() + geom_hline(yintercept=0, color='grey') + geom_vline(xintercept=xint, color='grey') +
     geom_line(aes(x=age, y=corr, color=G, group=G), size=1, alpha=1) + 
     geom_point(aes(x=age, y=corr, color=G), size=5) + 
-    xlab("Age") + ylab("Corr.") +
+    xlab("") + ylab("AHBA-BrainSpan correlation") +
     scale_color_manual(values=mycolors) +
-    scale_y_continuous(limits=c(0,1), breaks=seq(0,1,.25)) +
+    scale_y_continuous(limits=c(0,1), breaks=seq(0,1,.2)) +
     # scale_color_manual(values=brewer.rdylbu(4)) +
     ggtitle(title) +
     theme_minimal() + 
     theme(panel.grid.minor = element_blank(),
-          axis.title=element_text(angle=0),
+          #axis.title.y=element_text(angle=0, vjust=0.5, hjust=1),
           axis.text=element_text(size=16, color='grey7'),
           # legend.position = c(.95, .9),
           # legend.position=element_blank(),
@@ -109,15 +109,16 @@ plot_ahba_bs_scatter <- function(both_scores, corrs, facet='h', size=4) {
     
     g <- ggplot(both_scores, aes(AHBA, Brainspan)) + 
     # xlim(c(-lim,lim)) + ylim(c(-lim,lim)) +
-    geom_point(aes(color=structure_name), size=size) +
+    geom_point(aes(color=AHBA), size=size) +
     geom_smooth(method='lm', linetype=1, se=F, color='grey') +
-    scale_color_manual(values=cols25(), guide='none') +
+    scale_color_gradientn(colors=rev(brewer.rdbu(100)), guide='none') +
+    #scale_color_manual(values=cols25(), guide='none') +
     geom_text(data=data.frame(G=names(corrs), 
                               label=paste("r =", round(corrs, 2)))
-              , aes(x=-1,y=1, label=label), size=7
+              , aes(x=-.5,y=1, label=label), size=7
     ) +
     coord_fixed() +
-    xlab('AHBA Score') + ylab('BrainSpan\nScore') +
+    xlab('AHBA Score') + ylab('BrainSpan Score') +
     scale_y_continuous(breaks=0) +
     scale_x_continuous(breaks=0) +
     theme_minimal() + 

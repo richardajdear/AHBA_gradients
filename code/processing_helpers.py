@@ -103,8 +103,7 @@ def fetch_dk(native=True, only_cortex=True, only_left=False):
     """
     atlas_dk = abagen.fetch_desikan_killiany(native=native)
     
-    def remove_subcortex(image):
-        img = nib.load(image)
+    def remove_subcortex(img):
         if only_left:
             img_cortex = np.where((img.dataobj[:] > 34), 0, img.dataobj[:])
         else:
@@ -112,9 +111,16 @@ def fetch_dk(native=True, only_cortex=True, only_left=False):
         return img.__class__(img_cortex, img.affine, img.header)
         
     if only_cortex:
-        for donor, image in atlas_dk['image'].items():
-            atlas_dk['image'][donor] = remove_subcortex(image)
-#         atlas_dk['info'] = pd.read_csv(atlas_dk['info']).replace('subcortex/brainstem','other')
+        if native:
+            for donor, image in atlas_dk['image'].items():
+                img = nib.load(img)
+                atlas_dk['image'][donor] = remove_subcortex(img)
+    #         atlas_dk['info'] = pd.read_csv(atlas_dk['info']).replace('subcortex/brainstem','other')
+        else:
+            img = nib.load(atlas_dk['image'])
+            atlas_dk['image'] = remove_subcortex(img)
+    
+    atlas_dk['info'] = pd.read_csv(atlas_dk['info'])
     
     return atlas_dk
 
@@ -142,12 +148,11 @@ def fetch_hcp(native=True, only_left=False):
         }
     else:
         atlas_hcp = {
-            'image':'../data/parcellations/HCP-MMP_1mm.nii.gz',
-            'info':pd.read_csv('../data/HCP-MMP1_UniqueRegionList.txt').rename(columns={'LR':'hemisphere', 'regionID':'id', 'region':'label'}).assign(structure='cortex')
+            'image':nib.load('../data/parcellations/HCP-MMP_1mm.nii.gz'),
+            'info':pd.read_csv('../data/parcellations/HCP-MMP1_UniqueRegionList.txt').rename(columns={'LR':'hemisphere', 'regionID':'id', 'region':'label'}).assign(structure='cortex')
         }
 
-    def remove_right(image):
-        img = nib.load(image)
+    def remove_right(img):
         img_cortex = np.where((img.dataobj[:] > 180), 0, img.dataobj[:])
         return img.__class__(img_cortex, img.affine, img.header)
     
@@ -196,7 +201,7 @@ def fetch_dx():
     """
     dx_info = (
         pd.read_csv("../data/parcellations/Destrieux.csv")
-        .set_axis({'id','label'},axis=1)
+        .set_axis(['id','label'],axis=1)
         .assign(structure='cortex', hemisphere='L')
     )
 
@@ -210,42 +215,48 @@ def fetch_dx():
 def get_labels_dx():
     labels_dx = (
         pd.read_csv("../data/parcellations/desterieux_ggseg_labels.csv")
-        .set_axis({'id','label'},axis=1)
+        .set_axis(['id','label'],axis=1)
         .set_index('id')['label']
     )
     return labels_dx
 
 
-def fetch_s200():
+def fetch_schaefer(size=400):
     """
-    Get Schaefer200 atlas
+    Get Schaefer atlas
     """
     s200_info = (
         pd.read_csv("../data/parcellations/schaefer200_ggseg_labels.csv")
         .assign(structure='cortex', hemisphere='L')
+        #.loc[lambda x: x['id']!=1] # drop medial wall
     )
 
     # Path to Schaefer200 image
-    img_path = '../data/parcellations/Schaefer200_space-MNI152NLin6_res-4x4x4.nii.gz'
+    img_path = f'../data/parcellations/Schaefer2018_{size}Parcels_17Networks_order_FSLMNI152_1mm.nii.gz'
     
     # Drop right hemi
     img = nib.load(img_path)
-    img_left = np.where((img.dataobj[:] > 101), 0, img.dataobj[:])
+    img_left = np.where((img.dataobj[:] > size/2+1), 0, img.dataobj[:])
+
+    img_left = np.where((img_left == 1), 0, img_left)    # drop medial wall
+
     img = img.__class__(img_left, img.affine, img.header)
     
-    atlas_s200 = {
+    atlas = {
         'image':img,
-        'info': s200_info
+        'info': None
+        #'info': s200_info
     }
 
-    return atlas_s200
+    return atlas
 
-def get_labels_s200():
-    labels_s200 = (
-        pd.read_csv("../data/parcellations/schaefer200_ggseg_labels.csv")
+def get_labels_schaefer(size=400):
+    labels = (
+        pd.read_csv(f"../data/parcellations/schaefer{size}_ggseg_labels.csv")
         .set_index('id')['label']
+        .astype('str')
     )
-    return labels_s200
+    return labels
 
     
 

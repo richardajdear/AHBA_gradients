@@ -7,6 +7,7 @@ from sklearn.decomposition import PCA
 from sklearn.cross_decomposition import PLSCanonical, PLSRegression
 from sklearn.preprocessing import StandardScaler
 from brainspace.gradient import GradientMaps
+from brainspace.gradient.kernels import compute_affinity
 from brainsmash.mapgen.base import Base
 from neuromaps.images import annot_to_gifti
 from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
@@ -67,6 +68,7 @@ class gradientVersion():
         
         self.scores = scores
         self.expression = X
+        self.affinity = compute_affinity(X.values, kernel=self.kernel, sparsity=self.sparsity)
         self.var = self.gradients.lambdas_
         self.weights = self.fit_weights()
     
@@ -300,14 +302,14 @@ class gradientVersion():
             return gene_corrs
         
         
-    def match_components(self, df_corr):
+    def match_components(self, df_corr, n_components=5):
         """
         Matching logic for a correlation df
         """
-        _matches = [None]*5
-        _corrs = [None]*5
+        _matches = [None]*n_components
+        _corrs = [None]*n_components
 
-        for i in range(5):
+        for i in range(n_components):
             # Find columns and rows already matched
             xs = [m[0] for m in _matches if m != None]
             ys = [m[1] for m in _matches if m != None]

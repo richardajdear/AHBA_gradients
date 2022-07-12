@@ -58,7 +58,7 @@ ggtitle(title) + xlab("") + ylab("")
 
 
 plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
-                     colors=rev(brewer.rdbu(100))
+                     colors=rev(brewer.rdbu(100)), name='z'
                     ) {
         if (!"version" %in% colnames(scores_df)) {
         scores_df <- scores_df %>% mutate(version = '')
@@ -86,6 +86,7 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
     theme_void() + 
     # facet_grid(component~version, switch=switch) +
     theme(legend.position='bottom',
+          legend.title=element_text(vjust=1),          
           strip.text.x=element_text(vjust=1),
           strip.text.y.left = element_text(angle = 0),
           panel.spacing.x = unit(spacing_x, 'lines'),
@@ -94,7 +95,7 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
 #     scale_fill_gradient2(low=muted('red'), high=muted('blue'), 
     scale_fill_gradientn(colors=colors, 
                          limits=c(-m,m), oob=squish, breaks=c(-m,0,m), 
-                         labels=c(round(-m,2),0,round(m,2)), name=''
+                         labels=c(round(-m,2),0,round(m,2)), name=name
                         ) +
     coord_sf(clip='off') +
     ggtitle(title) + xlab("") + ylab("")
@@ -109,7 +110,7 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
 }
 
 
-plot_dx <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
+plot_dx <- function(scores_df, title="", three=T, switch=NULL, flip=F) {
     df <- scores_df %>% 
         # rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
@@ -151,7 +152,9 @@ plot_dx <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
 ggtitle(title) + xlab("") + ylab("")
 }
 
-plot_s200 <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
+
+
+plot_schaefer <- function(scores_df, title="", three=T, switch=NULL, flip=F, size=400) {
     df <- scores_df %>% 
         rename('G1'='0', 'G2'='1', 'G3'='2', 'G4'='3', 'G5'='4') %>%
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
@@ -169,10 +172,17 @@ plot_s200 <- function(scores_df, title="", three=F, switch=NULL, flip=F) {
         df %>% .$score %>% quantile(.01) %>% abs
     )
 
+    if (size==400) {
+        atlas=schaefer17_400
+    } else if (size==200) {
+        atlas=schaefer17_200
+    } else if (size==800) {
+        atlas=schaefer17_800
+    }
     
     ggplot(df) + 
     geom_brain(
-        atlas=desterieux,
+        atlas=atlas,
         hemi='left',
         mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
         colour='grey', size=.1,
@@ -346,24 +356,30 @@ plot_hcp_dist <- function(dist_hcp, title="",
 
 
 
-plot_hcp_classes <- function(df, classes=vonEconomo, classcolors=vonEconomo.colors) {
-    colors <- df %>% select( {{classes}} ,  {{classcolors}} ) %>% unique() %>% 
-        arrange( {{classes}} ) %>% drop_na() %>% pull( {{classcolors}} )
-    names <- c('motor', 'assocation', 'association', 'sensory', 'sensory', 'limbic', 'insula')
-    glasser$data <- glasser$data %>% filter(hemi=='left')
+plot_hcp_classes <- function(df, classes=vonEconomo, classcolors=vonEconomo_colors, classnames=vonEconomo_names, ncol=2) {
+    colors <- df %>% select( {{classes}} ,  {{classcolors}} , {{classnames}} ) %>% 
+    unique() %>% drop_na() %>%
+    arrange( {{classes}} ) %>% pull( {{classcolors}} )
+    
+    names <- df %>% select( {{classes}} ,  {{classcolors}} , {{classnames}} ) %>% 
+    unique() %>% drop_na() %>%
+    arrange( {{classes}} ) %>% pull( {{classnames}} )
+    
 
     df %>% 
     mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
-    mutate( classes = factor( {{classes}} )) %>%
-    filter( classes  != 'NaN') %>%
+    mutate(classes = factor( {{classes}} )) %>%
+    filter(classes != 0, classes != 8) %>%
     ggplot() +
     geom_brain(
-        atlas=glasser,
+        atlas=glasser, hemi='left',
         mapping=aes(fill= classes , geometry=geometry, hemi=hemi, side=side, type=type),
         colour='grey', size=.1
     ) +
+    scale_fill_manual(values=colors, labels=names, na.translate=F) +
+    guides(fill=guide_legend(ncol=ncol, title='')) +
     theme_void() +
-    scale_fill_manual(values=colors, guide="none")
+    theme(legend.position='bottom')
 }
 
 

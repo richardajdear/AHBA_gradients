@@ -26,18 +26,20 @@ def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True):
     selected_maps = [
         'T1T2',
         'thickness',
-        'glasser_CMRO2',
-        'glasser_CMRGlu',
+        #'glasser_CMRO2',
+        #'glasser_CMRGlu',        
+        'G1_fMRI',        
+        'PC1_neurosynth',        
+        'externopyramidisation',        
         'glasser_GI',
+        'hill.evo_remapped',        
         'hill.dev_remapped',
-        'hill.evo_remapped',
-        'externopyramidisation',
         'glasser_CBF',
+        'allom',
+        
         # 'glasser_CBV',
         # 'asl',
-        'allom',
-        'G1_fMRI',        
-        'PC1_neurosynth',
+        
         # 'x':'X axis',
         # 'y':'Y axis',
         # 'z':'Z axis'
@@ -353,10 +355,12 @@ def maps_pca(maps, short_names=None):
                                columns=cols, 
                                index=maps.columns)
     
+    pca_var = pca.explained_variance_ratio_
+    
     if short_names is not None:
         pca_weights = pca_weights.assign(map_name = lambda x: x.index.map(short_names))
     
-    return pca_scores, pca_weights
+    return pca_scores, pca_var, pca_weights
     
     
 

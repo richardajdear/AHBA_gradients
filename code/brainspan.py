@@ -112,6 +112,18 @@ def get_hcp_bs_mapping_v2():
     
     return hcp_bs_mapping
 
+def get_hcp_bs_mapping_v3():
+    """
+    Define mapping between individual HCP regions and BrainSpan
+    """
+    hcp_bs_mapping = (
+        pd.read_csv("../data/hcp_bs_mapping_v3.csv", index_col=None)
+        # .query("keep==1")
+        .assign(structure_name = lambda x: np.where(x['keep']==1, x['structure_name'], np.nan))
+               )
+    
+    return hcp_bs_mapping
+
 
 def get_dk_bs_mapping():
     """
@@ -290,7 +302,7 @@ def aggregate_brainspan_by_age(bs_clean, normalize=True):
     Aggregate Brainspan donor brains by ages
     Drop donors with <=3 samples
     """
-    # Drop brains with <= 3 samples
+    # Drop brains with <= 3 missing samples
     bs_age_counts = bs_clean.groupby(['age']).size()
                 #.loc[lambda x: x>0].sort_index(level=1)
     bs_keep = bs_age_counts > 8
