@@ -3,6 +3,7 @@ abagen
 rpy2
 brainspace
 brainsmash
+gseapy
 #gprofiler-official
 git+https://github.com/enthought/mayavi.git
 git+https://github.com/nipy/PySurfer.git

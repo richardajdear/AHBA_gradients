@@ -22,7 +22,7 @@ def load_pickle(fname):
 def get_expression_abagen(atlas, 
                           DS_threshold=0,
                           save_name=None, 
-                          data_dir='~/rds/rds-cam-psych-transc-Pb9UGUlrwWc/Cam_LIBD/AHBA_data/abagen-data',
+                          data_dir='../data/abagen-data',
                           return_donors=False,
                           return_counts=False,
                           return_labels=False,

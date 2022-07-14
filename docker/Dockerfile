@@ -47,12 +47,7 @@ RUN pip3 install aquirdturtle_collapsible_headings
 RUN jupyter labextension install @hokyjack/jupyterlab-monokai-plus 
 #RUN pip3 install jupyterlab-lsp
 #RUN pip3 install 'python-lsp-server[all]'
-RUN pip3 install jupyterlab_sublime
-#RUN jupyter labextension install @techrah/text-shortcuts --no-build
+#RUN pip3 install jupyterlab_sublime
+RUN jupyter labextension install @techrah/text-shortcuts --no-build
 #RUN jupyter labextension install @jupyterlab/debugger --no-build
 #RUN jupyter lab build --dev-build=False --minimize=False
-
-
-# R packages 2
-COPY r-reqs2.R ./
-RUN Rscript r-reqs2.R

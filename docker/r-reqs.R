@@ -9,21 +9,25 @@ package_list <- c(
 	#'vctrs',
 	#'ellipsis',
 	'ggseg',
-	'ggsegExtra',
+	# 'ggsegExtra',
+	'ggsegGlasser',
+	'ggsegSchaefer',
+	'ggsegDesterieux',
 	'ggseg3d', 
 	'ggrepel',
 	'ggridges',
+	'ggtext',
+	'ggpubr',
+	'lemon',
 	'patchwork',
 	'pals', 
-	'scales', 
-	'ggpubr', 
+	'scales',  
+	'shades',
 	'magick', 
 	'png',
 	'gdtools',
 	'flextable'
 )
 install.packages(package_list)
-
-#install.packages("languageserver", repos='https://cloud.r-project.org/')
 
 devtools::install_github("ricardo-bion/ggradar", dependencies = TRUE)

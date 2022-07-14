@@ -1,8 +1,9 @@
 # R functions to plot brains using ggseg
 
 library(ggseg)
+# library(ggsegExtra)
 library(ggsegGlasser)
-library(ggsegDesterieux)
+# library(ggsegDesterieux)
 suppressMessages(library(tidyverse))
 suppressMessages(library(scales))
 library(patchwork)
