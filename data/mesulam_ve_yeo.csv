@@ -1,0 +1,181 @@
+,label,Mesulam,Mesulam_colors,Mesulam_names,Yeo,Yeo_colors,Yeo_names,vonEconomo,vonEconomo_colors,vonEconomo_names,x,y,z
+1,V1,4,#80B1D3,Idiotypic,1,#660066,Visual,5,#fffb00,Sensory 1,11.21,49.816,35.575
+2,MST,3,#FB8072,Unimodal,1,#660066,Visual,4,#f59505,Sensory 2,36.25,34.011,37.57
+3,V6,3,#FB8072,Unimodal,1,#660066,Visual,4,#f59505,Sensory 2,10.096,35.75,55.243
+4,V2,4,#80B1D3,Idiotypic,1,#660066,Visual,4,#f59505,Sensory 2,11.179,46.89,36.613
+5,V3,4,#80B1D3,Idiotypic,1,#660066,Visual,4,#f59505,Sensory 2,14.58,47.879,37.7
+6,V4,3,#FB8072,Unimodal,1,#660066,Visual,4,#f59505,Sensory 2,25.116,47.053,34.651
+7,V8,3,#FB8072,Unimodal,1,#660066,Visual,2,#220ced,Association 1,31.562,39.713,18.143
+8,4,4,#80B1D3,Idiotypic,2,#0066CC,Somatomotor,1,#6f057a,Motor,24.919,-11.595,78.307
+9,3b,4,#80B1D3,Idiotypic,2,#0066CC,Somatomotor,5,#fffb00,Sensory 1,37.321,-10.774,72.728
+10,FEF,4,#80B1D3,Idiotypic,3,#009900,Dorsal attention,1,#6f057a,Motor,33.942,-18.164,74.59
+11,PEF,4,#80B1D3,Idiotypic,3,#009900,Dorsal attention,1,#6f057a,Motor,40.15,-25.579,70.467
+12,55b,4,#80B1D3,Idiotypic,4,#FF00FF,Central attention,1,#6f057a,Motor,39.31,-22.354,79.368
+13,V3A,3,#FB8072,Unimodal,1,#660066,Visual,2,#220ced,Association 1,8.9808,46.067,60.974
+14,RSC,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,6,#00fffb,Limbic,6.4352,5.684,48.37
+15,POS2,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,7.7549,31.265,66.511
+16,V7,3,#FB8072,Unimodal,1,#660066,Visual,2,#220ced,Association 1,14.811,40.448,68.151
+17,IPS1,3,#FB8072,Unimodal,3,#009900,Dorsal attention,2,#220ced,Association 1,20.526,31.339,64.864
+18,FFC,3,#FB8072,Unimodal,1,#660066,Visual,2,#220ced,Association 1,43.254,23.257,16.73
+19,V3B,3,#FB8072,Unimodal,1,#660066,Visual,2,#220ced,Association 1,17.543,42.031,58.287
+20,LO1,3,#FB8072,Unimodal,1,#660066,Visual,4,#f59505,Sensory 2,33.264,49.388,35.43
+21,LO2,3,#FB8072,Unimodal,1,#660066,Visual,4,#f59505,Sensory 2,41.705,40.948,27.485
+22,PIT,3,#FB8072,Unimodal,1,#660066,Visual,4,#f59505,Sensory 2,36.713,42.721,22.352
+23,MT,3,#FB8072,Unimodal,1,#660066,Visual,4,#f59505,Sensory 2,35.156,42.643,38.573
+24,A1,4,#80B1D3,Idiotypic,2,#0066CC,Somatomotor,5,#fffb00,Sensory 1,35.75,-4.279,45.867
+25,PSL,3,#FB8072,Unimodal,7,#FF6666,Default mode,3,#067a08,Association 2,49.131,15.769,54.833
+26,SFL,3,#FB8072,Unimodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,7.9167,-43.039,83.049
+27,PCV,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,6.3,9.921,72.767
+28,STV,3,#FB8072,Unimodal,7,#FF6666,Default mode,3,#067a08,Association 2,52.196,17.653,48.889
+29,7Pm,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,8.3036,28.435,77.077
+30,7m,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,3.5049,23.701,65.206
+31,POS1,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,8.2692,28.034,43.032
+32,23d,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,6,#00fffb,Limbic,2.9605,-9.779,62.759
+33,v23ab,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,3.4559,23.75,47.657
+34,d23ab,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,6,#00fffb,Limbic,2.4364,9.9667,58.607
+35,31pv,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,8.2812,10.481,61.021
+36,5m,4,#80B1D3,Idiotypic,2,#0066CC,Somatomotor,1,#6f057a,Motor,4.6094,2.4866,84.979
+37,5mv,4,#80B1D3,Idiotypic,4,#FF00FF,Central attention,1,#6f057a,Motor,11.5,-0.44567,72.667
+38,23c,4,#80B1D3,Idiotypic,4,#FF00FF,Central attention,2,#220ced,Association 1,10.076,-6.2586,67.575
+39,5L,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,1,#6f057a,Motor,9.1304,9.2427,89.558
+40,24dd,4,#80B1D3,Idiotypic,2,#0066CC,Somatomotor,1,#6f057a,Motor,5.9783,-14.045,75.237
+41,24dv,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,2,#220ced,Association 1,8.125,-24.623,71.463
+42,7AL,2,#BEBADA,Heteromodal,3,#009900,Dorsal attention,2,#220ced,Association 1,10.637,15.127,85.233
+43,SCEF,3,#FB8072,Unimodal,4,#FF00FF,Central attention,2,#220ced,Association 1,5.5978,-31.909,79.819
+44,6ma,3,#FB8072,Unimodal,4,#FF00FF,Central attention,2,#220ced,Association 1,15.925,-33.629,87.792
+45,7Am,2,#BEBADA,Heteromodal,3,#009900,Dorsal attention,2,#220ced,Association 1,4.8214,19.864,81.928
+46,7PL,0,,,3,#009900,Dorsal attention,2,#220ced,Association 1,15.833,37.79,78.347
+47,7PC,2,#BEBADA,Heteromodal,3,#009900,Dorsal attention,2,#220ced,Association 1,27.326,12.634,85.597
+48,LIPv,2,#BEBADA,Heteromodal,3,#009900,Dorsal attention,2,#220ced,Association 1,19.267,19.79,84.149
+49,VIP,2,#BEBADA,Heteromodal,3,#009900,Dorsal attention,2,#220ced,Association 1,13.262,23.88,87.593
+50,MIP,2,#BEBADA,Heteromodal,3,#009900,Dorsal attention,2,#220ced,Association 1,22.474,29.15,80.126
+51,1,4,#80B1D3,Idiotypic,2,#0066CC,Somatomotor,5,#fffb00,Sensory 1,38.614,-4.762,79.445
+52,2,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,5,#fffb00,Sensory 1,33.104,1.9387,74.854
+53,3a,4,#80B1D3,Idiotypic,2,#0066CC,Somatomotor,5,#fffb00,Sensory 1,31.981,-11.471,67.59
+54,6d,4,#80B1D3,Idiotypic,2,#0066CC,Somatomotor,1,#6f057a,Motor,29.986,-16.922,85.793
+55,6mp,4,#80B1D3,Idiotypic,2,#0066CC,Somatomotor,1,#6f057a,Motor,13.75,-16.689,90.091
+56,6v,4,#80B1D3,Idiotypic,2,#0066CC,Somatomotor,1,#6f057a,Motor,49.511,-30.323,63.254
+57,p24pr,1,#FFFFB3,Paralimbic,4,#FF00FF,Central attention,6,#00fffb,Limbic,3.4615,-23.529,65.628
+58,33pr,1,#FFFFB3,Paralimbic,4,#FF00FF,Central attention,6,#00fffb,Limbic,4.8864,-33.643,55.576
+59,a24pr,1,#FFFFB3,Paralimbic,4,#FF00FF,Central attention,6,#00fffb,Limbic,5.7095,-40.252,57.775
+60,p32pr,3,#FB8072,Unimodal,4,#FF00FF,Central attention,2,#220ced,Association 1,8.0682,-37.62,64.667
+61,a24,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,6,#00fffb,Limbic,6.8351,-61.747,31.901
+62,d32,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,6.0648,-60.396,54.08
+63,8BM,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,6.0167,-53.346,67.033
+64,p32,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,4,#f59505,Sensory 2,12.546,-66.816,31.426
+65,10r,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,4,#f59505,Sensory 2,7.1235,-70.171,24.727
+66,47m,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,4,#f59505,Sensory 2,36.806,-49.964,24.481
+67,8Av,3,#FB8072,Unimodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,33.538,-40.547,76.006
+68,8Ad,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,21.218,-53.418,68.654
+69,9m,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,6.8822,-70.814,50.802
+70,8BL,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,8.3125,-56.998,75.698
+71,9p,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,17.306,-63.899,66.603
+72,10d,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,13.967,-81.779,40.233
+73,8C,3,#FB8072,Unimodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,38.568,-39.2,64.617
+74,44,3,#FB8072,Unimodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,45.683,-41.879,48.833
+75,45,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,43.88,-51.185,37.922
+76,47l,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,4,#f59505,Sensory 2,42.047,-52.773,28.101
+77,a47r,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,4,#f59505,Sensory 2,35.636,-66.95,22.189
+78,6r,3,#FB8072,Unimodal,4,#FF00FF,Central attention,1,#6f057a,Motor,45.865,-34.614,49.529
+79,IFJa,3,#FB8072,Unimodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,32.807,-37.703,57.638
+80,IFJp,4,#80B1D3,Idiotypic,3,#009900,Dorsal attention,2,#220ced,Association 1,34.966,-27.617,58.518
+81,IFSp,3,#FB8072,Unimodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,37.055,-48.381,51.743
+82,IFSa,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,40.179,-57.934,41.899
+83,p9-46v,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,3,#067a08,Association 2,36.705,-57.052,54.667
+84,46,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,3,#067a08,Association 2,30.921,-61.794,55.868
+85,a9-46v,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,3,#067a08,Association 2,34.043,-73.157,36.98
+86,9-46d,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,3,#067a08,Association 2,23.624,-66.166,49.793
+87,9a,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,3,#067a08,Association 2,18.011,-72.932,55.064
+88,10v,2,#BEBADA,Heteromodal,5,#FFFF99,Limbic,4,#f59505,Sensory 2,5.8537,-69.23,16.648
+89,a10p,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,3,#067a08,Association 2,24.841,-77.415,26.712
+90,10pp,2,#BEBADA,Heteromodal,5,#FFFF99,Limbic,3,#067a08,Association 2,15.236,-75.995,19.599
+91,11l,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,4,#f59505,Sensory 2,24.394,-64.186,20.337
+92,13l,1,#FFFFB3,Paralimbic,5,#FFFF99,Limbic,4,#f59505,Sensory 2,21.185,-51.63,15.608
+93,OFC,1,#FFFFB3,Paralimbic,5,#FFFF99,Limbic,4,#f59505,Sensory 2,10.718,-50.045,12.752
+94,47s,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,4,#f59505,Sensory 2,31.391,-44.356,19.42
+95,LIPd,2,#BEBADA,Heteromodal,3,#009900,Dorsal attention,2,#220ced,Association 1,22.222,20.082,74.528
+96,6a,3,#FB8072,Unimodal,3,#009900,Dorsal attention,1,#6f057a,Motor,21.385,-26.356,76.018
+97,i6-8,3,#FB8072,Unimodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,24.75,-36.01,80.013
+98,s6-8,3,#FB8072,Unimodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,20.215,-49.779,76.305
+99,43,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,1,#6f057a,Motor,51.528,-30.724,41.667
+100,OP4,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,5,#fffb00,Sensory 1,51.813,-16.293,47.237
+101,OP1,2,#BEBADA,Heteromodal,2,#0066CC,Somatomotor,3,#067a08,Association 2,41.456,-8.4434,51.139
+102,OP2-3,2,#BEBADA,Heteromodal,2,#0066CC,Somatomotor,7,#f200ff,Insula,34.583,-12.835,49.528
+103,52,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,7,#f200ff,Insula,35.298,-7.6361,33.595
+104,RI,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,3,#067a08,Association 2,33.073,5.4293,48.729
+105,PFcm,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,3,#067a08,Association 2,44.294,0.32969,51.333
+106,PoI2,1,#FFFFB3,Paralimbic,4,#FF00FF,Central attention,7,#f200ff,Insula,34.785,-24.025,34.516
+107,TA2,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,3,#067a08,Association 2,45.972,-29.819,30.381
+108,FOP4,2,#BEBADA,Heteromodal,4,#FF00FF,Central attention,2,#220ced,Association 1,35.217,-38.179,40.667
+109,MI,1,#FFFFB3,Paralimbic,4,#FF00FF,Central attention,7,#f200ff,Insula,31.183,-35.746,36.533
+110,Pir,1,#FFFFB3,Paralimbic,8,#404040,,7,#f200ff,Insula,25.227,-30.309,20.765
+111,AVI,1,#FFFFB3,Paralimbic,6,#FF8000,Frontoparietal,4,#f59505,Sensory 2,25.924,-47.17,32.33
+112,AAIC,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,7,#f200ff,Insula,29.485,-37.757,24.961
+113,FOP1,2,#BEBADA,Heteromodal,4,#FF00FF,Central attention,1,#6f057a,Motor,43.25,-30.422,38.524
+114,FOP3,2,#BEBADA,Heteromodal,4,#FF00FF,Central attention,7,#f200ff,Insula,30.598,-29.453,45.754
+115,FOP2,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,1,#6f057a,Motor,37.917,-23.612,47.0
+116,PFt,3,#FB8072,Unimodal,3,#009900,Dorsal attention,3,#067a08,Association 2,43.375,-2.6957,64.667
+117,AIP,2,#BEBADA,Heteromodal,3,#009900,Dorsal attention,2,#220ced,Association 1,27.794,9.7063,69.005
+118,EC,1,#FFFFB3,Paralimbic,5,#FFFF99,Limbic,6,#00fffb,Limbic,15.88,-16.075,12.63
+119,PreS,1,#FFFFB3,Paralimbic,1,#660066,Visual,6,#00fffb,Limbic,14.546,0.5619,22.848
+120,H,0,,,8,#404040,,6,#00fffb,Limbic,0.0,0.0,0.0
+121,ProS,4,#80B1D3,Idiotypic,1,#660066,Visual,4,#f59505,Sensory 2,20.393,22.292,34.524
+122,PeEc,1,#FFFFB3,Paralimbic,5,#FFFF99,Limbic,6,#00fffb,Limbic,25.276,-23.091,9.8614
+123,STGa,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,3,#067a08,Association 2,45.331,-40.526,17.712
+124,PBelt,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,3,#067a08,Association 2,47.788,-3.7213,41.686
+125,A5,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,3,#067a08,Association 2,54.349,-13.547,34.35
+126,PHA1,1,#FFFFB3,Paralimbic,1,#660066,Visual,6,#00fffb,Limbic,21.467,4.6413,19.232
+127,PHA3,3,#FB8072,Unimodal,1,#660066,Visual,2,#220ced,Association 1,30.073,5.6622,19.52
+128,STSda,3,#FB8072,Unimodal,7,#FF6666,Default mode,3,#067a08,Association 2,48.821,-20.565,27.595
+129,STSdp,3,#FB8072,Unimodal,7,#FF6666,Default mode,3,#067a08,Association 2,45.608,4.5115,35.173
+130,STSvp,3,#FB8072,Unimodal,7,#FF6666,Default mode,2,#220ced,Association 1,49.929,0.97571,30.067
+131,TGd,1,#FFFFB3,Paralimbic,5,#FFFF99,Limbic,2,#220ced,Association 1,36.665,-36.805,8.067
+132,TE1a,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,54.917,-25.012,18.55
+133,TE1p,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,56.605,9.9578,25.811
+134,TE2a,3,#FB8072,Unimodal,5,#FFFF99,Limbic,2,#220ced,Association 1,50.578,-9.8865,14.801
+135,TF,3,#FB8072,Unimodal,5,#FFFF99,Limbic,2,#220ced,Association 1,36.014,-14.036,10.95
+136,TE2p,3,#FB8072,Unimodal,3,#009900,Dorsal attention,2,#220ced,Association 1,45.72,5.0695,16.371
+137,PHT,2,#BEBADA,Heteromodal,3,#009900,Dorsal attention,2,#220ced,Association 1,50.592,26.33,29.911
+138,PH,3,#FB8072,Unimodal,3,#009900,Dorsal attention,2,#220ced,Association 1,40.878,22.755,25.984
+139,TPOJ1,2,#BEBADA,Heteromodal,4,#FF00FF,Central attention,3,#067a08,Association 2,53.942,16.062,40.508
+140,TPOJ2,2,#BEBADA,Heteromodal,3,#009900,Dorsal attention,3,#067a08,Association 2,42.778,30.013,43.417
+141,TPOJ3,2,#BEBADA,Heteromodal,3,#009900,Dorsal attention,3,#067a08,Association 2,40.048,38.923,45.147
+142,DVT,3,#FB8072,Unimodal,1,#660066,Visual,2,#220ced,Association 1,15.375,28.388,58.833
+143,PGp,3,#FB8072,Unimodal,3,#009900,Dorsal attention,3,#067a08,Association 2,32.975,46.136,54.068
+144,IP2,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,3,#067a08,Association 2,32.043,17.294,69.91
+145,IP1,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,3,#067a08,Association 2,28.184,29.745,76.69
+146,IP0,3,#FB8072,Unimodal,3,#009900,Dorsal attention,3,#067a08,Association 2,21.385,41.572,62.437
+147,PFop,2,#BEBADA,Heteromodal,4,#FF00FF,Central attention,3,#067a08,Association 2,54.712,-6.8623,59.891
+148,PF,2,#BEBADA,Heteromodal,4,#FF00FF,Central attention,3,#067a08,Association 2,47.346,7.2932,65.91
+149,PFm,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,3,#067a08,Association 2,39.458,22.764,65.525
+150,PGi,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,3,#067a08,Association 2,35.08,27.833,50.516
+151,PGs,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,3,#067a08,Association 2,33.345,39.653,64.369
+152,V6A,3,#FB8072,Unimodal,1,#660066,Visual,2,#220ced,Association 1,10.602,36.239,64.944
+153,VMV1,4,#80B1D3,Idiotypic,1,#660066,Visual,4,#f59505,Sensory 2,19.628,22.248,25.883
+154,VMV3,3,#FB8072,Unimodal,1,#660066,Visual,2,#220ced,Association 1,27.137,21.35,20.957
+155,PHA2,2,#BEBADA,Heteromodal,1,#660066,Visual,6,#00fffb,Limbic,29.612,4.0141,21.563
+156,V4t,3,#FB8072,Unimodal,1,#660066,Visual,4,#f59505,Sensory 2,43.421,39.563,34.469
+157,FST,3,#FB8072,Unimodal,3,#009900,Dorsal attention,2,#220ced,Association 1,41.597,31.957,31.611
+158,V3CD,3,#FB8072,Unimodal,1,#660066,Visual,4,#f59505,Sensory 2,25.99,49.075,50.083
+159,LO3,3,#FB8072,Unimodal,1,#660066,Visual,4,#f59505,Sensory 2,35.329,51.318,41.947
+160,VMV2,4,#80B1D3,Idiotypic,1,#660066,Visual,4,#f59505,Sensory 2,25.208,20.846,27.062
+161,31pd,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,9.6528,15.013,62.653
+162,31a,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,6.125,1.346,67.917
+163,VVC,3,#FB8072,Unimodal,1,#660066,Visual,2,#220ced,Association 1,33.616,15.382,15.634
+164,25,1,#FFFFB3,Paralimbic,5,#FFFF99,Limbic,4,#f59505,Sensory 2,4.8774,-44.044,22.363
+165,s32,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,4,#f59505,Sensory 2,8.0093,-54.872,19.296
+166,pOFC,1,#FFFFB3,Paralimbic,5,#FFFF99,Limbic,4,#f59505,Sensory 2,10.287,-34.701,18.39
+167,PoI1,1,#FFFFB3,Paralimbic,4,#FF00FF,Central attention,7,#f200ff,Insula,33.75,-15.107,32.863
+168,Ig,1,#FFFFB3,Paralimbic,2,#0066CC,Somatomotor,7,#f200ff,Insula,30.809,-12.426,45.696
+169,FOP5,2,#BEBADA,Heteromodal,4,#FF00FF,Central attention,2,#220ced,Association 1,29.762,-49.898,38.595
+170,p10p,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,3,#067a08,Association 2,22.292,-78.703,34.111
+171,p47r,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,4,#f59505,Sensory 2,38.785,-65.161,31.09
+172,TGv,1,#FFFFB3,Paralimbic,5,#FFFF99,Limbic,2,#220ced,Association 1,37.833,-30.029,1.4166
+173,MBelt,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,5,#fffb00,Sensory 1,40.319,-12.279,39.078
+174,LBelt,4,#80B1D3,Idiotypic,2,#0066CC,Somatomotor,3,#067a08,Association 2,38.618,-0.56848,42.693
+175,A4,3,#FB8072,Unimodal,2,#0066CC,Somatomotor,3,#067a08,Association 2,55.841,-7.0745,41.417
+176,STSva,3,#FB8072,Unimodal,7,#FF6666,Default mode,2,#220ced,Association 1,47.788,-20.202,23.128
+177,TE1m,2,#BEBADA,Heteromodal,7,#FF6666,Default mode,2,#220ced,Association 1,56.778,-7.0496,23.176
+178,PI,1,#FFFFB3,Paralimbic,4,#FF00FF,Central attention,3,#067a08,Association 2,39.787,-28.681,22.045
+179,a32pr,2,#BEBADA,Heteromodal,6,#FF8000,Frontoparietal,2,#220ced,Association 1,7.9,-50.329,56.067
+180,p24,1,#FFFFB3,Paralimbic,7,#FF6666,Default mode,6,#00fffb,Limbic,5.1907,-55.033,45.853

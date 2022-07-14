@@ -1,0 +1,10 @@
+nilearn
+abagen
+rpy2
+brainspace
+brainsmash
+#gprofiler-official
+git+https://github.com/enthought/mayavi.git
+git+https://github.com/nipy/PySurfer.git
+git+https://github.com/netneurolab/netneurotools.git
+git+https://github.com/netneurolab/neuromaps.git
