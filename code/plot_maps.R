@@ -261,10 +261,10 @@ plot_maps_pca_scatter <- function(maps_pca_scatter, maps_pca_corrs, size=7, ncol
     geom_smooth(method='lm', color=brewer.set1(5)[4]) +
     geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0.5, vjust=0.5) +
     scale_x_continuous(breaks=0) + scale_y_continuous(breaks=0) +
+          #strip.text.x=element_text(size=20),
     xlab('') + ylab('') +
     theme_minimal() +
     theme(strip.placement='outside',
-          #strip.text.x=element_text(size=20),
           #strip.text.y.left=element_text(angle=0, size=20),
           axis.title.y = element_text(angle=0, vjust=0.5),
           panel.grid.minor=element_blank(),
@@ -359,23 +359,25 @@ plot_ahba_mri_brains <- function(scores_df, colors=rev(brewer.rdbu(100)), ncol=2
 
 
 
-plot_corr_versions <- function(corr_versions, size=6) {
-    lim <- max(abs(corr_versions$true_mean))
+plot_corr_versions <- function(corr_versions, size=6, facet='h', nrow=1) {
+    lim <- max(abs(corr_versions$r))
     
-    corr_versions %>%
+    p <- corr_versions %>%
     mutate(map = factor(map, ordered=T, levels=rev(unique(.$map)))) %>%
     mutate(version = factor(version, ordered=T, levels=unique(.$version))) %>%
     mutate(p_level=ifelse(p<0.001, '***',
                    ifelse(p<0.01, '**',
                    ifelse(p<0.05, '*','')))) %>%
     mutate(p_sig = paste(round(p,3), p_level)) %>%
+    mutate(q_sig = ifelse(q<0.05, T, F)) %>%
     ggplot(aes(x=G, y=map)) +
-    facet_grid(.~version) +
-    geom_raster(aes(fill=true_mean)) + 
-    geom_tile(aes(color=sig), fill='transparent', size=2) + 
-    geom_text(aes(label=round(true_mean,2)), vjust=-.5, size=size) +
+    # facet_grid(.~version) +
+    geom_raster(aes(fill=r)) + 
+    geom_tile(aes(color=q_sig), fill='transparent', size=2) + 
+    geom_text(aes(label=round(r,2)), vjust=-.5, size=size) +
     geom_text(aes(label=p_sig), vjust=1, size=size) +
-    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), name='r', limits=c(-lim,lim)) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)[10:90]), name='r', limits=c(-lim,lim), 
+            breaks=c(-floor(lim*100)/100, floor(lim*100)/100)) +
     scale_color_manual(values=c('transparent', 'green'), labels=c('', 'FDR sig'), name='') +
     guides(fill=guide_colorbar(barwidth=10)) +
     xlab('') + ylab('') +
@@ -386,6 +388,14 @@ plot_corr_versions <- function(corr_versions, size=6) {
           legend.title=element_text(vjust=1),
           legend.position='bottom'
          )
+    
+    if (facet=='h') {
+        p + facet_grid(.~version)
+    } else if (facet=='w') {
+        p + facet_wrap(~version, nrow=nrow)
+    } else {
+        p
+    }
 }
 
 

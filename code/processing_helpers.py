@@ -6,6 +6,9 @@ from abagen.correct import keep_stable_genes
 import abagen_allen_tweaked
 import nibabel as nib
 import pickle
+from neuromaps.images import annot_to_gifti
+from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
+
 
 
 
@@ -192,6 +195,33 @@ def get_labels_hcp():
     labels_hcp = hcp_info.set_index('id')['label']
     return labels_hcp
     
+
+
+def project_to_dk(scores,
+                hcp_img_path = "../data/parcellations/lh.HCPMMP1.annot",
+                dk_img_path = "../data/parcellations/lh.aparc.annot"
+               ):
+    """
+    Project HCP scores to DK using annot files
+    """
+    hcp_img = annot_to_gifti(hcp_img_path)
+    dk_img = annot_to_gifti(dk_img_path)
+
+    scores_dk = np.zeros((34,3))
+    for i in range(3):
+        # Re-index gradient null values with NA
+        g_hcp = scores[i].reindex(range(1,181)).values
+        # Use HCP parcellation image to project HCP data to fsaverage
+        g_fsaverage = parcels_to_vertices(g_hcp, hcp_img)
+        # Use DK parcellation image to project fsaverage data into DK
+        g_dk = vertices_to_parcels(g_fsaverage, dk_img)
+        # Add to outputs
+        scores_dk[:,i] = g_dk
+
+    # Convert to dataframe
+    scores_dk = pd.DataFrame.from_records(scores_dk, index=list(range(1,35)))
+
+    return scores_dk
 
     
 

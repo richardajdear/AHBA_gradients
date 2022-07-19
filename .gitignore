@@ -1,0 +1,5 @@
+*.ipynb_checkpoints*
+.vscode
+code/__pycache__*
+data/abagen-data
+data/brainspan-data

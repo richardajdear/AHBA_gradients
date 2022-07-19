@@ -4,12 +4,13 @@ from processing_helpers import *
 from analysis_helpers import *
 
 from netneurotools import freesurfer as nnsurf
+from neuromaps.stats import compare_images
+# from scipy.stats import percentileofscore
+from statsmodels.stats.multitest import multipletests
 from nibabel.freesurfer.io import read_annot
 from brainsmash.mapgen.base import Base
-from scipy.stats import percentileofscore
 from sklearn.decomposition import PCA
-from statsmodels.stats.multitest import multipletests
-from nilearn.input_data import NiftiLabelsMasker
+# from nilearn.input_data import NiftiLabelsMasker
 
 
 
@@ -184,159 +185,44 @@ def generate_simulations(maps, n=10,
         
     np.save(outfile, null_maps)
 
-    
-def corr_nulls_from_maps(null_maps, scores, maps, method='pearson', pool=False, pool_frac=.1):
-    """
-    Get correlations with scores from null maps
-    """
-    
-    # Drpp 'label' field if it exists
-    if 'label' in scores.columns:
-        scores = scores.drop('label', axis=1)
-        
-    if pool:
-        # Set dimensions for reshaping
-        # Downsample nulls because of pooling
-        m = null_maps.shape[1]
-        n = int(null_maps.shape[2] * pool_frac)
-        null_maps_downsample = null_maps[:,:,:n]
-        null_maps_pool = null_maps_downsample.reshape(-1, m*n)
-    
-    null_corrs = {}
-    # Define index as 1 to n
-    index = [i+1 for i in range(null_maps.shape[0])]
-    for m, mapname in enumerate(maps.columns):
-        # Optionally pool maps together
-        if pool:
-            nulls = pd.DataFrame(null_maps_pool, index=index)
-        else:
-            nulls = pd.DataFrame(null_maps[:,m,:], index=index)
-        
-        # Concat scores and nulls, matching on index directly
-        df_concat = pd.concat([scores, nulls], axis=1)
-        # Optionally correlate with spearman, otherwise pearson
-        if method == 'spearman':
-            # .rank().corr() is faster than .corr(method='spearman') because of null checks
-            df_corr = df_concat.rank().corr()
-        else:
-            df_corr = df_concat.corr()
-        # Cleanup
-        null_corrs[mapname] = df_corr.iloc[3:,:3]
-        
-    # Concat rows (each map)
-    null_corrs = (
-        pd.concat(null_corrs).reset_index(level=0)
-        .set_axis(['map','G1','G2','G3'],axis=1)
-    )
-    return null_corrs
 
-
-def corr_nulls_from_grads(null_grads, scores, maps, method='pearson', pool=False, pool_frac=.1):
+def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr', pool=False, pool_frac=.3, adjust='fdr_bh'):
     """
     Get correlations with maps from gradient score nulls
+    Uses numpy masked array to handle missing values
     """
-    if pool:
-        # Set dimensions for reshaping
-        # Downsample nulls because of pooling
-        m = null_grads.shape[1]
-        n = int(null_grads.shape[2] * pool_frac)
-        null_grads_downsample = null_grads[:,:,:n]
-        null_grads_pool = null_grads_downsample.reshape(-1, m*n)
-    
-    null_corrs = {}
-    # Gradients do not have all regions, so take scores index as index
-    index = scores.index
-    # Maps still don't have an index, so add it here
-    maps_index = [i+1 for i in range(maps.shape[0])]
-    for m in range(null_grads.shape[1]):
+    # First filter maps for regions in gradients
+    maps_filter = maps.set_axis(range(1, maps.shape[0]+1)).loc[scores.index, :]
+
+    n_maps = maps_filter.shape[1]
+    output_frame = np.zeros((3*n_maps, 2))
+    output_index = pd.MultiIndex.from_product([scores.iloc[:,:3].columns, maps_filter.columns])
+
+    # For each gradient...
+    for g in range(null_grads.shape[1]):
+        _scores = scores.iloc[:,g].values
         # Optionally pool maps together
         if pool:
-            nulls = pd.DataFrame(null_grads_pool, index=index)
+            # Set dimensions for reshaping
+            # Downsample nulls because of pooling
+            m = null_grads.shape[1]
+            n = int(null_grads.shape[2] * pool_frac)
+            null_grads_downsample = null_grads[:,:,:n]
+            _nulls = null_grads_downsample.reshape(-1, g*n)
         else:
-            nulls = pd.DataFrame(null_grads[:,m,:], index=index)
+            _nulls = null_grads[:,g,:]
         
-        # Concat scores and nulls
-        df_concat = pd.concat([maps.set_axis(maps_index), nulls], axis=1)
-        # Optionally correlate with spearman, otherwise pearson
-        if method == 'spearman':
-            # .rank().corr() is faster than .corr(method='spearman') because of null checks
-            df_corr = df_concat.rank().corr()
-        else:
-            df_corr = df_concat.corr()
-        # Cleanup and stack maps into vector
-        n_maps = maps.shape[1]
-        null_corrs[m] = df_corr.iloc[:n_maps,n_maps:].stack().droplevel(1)
-        
-    # Concat columns (each gradient)
-    null_corrs = (
-        pd.concat(null_corrs, axis=1).reset_index(level=0)
-        .set_axis(['map','G1','G2','G3'], axis=1)
-    )
-    return null_corrs
-    
-    
+        # For each map
+        for m in range(maps_filter.shape[1]):
+            _map = maps_filter.iloc[:,m].values
+            _r, _p = compare_images(_scores, _map, nulls=_nulls, metric=method)
+            output_frame[m+g*n_maps,:] = [_r, _p]
 
-
-def get_null_p(true_corrs, null_corrs, adjust='fdr_bh', order=None):
-    """
-    Get p values
-    """
-    # For each map, for each set of nulls, compute the percentile of the true correlations
-    null_pct = np.zeros(true_corrs.shape)
-    for m, _map in enumerate(true_corrs.index):
-        for i in range(3):
-            _null_corrs = null_corrs.set_index('map').loc[_map].iloc[:,i]
-            _corr = true_corrs.iloc[m,i]
-            pct = percentileofscore(_null_corrs, _corr)/100
-            null_pct[m,i] = pct
-
-    true_mean = true_corrs.stack().rename('true_mean')
-
-    null_mean = (null_corrs
-                 .groupby('map').agg(['mean','std'])
-                 .stack(0)
-                 .rename_axis([None,None])
-                 .set_axis(['null_mean', 'null_std'], axis=1)
-                )
-            
-    null_p = (pd.DataFrame(null_pct, index=true_corrs.index, columns=true_corrs.columns)
-              .stack().rename('pct').to_frame()
-              .join(true_mean)
-              .join(null_mean)
-              .assign(z = lambda x: (x['true_mean'] - x['null_mean'])/x['null_std'])
-              .assign(pos = lambda x: [pct > 0.5 for pct in x['pct']])
-              .assign(p = lambda x: [(1-pct)*2 if pct>0.5 else pct*2 for pct in x['pct']]) # x2 for bidirectional
-              .assign(sig = lambda x: x['p'] < .05)
-             )
-    
-    if adjust is not None:
-        null_p = (null_p
-             .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
-             .assign(sig = lambda x: x['q'] < .05)
-             # .assign(q_abs = lambda x: [1-q if pos else q for pos, q in zip(x['pos'], x['q'])])
-            )
-    else:
-        null_p = (null_p
-             .assign(q = lambda x: x['p'])
-             .assign(sig = lambda x: x['p'] < .05)
-                 )
-    
-    null_p = (null_p
-              .reset_index()
-              .rename({'level_0':'map', 'level_1':'G'}, axis=1)
-              # .assign(map = lambda x: pd.Categorical(x['map'], ordered=True, categories=order))
-             )
-    
-    # Fix order of maps
-    if order is None:
-        order = true_corrs.index
-    null_p = (null_p
-              .assign(map = lambda x: pd.Categorical(x['map'], ordered=True, categories=order))
-              .sort_values('map')
-         )
-
-    return null_p
-
+    # Output clean dataframe
+    output_adjusted = pd.DataFrame(output_frame, index=output_index) \
+                        .set_axis(['r','p'], axis=1) \
+                        .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
+    return output_adjusted
 
 
 def maps_pca(maps, short_names=None):
@@ -362,51 +248,184 @@ def maps_pca(maps, short_names=None):
     
     return pca_scores, pca_var, pca_weights
     
+
+###
+# Legacy method
+
+# def corr_nulls_from_grads(null_grads, scores, maps, method='pearson', pool=False, pool_frac=.1):
+#     """
+#     Get correlations with maps from gradient score nulls
+#     """            
+#     # Filter maps for regions in gradients
+#     maps_filter = maps.set_axis(range(1, maps.shape[0]+1)).loc[scores.index, :]
+
+#     null_corrs = {}
+#     for m in range(null_grads.shape[1]):
+#         # Optionally pool maps together
+#         if pool:
+#             # Set dimensions for reshaping
+#             # Downsample nulls because of pooling
+#             m = null_grads.shape[1]
+#             n = int(null_grads.shape[2] * pool_frac)
+#             null_grads_downsample = null_grads[:,:,:n]
+#             nulls = null_grads_downsample.reshape(-1, m*n)
+#         else:
+#             nulls = null_grads[:,m,:]
+        
+#         # Concat scores and nulls
+#         # df_concat = pd.concat([maps.set_axis(maps_index), nulls], axis=1)
+#         # Optionally correlate with spearman, otherwise pearson
+#         if method == 'spearman':
+#             df_corr = np_pearson_corr(maps_filter.rank(), nulls.rank())
+#         else:
+#             df_corr = np_pearson_corr(maps_filter, nulls)
+#         # Cleanup and stack maps into vector
+#         null_corrs[m] = df_corr.stack().droplevel(1)
+        
+#     # Concat columns (each gradient)
+#     null_corrs = (
+#         pd.concat(null_corrs, axis=1).reset_index(level=0)
+#         .set_axis(['map','G1','G2','G3'], axis=1)
+#     )
+#     return null_corrs
     
 
+# def corr_nulls_from_maps(null_maps, scores, maps, method='pearson', pool=False, pool_frac=.1):
+#     """
+#     Get correlations with scores from null maps
+#     """
+    
+#     # Drpp 'label' field if it exists
+#     if 'label' in scores.columns:
+#         scores = scores.drop('label', axis=1)
+        
+#     if pool:
+#         # Set dimensions for reshaping
+#         # Downsample nulls because of pooling
+#         m = null_maps.shape[1]
+#         n = int(null_maps.shape[2] * pool_frac)
+#         null_maps_downsample = null_maps[:,:,:n]
+#         null_maps_pool = null_maps_downsample.reshape(-1, m*n)
+    
+#     null_corrs = {}
+#     # Define index as 1 to n
+#     index = [i+1 for i in range(null_maps.shape[0])]
+#     for m, mapname in enumerate(maps.columns):
+#         # Optionally pool maps together
+#         if pool:
+#             nulls = pd.DataFrame(null_maps_pool, index=index)
+#         else:
+#             nulls = pd.DataFrame(null_maps[:,m,:], index=index)
+        
+#         # Concat scores and nulls, matching on index directly
+#         df_concat = pd.concat([scores, nulls], axis=1)
+#         # Optionally correlate with spearman, otherwise pearson
+#         if method == 'spearman':
+#             # .rank().corr() is faster than .corr(method='spearman') because of null checks
+#             df_corr = df_concat.rank().corr()
+#         else:
+#             df_corr = df_concat.corr()
+#         # Cleanup
+#         null_corrs[mapname] = df_corr.iloc[3:,:3]
+        
+#     # Concat rows (each map)
+#     null_corrs = (
+#         pd.concat(null_corrs).reset_index(level=0)
+#         .set_axis(['map','G1','G2','G3'],axis=1)
+#     )
+#     return null_corrs
 
 
+# def get_null_p(true_corrs, null_corrs, adjust='fdr_bh', order=None):
+#     """
+#     Get p values
+#     """
+#     # For each map, for each set of nulls, compute the percentile of the true correlations
+#     null_pct = np.zeros(true_corrs.shape)
+#     for m, _map in enumerate(true_corrs.index):
+#         for i in range(3):
+#             _null_corrs = null_corrs.set_index('map').loc[_map].iloc[:,i]
+#             _corr = true_corrs.iloc[m,i]
+#             pct = percentileofscore(_null_corrs, _corr)/100
+#             null_pct[m,i] = pct
 
+#     true_mean = true_corrs.stack().rename('true_mean')
 
+#     null_mean = (null_corrs
+#                  .groupby('map').agg(['mean','std'])
+#                  .stack(0)
+#                  .rename_axis([None,None])
+#                  .set_axis(['null_mean', 'null_std'], axis=1)
+#                 )
+            
+#     null_p = (pd.DataFrame(null_pct, index=true_corrs.index, columns=true_corrs.columns)
+#               .stack().rename('pct').to_frame()
+#               .join(true_mean)
+#               .join(null_mean)
+#               .assign(z = lambda x: (x['true_mean'] - x['null_mean'])/x['null_std'])
+#               .assign(pos = lambda x: [pct > 0.5 for pct in x['pct']])
+#               .assign(p = lambda x: [(1-pct)*2 if pct>0.5 else pct*2 for pct in x['pct']]) # x2 for bidirectional
+#               .assign(sig = lambda x: x['p'] < .05)
+#              )
+    
+#     if adjust is not None:
+#         null_p = (null_p
+#              .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
+#              .assign(sig = lambda x: x['q'] < .05)
+#              # .assign(q_abs = lambda x: [1-q if pos else q for pos, q in zip(x['pos'], x['q'])])
+#             )
+#     else:
+#         null_p = (null_p
+#              .assign(q = lambda x: x['p'])
+#              .assign(sig = lambda x: x['p'] < .05)
+#                  )
+    
+#     null_p = (null_p
+#               .reset_index()
+#               .rename({'level_0':'map', 'level_1':'G'}, axis=1)
+#               # .assign(map = lambda x: pd.Categorical(x['map'], ordered=True, categories=order))
+#              )
+    
+#     # Fix order of maps
+#     if order is None:
+#         order = true_corrs.index
+#     null_p = (null_p
+#               .assign(map = lambda x: pd.Categorical(x['map'], ordered=True, categories=order))
+#               .sort_values('map')
+#          )
 
-
-
-
-
-
-
-
+#     return null_p
 
 
     
 
-def print_corrs_sig(corrs, null_p):
-    map_corrs_sig = (corrs
-     .loc[null_p.index]
-     .round(2).astype('string')
-     .where(null_p > .05, other = lambda x: x+' *')
-     .where(null_p > .01, other = lambda x: x+'*')
-     .where(null_p > .001, other = lambda x: x+'*')
-    )
-    # map_corrs_sig.to_csv("../outputs/map_corrs_sig.csv")
-    return map_corrs_sig
+# def print_corrs_sig(corrs, null_p):
+#     map_corrs_sig = (corrs
+#      .loc[null_p.index]
+#      .round(2).astype('string')
+#      .where(null_p > .05, other = lambda x: x+' *')
+#      .where(null_p > .01, other = lambda x: x+'*')
+#      .where(null_p > .001, other = lambda x: x+'*')
+#     )
+#     # map_corrs_sig.to_csv("../outputs/map_corrs_sig.csv")
+#     return map_corrs_sig
 
 
-def get_inflammation_data(img="../data/inflammation/Activation_proportion.nii.gz"):
-    hcp_mask = "../data/parcellations/HCP-MMP_1mm.nii.gz"
-    mask = NiftiLabelsMasker(hcp_mask, resampling_target='data')
-    inflammation_img = img
-    inflammation_hcp = mask.fit_transform(inflammation_img).squeeze()
+# def get_inflammation_data(img="../data/inflammation/Activation_proportion.nii.gz"):
+#     hcp_mask = "../data/parcellations/HCP-MMP_1mm.nii.gz"
+#     mask = NiftiLabelsMasker(hcp_mask, resampling_target='data')
+#     inflammation_img = img
+#     inflammation_hcp = mask.fit_transform(inflammation_img).squeeze()
 
-    inflammation_hcp = (
-        pd.Series(inflammation_hcp)
-        .rename('activation')
-        .to_frame()
-        .set_axis([i+1 for i in range(360)])
-        .join(get_labels_hcp())
-        .set_index('label')
-        # .rename({'label':'region'}, axis=1)
-        # set_index('region')
-        # .assign(hemi=lambda x:['left' if id<=180 else 'right' for id in x.index])
-               )
-    return inflammation_hcp
+#     inflammation_hcp = (
+#         pd.Series(inflammation_hcp)
+#         .rename('activation')
+#         .to_frame()
+#         .set_axis([i+1 for i in range(360)])
+#         .join(get_labels_hcp())
+#         .set_index('label')
+#         # .rename({'label':'region'}, axis=1)
+#         # set_index('region')
+#         # .assign(hemi=lambda x:['left' if id<=180 else 'right' for id in x.index])
+#                )
+#     return inflammation_hcp

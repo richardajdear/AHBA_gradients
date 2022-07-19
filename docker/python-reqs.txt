@@ -1,9 +1,11 @@
 nilearn
-abagen
 rpy2
-brainspace
+#brainspace
 brainsmash
 gseapy
+plotnine
+abagen
+neuromaps
 #gprofiler-official
 git+https://github.com/enthought/mayavi.git
 git+https://github.com/nipy/PySurfer.git

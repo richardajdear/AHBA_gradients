@@ -41,7 +41,7 @@ class gradientVersion():
 
         
     def fit(self, expression, scale=False, message=True, 
-            data_dir = "~/rds/rds-cam-psych-transc-Pb9UGUlrwWc/Cam_LIBD/AHBA_data/abagen-data/expression/"):
+            data_dir = "../data/abagen-data/expression/"):
         """
         Fit to data
         Marker genes is a list of genes to define the gradient direction, if gradient n is inversely aligned to marker n, the gradient will be flipped
