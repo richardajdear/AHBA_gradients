@@ -193,7 +193,7 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', x=0, 
     mutate(sig_label=ifelse(q<0.001, '***',
                    ifelse(q<0.01, '**',
                    ifelse(q<0.05, '*','')))) %>%
-    mutate(r_label=paste('r =', round(true_mean,2), sig_label))
+    mutate(r_label=paste('r =', round(r,2), sig_label))
     # mutate(x=-1, y=2)
 
     # if (!is.null(which) ) {
@@ -212,6 +212,7 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', x=0, 
     scale_x_continuous(breaks=0, position='top') + scale_y_continuous(breaks=0) +
     # xlim(c(-3,3)) + ylim(c(-3,3)) +
     xlab(xlab) + ylab(ylab) +
+    coord_cartesian(clip='off') +
     theme_minimal() +
     theme(
     # strip.placement='outside',
@@ -225,7 +226,7 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', x=0, 
          )
     
     if (facet=='v') {
-        p + facet_grid(map~G, switch='y')
+        p + facet_grid(map~G, switch='both')
     } else if (facet=='h') {
         p + facet_grid(G~map, switch='y')
     } else {

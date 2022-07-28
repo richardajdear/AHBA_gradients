@@ -6,8 +6,7 @@ repos = c(
 )
 
 package_list <- c(
-	#'vctrs',
-	#'ellipsis',
+	'sf',
 	'ggseg',
 	# 'ggsegExtra',
 	'ggsegGlasser',

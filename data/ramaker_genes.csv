@@ -1,4 +1,4 @@
-﻿GeneName_ENSEMBLGeneID,,,DESeq2 baseMean expression,Pritzker_FoldChange,Pritzker_Pvalue,Pritzker_FDR,Stanley_FoldChange,Stanley Pvalue,Stanley_FDR
+﻿GeneName_ENSEMBLGeneID,gene,function,DESeq2 baseMean expression,Pritzker_FoldChange,Pritzker_Pvalue,Pritzker_FDR,Stanley_FoldChange,Stanley Pvalue,Stanley_FDR
 ENSG00000078369,GNB1,"guanine nucleotide binding protein (G protein), beta polypeptide 1 [Source:HGNC Symbol;Acc:HGNC:4396]",26510.65643,-0.199585665,0.025079262,0.220381159,-0.265357028,4.06E-07,0.000304015
 ENSG00000187730,GABRD,"gamma-aminobutyric acid (GABA) A receptor, delta [Source:HGNC Symbol;Acc:HGNC:4084]",4318.484942,-0.30103568,0.035951734,0.249463182,-0.317180953,0.009230819,0.086141022
 ENSG00000067606,PRKCZ,"protein kinase C, zeta [Source:HGNC Symbol;Acc:HGNC:9412]",4047.797378,-0.206597762,0.045505458,0.270631737,-0.297226418,0.000185717,0.009258697

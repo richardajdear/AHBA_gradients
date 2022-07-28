@@ -208,12 +208,12 @@ plot_corrs <- function(df, facetting='h', xlab='', ylab='', size=8) {
 }
 
 
-plot_atlas_score_dots <- function(atlas_mean_scores_sig_colors) {
+plot_atlas_score_dots <- function(atlas_mean_scores_sig_colors, size=7) {
     atlas_mean_scores_sig_colors %>% 
     mutate(sig = case_when(q<0.001 ~ '***', q<0.01 ~ '**', q<0.05 ~ '*', TRUE ~ '')) %>%
     ggplot(aes(x=mean, y=G)) +
       facet_wrap(~atlas, ncol=3) +
-      geom_point(aes(fill=I(color)), color='grey50', size=7, shape=21, alpha=.8) +
+      geom_point(aes(fill=I(color)), color='grey50', size=size, shape=21, alpha=.8) +
       geom_text(aes(label=sig), size=8, vjust=-.5) +
       scale_y_discrete(limits=rev, name='') +
       scale_x_continuous(breaks=c(-1,0,1), name='Mean axis z-score in atlas region') +

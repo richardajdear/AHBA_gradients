@@ -5,8 +5,7 @@ from enrichments import *
 from mri_maps import *
 from gradientVersion import *
 
-def get_gandal_genes(which='microarray'):
-    disorders = ['ASD', 'SCZ', 'MDD']
+def get_gandal_genes(which='microarray', disorders = ['ASD', 'SCZ', 'MDD']):
     if which == 'microarray':
 
         gandal_genes = (pd.read_csv("../data/gandal_genes_microarray.csv")
@@ -129,6 +128,53 @@ def get_gene_corr(weights, null_weights, gandal_genes, sig_thresh=1, adjust='fdr
 
     null_p = compute_null_p(true_corrs, null_corrs, adjust=adjust)
     return null_p
+
+
+
+def get_gene_corr2(weights, null_weights, genes_log2FC, group='disorder', sig_thresh=1, adjust='fdr_bh'):
+    """
+    Correlate gene weights with log2FC
+    """
+    true_corrs = {}
+    null_corrs = {}
+
+    for g in genes_log2FC[group].unique():
+        # Don't overwrite the input data in the loop!
+        _genes_log2FC = genes_log2FC.copy().loc[lambda x: x[group]==g]
+
+        # Take only significant genes
+        _genes_log2FC = _genes_log2FC.loc[lambda x: x['FDR']<sig_thresh, 'log2FC']
+        
+        # Merge duplicates
+        _genes_log2FC = _genes_log2FC.groupby('gene').mean()
+
+        # Find matching genes and filter differential expression
+        genes_matched = set(weights.index).intersection(_genes_log2FC.index)
+        _genes_log2FC = _genes_log2FC.loc[genes_matched].values
+        # Also filter true and null weights
+        # np.searchsorted to find indices of matched genes in same order as genes_matched
+        genes_idxs = np.searchsorted(weights.index, list(genes_matched))
+        true = weights.values[genes_idxs, :]
+        nulls = null_weights[genes_idxs, :, :]
+        
+        # For each PC, get the correlation of the true weights and all the nulls
+        true_corr_group = np.zeros(3)
+        null_corr_group = np.zeros((null_weights.shape[2], 3))
+        for i in range(3):
+            true_corr_group[i] = np_pearson_corr(_genes_log2FC, true[:,i]).squeeze()
+            null_corr_group[:, i] = np_pearson_corr(_genes_log2FC, nulls[:,i,:]).squeeze()
+        
+        true_corrs[g] = pd.DataFrame(true_corr_group).T
+        null_corrs[g] = pd.DataFrame(null_corr_group) 
+
+    true_corrs = pd.concat(true_corrs).set_axis(['G1','G2','G3'], axis=1).droplevel(1)
+    null_corrs = pd.concat(null_corrs).set_axis(['G1','G2','G3'], axis=1).reset_index(level=0).rename({'level_0':'label'}, axis=1)
+
+    # return true_corrs, null_corrs
+    null_p = compute_null_p(true_corrs, null_corrs, adjust=adjust)
+    return null_p
+
+
 
 
 def get_gene_map_corr(version, null_scores, gandal_genes, posneg, method='mean', sig_thresh=1, 
