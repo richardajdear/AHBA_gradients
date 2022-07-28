@@ -149,7 +149,7 @@ def get_gene_corr2(weights, null_weights, genes_log2FC, group='disorder', sig_th
         _genes_log2FC = _genes_log2FC.groupby('gene').mean()
 
         # Find matching genes and filter differential expression
-        genes_matched = set(weights.index).intersection(_genes_log2FC.index)
+        genes_matched = list(set(weights.index).intersection(_genes_log2FC.index))
         _genes_log2FC = _genes_log2FC.loc[genes_matched].values
         # Also filter true and null weights
         # np.searchsorted to find indices of matched genes in same order as genes_matched
