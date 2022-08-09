@@ -1,11 +1,14 @@
 # Helper functions for processing
 
 import numpy as np, pandas as pd
-import abagen
-from abagen.correct import keep_stable_genes
-import abagen_allen_tweaked
-import nibabel as nib
 import pickle
+import abagen
+import abagen_allen_tweaked
+from abagen.correct import keep_stable_genes
+from abagen.utils import efficient_corr
+from itertools import combinations
+import warnings
+import nibabel as nib
 from neuromaps.images import annot_to_gifti
 from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
 
@@ -23,79 +26,154 @@ def load_pickle(fname):
 
 
 def get_expression_abagen(atlas, 
-                          DS_threshold=0,
-                          save_name=None, 
+                          save_name=None,
                           data_dir='../data/abagen-data',
                           return_donors=False,
                           return_counts=False,
                           return_labels=False,
                           return_stability=False,
+                          verbose=0,
+                          only_left=True,
+                          only_cortex=True,
+                          ibf_threshold=0.5,
+                          probe_selection='diff_stability',
+                          lr_mirror='rightleft',
+                          region_agg='donors',
+                          tolerance=2,
+                          sample_norm='srs',
+                          gene_norm='srs',
+                          donors='all',
+                          donors_threshold=0,
+                          gene_stability_threshold=0,
+                          region_stability_threshold=0,                          
                           **kwargs):
     """
-    Get expression matrix and matching labels from Abagen X
+    Get expression matrix and matching labels from Abagen
     """
     
-    out = abagen_allen_tweaked.get_expression_data(
-        atlas=atlas['image'],
-        atlas_info=atlas['info'],
-        data_dir=data_dir + '/microarray',
-        n_proc=32,
-        return_counts=return_counts,
-        return_labels=return_labels,
-        return_donors=True, # always true to get DS
+    # Pack overridden defaults into kwargs to pass to abagen
+    kwargs = dict(verbose=verbose,
+                  only_left=only_left,
+                  only_cortex=only_cortex,
+                  ibf_threshold=ibf_threshold,
+                  probe_selection=probe_selection,
+                  lr_mirror=lr_mirror,
+                  region_agg=region_agg,
+                  tolerance=tolerance,
+                  sample_norm=sample_norm,
+                  gene_norm=gene_norm,
+                  donors=donors,
+                  donors_threshold=donors_threshold,
+                  **kwargs)
+
+    with warnings.catch_warnings(): 
+        warnings.simplefilter('ignore')
+        _out = abagen_allen_tweaked.get_expression_data(
+            atlas=atlas['image'],
+            atlas_info=atlas['info'],
+            data_dir=data_dir + '/microarray',
+            n_proc=32,
+            return_counts=return_counts,
+            return_labels=return_labels,
+            return_donors=True, # always true to get DS
+            **kwargs)
         
-        # Set my own defaults for the kwarg parameters here
-        verbose=kwargs.get('verbose', 0),
-        only_left=kwargs.get('only_left', True),
-        only_cortex=kwargs.get('only_cortex', True),
-        ibf_threshold=kwargs.get('ibf_threshold', 0.5),
-        probe_selection=kwargs.get('probe_selection', 'diff_stability'),
-        lr_mirror=kwargs.get('lr_mirror', 'rightleft'),
-        region_agg=kwargs.get('region_agg', 'donors'),
-        tolerance=kwargs.get('tolerance', 2),
-        sample_norm=kwargs.get('sample_norm', 'srs'),
-        gene_norm=kwargs.get('gene_norm', 'srs'),
-        donors=kwargs.get('donors', 'all'),
-        donors_threshold=kwargs.get('donors_threshold', 0)
-    )
-    
     # If returning labels or counts, expression is the first element of tuple
     if return_labels or return_counts:
-        expression_all_genes = out[0]
+        expression_all = _out[0]
     else:
-        expression_all_genes = out
+        expression_all = _out
+
+    # Drop right hemisphere
+    expression_all = [e.iloc[:180] for e in expression_all]
     
-    # Filter DS
-    expression, stability = keep_stable_genes(expression_all_genes, threshold=DS_threshold, return_stability=True)
-    stability = pd.Series(stability, index=expression_all_genes[0].columns)
-    if DS_threshold > 0:
-        print(f'{expression[0].shape[1]} genes remain after filtering for top {round(1-DS_threshold,2)} differential stability')
-    
+    # Filter for stable regions
+    expression_stable_regions, region_stability = keep_stable_regions(
+        expression_all,
+        threshold=region_stability_threshold,
+        return_stability=True)
+    region_stability = pd.Series(region_stability, index=expression_all[0].index)
+    if region_stability_threshold > 0:
+        print(f'{expression_stable_regions[1].shape[1]} regions remain \
+              after filtering for top {round(1-region_stability_threshold,2)} stability')
+
+    # Filter for stable genes
+    expression_stable_genes, gene_stability = keep_stable_genes(
+        expression_stable_regions, 
+        threshold=gene_stability_threshold,
+        return_stability=True)
+    gene_stability = pd.Series(gene_stability, index=expression_stable_regions[0].columns)
+    if gene_stability_threshold > 0:
+        print(f'{expression_stable_genes[0].shape[1]} genes remain \
+              after filtering for top {round(1-gene_stability_threshold,2)} stability')
+
     # Combine donors together after filtering
-    if not return_donors:
-        expression = pd.concat(expression).groupby(level=0).mean()
+    if return_donors:
+        expression = expression_stable_genes
+    else:
+        expression = pd.concat(expression_stable_genes).groupby(level=0).mean()
     
     # Save combined expression data
     if save_name is not None:
         expression.to_csv(data_dir + "/expression/" + save_name + ".csv")
         if return_labels:
-            out[1].to_csv(data_dir + "/labels/" + save_name + ".csv")
+            _out[1].to_csv(data_dir + "/labels/" + save_name + ".csv")
     
     # Pack outputs into tuple
-    out_ = (expression,)
+    out = (expression,)
     if return_labels:
-        out_ += (out[1],)
+        out += (_out[1],)
     if return_counts:
         if return_labels:
-            out_ += (out[2],)
+            out += (_out[2],)
         else:
-            out_ += (out[1],)
+            out += (_out[1],)
     if return_stability:
-        out_ += (stability,)
-    if len(out_) == 1:
-        out_ = out_[0]
+        out += (gene_stability, region_stability,)
+    if len(out) == 1:
+        out = out[0]
     
-    return out_
+    return out
+
+
+def keep_stable_regions(expression, threshold, 
+                        percentile=True, rank=True, 
+                        return_stability=True):
+    """
+    Keep only stable regions, using same logic as gene
+    differential stability filter.
+    """
+
+    num_subj = len(expression)
+    num_region = expression[0].shape[0]
+
+    # flip axes to get stability of regions, not genes
+    for_corr = expression.T if not rank else [e.T.rank() for e in expression]
+
+    # for all donor pairs
+    region_corrs = np.zeros((num_region, sum(range(num_subj))))
+    for n, (s1, s2) in enumerate(combinations(range(num_subj), 2)):
+        genes = np.intersect1d(for_corr[s1].dropna(axis=0, how='all').index,
+                               for_corr[s2].dropna(axis=0, how='all').index)
+        region_corrs[:, n] = efficient_corr(for_corr[s1].loc[genes],
+                                            for_corr[s2].loc[genes])
+
+    # average similarity across donors (ignore NaNs)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=RuntimeWarning,
+                                message='Mean of empty slice')
+        region_corrs = np.nanmean(region_corrs, axis=1)
+
+    # calculate absolute threshold if percentile is desired
+    if percentile:
+        threshold = np.nanpercentile(region_corrs, threshold * 100)
+    keep_regions = region_corrs >= threshold
+    expression = [e.iloc[keep_regions, :] for e in expression]
+
+    if return_stability:
+        return expression, region_corrs
+
+    return expression
 
 
     

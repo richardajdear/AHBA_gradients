@@ -153,7 +153,7 @@ def make_gene_maps(version, gene_labels, atlas='hcp', normalize='std', method='m
         gene_labels_ = gene_labels.set_index('label').loc[label]
         if len(gene_labels_)== 1: 
             gene_labels_ = gene_labels_.to_frame().T
-        mask = set(gene_labels_['gene']).intersection(version.expression.columns)
+        mask = np.intersect1d(gene_labels_['gene'], version.expression.columns)
         if len(mask) == 0:
             continue
         gene_label_expression_ = version.expression.loc[:, mask]
@@ -442,4 +442,51 @@ def get_cell_genes_weighted(which=None, normalize=True):
         return pd.concat([lake_ex, lake_in])
 
 
+def get_layer_gene_stats(weights, null_weights, which='both'):
+    he_layers = (pd.read_csv("../data/he_layers.csv")
+                .loc[:,['Gene symbol', 'Layer marker in human', 'Log2FC to other layers in human']]
+                .set_axis(['gene', 'label', 'log2FC'], axis=1)
+                .dropna()
+                .loc[lambda x: x['log2FC']>1]
+                .sort_values('label')
+                .drop(['log2FC'],axis=1)
+                )
+    
+    maynard_data = pd.read_csv("../data/maynard_layers.csv")
 
+    maynard_tstat = (maynard_data
+                    .loc[:,['gene', 't_stat_Layer1','t_stat_Layer2','t_stat_Layer3','t_stat_Layer4','t_stat_Layer5','t_stat_Layer6', 't_stat_WM']]
+                    .set_index('gene')
+                    .set_axis(['L1','L2','L3','L4','L5','L6', 'WM'], axis=1).reset_index()
+                    .melt(id_vars='gene', var_name='label', value_name='tstat')
+                    .set_index(['gene', 'label'])
+                    )
+
+    maynard_layers = (maynard_data
+                        .loc[:,['gene', 'fdr_Layer1','fdr_Layer2','fdr_Layer3','fdr_Layer4','fdr_Layer5','fdr_Layer6', 'fdr_WM']]
+                        .set_index('gene')
+                        .set_axis(['L1','L2','L3','L4','L5','L6', 'WM'], axis=1).reset_index()
+                        .melt(id_vars='gene', var_name='label', value_name='fdr')
+                        .set_index(['gene', 'label'])
+                        .join(maynard_tstat)
+                        .loc[lambda x: (x['fdr']<0.05) & (x['tstat']>0)]
+                        .reset_index()
+                        .sort_values('label')
+                        .drop(['tstat', 'fdr'],axis=1)
+                        )
+    
+    he_maynard_layers = pd.concat([
+                            he_layers, #.replace({'L6':'L6/WM'}), 
+                            maynard_layers.replace({'L6':'L6', 'WM':'L6'})
+                        ]).drop_duplicates() 
+    
+    if which=='he':
+        layer_genes = he_layers
+    elif which=='maynard':
+        layer_genes = maynard_layers
+    elif which=='both':
+        layer_genes = he_maynard_layers
+
+    layer_stats = compute_null_p(*compute_enrichments(weights, null_weights, layer_genes))
+
+    return layer_stats

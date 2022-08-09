@@ -201,6 +201,7 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr', pool=Fals
     # For each gradient...
     for g in range(null_grads.shape[1]):
         _scores = scores.iloc[:,g].values
+        _scores = _scores.astype(np.longdouble) # hack to force ValueError in compare_images
         # Optionally pool maps together
         if pool:
             # Set dimensions for reshaping
@@ -215,13 +216,22 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr', pool=Fals
         # For each map
         for m in range(maps_filter.shape[1]):
             _map = maps_filter.iloc[:,m].values
+            _map = _map.astype(np.longdouble) # hack to force ValueError in compare_images
             _r, _p = compare_images(_scores, _map, nulls=_nulls, metric=method)
             output_frame[m+g*n_maps,:] = [_r, _p]
 
     # Output clean dataframe
-    output_adjusted = pd.DataFrame(output_frame, index=output_index) \
-                        .set_axis(['r','p'], axis=1) \
-                        .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
+    output_adjusted = (pd.DataFrame(output_frame, index=output_index) 
+                        .set_axis(['r','p'], axis=1)
+                        .rename_axis(['G','map']).reset_index()
+    )
+    
+    # Multiple comparisons
+    if adjust is not None:
+        output_adjusted = output_adjusted.assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
+    else:       
+        output_adjusted = output_adjusted.assign(q = lambda x: x['p'])
+
     return output_adjusted
 
 
@@ -248,6 +258,36 @@ def maps_pca(maps, short_names=None):
     
     return pca_scores, pca_var, pca_weights
     
+
+# Atlas regions enrichment
+def compute_region_means(scores, null_scores, regions_series, method='median'):
+    masks = {}
+    # regions_series = regions.drop('label',axis=1).squeeze().dropna()
+    for region in regions_series.dropna().unique():
+        region_ids = regions_series.loc[lambda x: x==region].index
+        masks[region] = np.isin(scores.index, region_ids)
+
+    scores_array = scores.iloc[:,:3].values
+    
+    true = {}
+    null = {}
+    
+    for region, mask in masks.items():
+        if method=='mean':
+            true[region] = pd.Series(np.nanmean(scores_array[mask, :], axis=0))
+            null[region] = pd.DataFrame(np.nanmean(null_scores[mask, :, :], axis=0)).T
+        elif method=='median':
+            true[region] = pd.Series(np.nanmedian(scores_array[mask, :], axis=0))
+            null[region] = pd.DataFrame(np.nanmedian(null_scores[mask, :, :], axis=0)).T                
+    
+    true = pd.concat(true).unstack(1).set_axis(['G1','G2','G3'], axis=1)
+    null = pd.concat(null).set_axis(['G1','G2','G3'], axis=1) \
+                 .reset_index(level=0).rename({'level_0':'label'}, axis=1)
+
+    return true, null
+
+
+
 
 ###
 # Legacy method

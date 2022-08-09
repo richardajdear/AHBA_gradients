@@ -10,9 +10,10 @@ RUN sudo apt-get update && \
     apt-get install -y libnlopt-dev && \
     apt-get install -y default-jre less
 
-### conda install 'units' to R (needed for ggseg)
-RUN conda install -y libgdal r-units 
-#r-nloptr imagemagick
+### conda install some R packages (needed for ggseg, images)
+RUN conda install -y libgdal r-units
+RUN R -e "install.packages('magick', dependencies=TRUE, repos='http://cran.rstudio.com/')"
+#RUN conda install -y r-magick
 
 ### R packages from the R script
 COPY r-reqs.R ./
@@ -24,6 +25,9 @@ RUN conda install -y vtk
 
 ### Python reqs
 COPY python-reqs.txt ./
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH $HOME/.cargo/bin:$PATH
+RUN pip3 install gseapy
 RUN pip3 install -r python-reqs.txt
 
 #RUN git clone https://github.com/MICA-MNI/ENIGMA.git

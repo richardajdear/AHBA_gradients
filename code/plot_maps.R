@@ -2,6 +2,7 @@ library(ggseg)
 # library(ggsegExtra)
 library(ggsegGlasser)
 # library(ggrepel)
+library(ggh4x)
 
 source("../code/brainPlots.R")
 
@@ -43,7 +44,7 @@ plot_maps <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colo
         m_min <- colorscale[1]
         m_max <- colorscale[2]
     }
-    
+
     p <- ggplot(df) + 
     geom_brain(
         atlas=glasser,
@@ -64,6 +65,7 @@ plot_maps <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colo
           panel.spacing.x=unit(spacing,'lines'),
           panel.spacing.y=unit(spacing,'lines'),
           strip.text.x=element_text(vjust=1),
+        #   strip.clip='off',
           plot.title=element_text(hjust=0.5)) +
 ggtitle(title) + xlab("") + ylab("")
     
@@ -72,7 +74,9 @@ ggtitle(title) + xlab("") + ylab("")
     } else if (facet=='v') {
         p + facet_grid(map~.)
     } else if (facet=='w') {
-        p + facet_wrap(~map, ncol=ncol, dir="v")
+        p + facet_wrap2(~map, ncol=ncol, dir="v",
+                strip=strip_vanilla(clip='off')
+        )
     }
 }
 
@@ -136,15 +140,15 @@ ggtitle(title) + xlab("") + ylab("")
 
 
 plot_map_corrs <- function(null_p, size=6) {
-    lim <- max(abs(null_p$true_mean))
+    lim <- max(abs(null_p$r))
     
     null_p %>%
-    mutate(map_name = factor(map_name, ordered=T, levels=rev(unique(.$map_name)))) %>%
+    mutate(map = factor(map, ordered=T, levels=rev(unique(.$map)))) %>%
     mutate(p_level=ifelse(q<0.001, '***',
                    ifelse(q<0.01, '**',
                    ifelse(q<0.05, '*','')))) %>%
-    ggplot(aes(x=G, y=map_name)) +
-    geom_raster(aes(fill=true_mean)) + 
+    ggplot(aes(x=G, y=map)) +
+    geom_raster(aes(fill=r)) + 
     geom_text(aes(label=p_level), vjust=.5, hjust=.5, size=size, color='white') +
     scale_fill_gradientn(colors=rev(brewer.rdbu(100)), name='r', 
                         limits=c(-lim,lim), breaks=c(-floor(lim*10)/10,floor(lim*10)/10)) +
@@ -161,7 +165,7 @@ plot_map_corrs <- function(null_p, size=6) {
 }
 
 plot_pca_weights <- function(pca_weights, size=6) {
-    lim <- max(abs(null_p$true_mean))
+    lim <- max(abs(null_p$r))
     
     pca_weights %>%
     gather(PC, weight, -map_name) %>%
@@ -237,7 +241,7 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', x=0, 
 
 
 
-plot_maps_pca_scatter <- function(maps_pca_scatter, maps_pca_corrs, size=7, ncol=2) {
+plot_maps_pca_scatter <- function(maps_pca_scatter, maps_pca_corrs, size=7, ncol=2, x=-1, y=2) {
     # corr <- both_scores_scatter %>% 
     #     select(-label) %>% 
     #     group_by(G) %>% 
@@ -252,8 +256,7 @@ plot_maps_pca_scatter <- function(maps_pca_scatter, maps_pca_corrs, size=7, ncol
     mutate(sig_label=ifelse(q<0.001, '***',
                    ifelse(q<0.01, '**',
                    ifelse(q<0.05, '*','')))) %>%
-    mutate(r_label=paste('r =', round(true_mean,2), sig_label)) %>%
-    mutate(x=-1, y=2)
+    mutate(r_label=paste('r =', round(r,2), sig_label))
     
     maps_pca_scatter %>%
     ggplot(aes(x=`AHBA DM`, y=`MRI PCA`)) +

@@ -19,7 +19,9 @@ from processing_helpers import *
 
 class gradientVersion():
     
-    def __init__(self, n_components=5, approach='dm', sparsity=0, kernel='normalized_angle', marker_genes=['NEFL', 'LGALS1', 'SYT6'], **kwargs):
+    def __init__(self, n_components=5, approach='dm', sparsity=0, kernel='normalized_angle', 
+                marker_genes=['NEFL', 'LGALS1', 'SYT6'], 
+                **kwargs):
         """
         Initialize
         """

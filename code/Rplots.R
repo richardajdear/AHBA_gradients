@@ -74,8 +74,9 @@ plot_weights_dist <- function(weights_ds, ncol=1) {
 }
 
 
-plot_triplets_v2 <- function(triplets_plot_v2, facet='h', threshold=0.6, colors=mycolors, smooth=T,
-                            xlab='% of genes retained by differential stability filter') {
+plot_triplets_v2 <- function(triplets_plot_v2, facet='h', ncol=4,
+                             threshold=0.6, colors=mycolors, smooth=T,
+                             xlab='% of genes retained by differential stability filter') {
 
     p <- triplets_plot_v2 %>%
     filter(component <= 3) %>%
@@ -110,7 +111,7 @@ plot_triplets_v2 <- function(triplets_plot_v2, facet='h', threshold=0.6, colors=
     if (facet=='h') {
         p + facet_grid(.~method)
     } else if (facet=='w') {
-        p + facet_wrap(~method)
+        p + facet_wrap(~method, ncol=ncol)
     }
     
 }
@@ -211,7 +212,7 @@ plot_corrs <- function(df, facetting='h', xlab='', ylab='', size=8) {
 plot_atlas_score_dots <- function(atlas_mean_scores_sig_colors, size=7) {
     atlas_mean_scores_sig_colors %>% 
     mutate(sig = case_when(q<0.001 ~ '***', q<0.01 ~ '**', q<0.05 ~ '*', TRUE ~ '')) %>%
-    ggplot(aes(x=mean, y=G)) +
+    ggplot(aes(x=true_mean, y=G)) +
       facet_wrap(~atlas, ncol=3) +
       geom_point(aes(fill=I(color)), color='grey50', size=size, shape=21, alpha=.8) +
       geom_text(aes(label=sig), size=8, vjust=-.5) +
@@ -226,10 +227,60 @@ plot_atlas_score_dots <- function(atlas_mean_scores_sig_colors, size=7) {
 }
 
 
-plot_violins <- function(df, classes=vonEconomo, 
-                         classcolors=vonEconomo.colors,
-                         classlabels=vonEconomo_labels
-                        ) {
+plot_atlas_violins <- function(regions, sig, classes=Mesulam, 
+                               classcolors=Mesulam_colors,
+                               classlabels=Mesulam_names
+                              ) {
+    colors <- regions %>% select( {{classes}} ,  {{classcolors}} ) %>% unique() %>% 
+        arrange( {{classes}} ) %>% drop_na() %>% pull( {{classcolors}} )
+    
+    labels <- regions %>% select( {{classes}} ,  {{classlabels}} ) %>% unique() %>% 
+        arrange( {{classes}} ) %>% drop_na() %>% pull( {{classlabels}} )
+    regions_labels <- data.frame(x=seq(1,4), label=labels)
+
+    sig <- mesulam_scores_sig %>% mutate(m=as.character(label)) %>% 
+            filter(m != 'NaN', m != 8, m != 0) %>%
+            mutate(sig = case_when(q<0.001 ~ '***', q<0.01 ~ '**', q<0.05 ~ '*', TRUE ~ ''))
+
+    
+    regions %>% 
+    mutate(m=factor( {{classes}} )) %>%
+    filter(m != 'NaN', m != 8, m != 0) %>%
+    select(G1:G3, m) %>%
+    gather(G, score, -m) %>%
+    group_by(G, m) %>%
+    mutate(med = median(score, na.rm=T), mean = mean(score, na.rm=T)) %>%
+    ggplot(aes(x=m, y=score)) + 
+    facet_grid(.~G, switch='x') +
+    # geom_hline(yintercept=0, color='grey50', size=.2) +
+    geom_violin(aes(fill=m), width=.7, color='grey50') +
+    # geom_point(aes(y=med), color='red') +
+    # geom_point(aes(y=mean), color='blue') +
+    geom_text(data=sig, aes(x=m, y=true_mean, label=sig), size=8, vjust=.75, hjust=.5) +
+    # geom_boxplot(aes(m, score), width=.1) +
+    scale_fill_manual(values=colors, guide='none') +
+    scale_y_continuous(breaks=0) +
+    # scale_fill_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-2,2)) +
+    coord_flip(ylim=c(-2.5,2.5), clip='off') +
+    # geom_text(aes(x=x,y=-4,label=label),size=8,data=df_labels,angle=35,hjust=1) +
+    theme_minimal() + 
+    theme(panel.spacing=unit(2,'lines'),
+          axis.text=element_blank(),
+          axis.title=element_blank(),
+          panel.grid.minor=element_blank(),
+          panel.grid.major.y=element_blank(),
+          strip.placement='outside',
+          plot.margin = unit(c(t=1,r=1,b=5,l=1), "lines"),
+          text=element_text(size=30),
+          aspect.ratio=1
+         )
+}
+
+
+plot_violins_old <- function(df, classes=vonEconomo, 
+                               classcolors=vonEconomo.colors,
+                               classlabels=vonEconomo_labels
+                              ) {
     colors <- df %>% select( {{classes}} ,  {{classcolors}} ) %>% unique() %>% 
         arrange( {{classes}} ) %>% drop_na() %>% pull( {{classcolors}} )
     

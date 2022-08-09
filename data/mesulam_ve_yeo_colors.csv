@@ -1,0 +1,19 @@
+atlas,label,color
+Mesulam,Idiotypic,#80B1D3
+Mesulam,Unimodal,#FB8072
+Mesulam,Paralimbic,#FFFFB3
+Mesulam,Heteromodal,#BEBADA
+vonEconomo,Sensory 1,#fffb00
+vonEconomo,Sensory 2,#f59505
+vonEconomo,Association 1,#220ced
+vonEconomo,Motor,#6f057a
+vonEconomo,Limbic,#00fffb
+vonEconomo,Association 2,#067a08
+vonEconomo,Insula,#f200ff
+Yeo,Visual,#660066
+Yeo,Somatomotor,#0066CC
+Yeo,Dorsal attention,#009900
+Yeo,Central attention,#FF00FF
+Yeo,Default mode,#FF6666
+Yeo,Frontoparietal,#FF8000
+Yeo,Limbic,#FFFF99

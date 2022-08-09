@@ -5,9 +5,11 @@ library(ggrepel)
 library(ggradar)
 
 
-plot_enrichment_bars <- function(null_p, xlab='Corr') {
+plot_enrichment_bars <- function(null_p, xlab='Corr', lim='none') {
     
-    lim <- max(abs(null_p$true_mean))
+    if (lim=='none') {
+        lim <- max(abs(null_p$true_mean))
+    }
     
     null_p %>% 
     mutate(sig = case_when(
@@ -160,7 +162,7 @@ plot_weight_scatters_with_labels <- function(weights_labels, title='', colors=br
     }
     
     p <- ggplot(df%>%filter(label!='none')) + 
-    facet_grid(which~label) + 
+    facet_grid2(which~label, strip=strip_vanilla(clip='off')) + 
     geom_hline(yintercept=0, color='grey7') + geom_vline(xintercept=0, color='grey7') +
     geom_text(data=df_axs, aes(x=x, y=y, label=ax, hjust=hjust, vjust=vjust), size=6.5, color='grey7') +
     geom_point(data=df%>%select(-label), aes(x,y), size=.1, color='lightgrey', alpha=.1) +
@@ -176,7 +178,7 @@ plot_weight_scatters_with_labels <- function(weights_labels, title='', colors=br
           strip.text.y = element_blank(),
           strip.text.x.top = element_text(size=20, vjust=3, color='grey7'),
           # strip.placement='outside', 
-          strip.clip='off',
+        #   strip.clip='off',
           # plot.margin = margin(t=10),
           # strip.placement='outside',
           legend.position=c(.5,-0.06),
@@ -236,7 +238,7 @@ plot_go_enrichments <- function(enrichments, size=4) {
           panel.grid.major.y=element_blank(),
           panel.spacing=unit(10,'lines'),
           strip.placement='outside',
-          strip.text=element_text(size=20, margin=margin(b=-10, unit='pt')),
+        #   strip.text=element_text(size=20, margin=margin(b=-10, unit='pt')),
           legend.position=c(0.1,0.8),
           text=element_text(size=20)
          )
@@ -272,6 +274,31 @@ plot_enrichments <- function(enrichments, size=4) {
          )
 }
 
+
+plot_log2FC <- function(scatter, corr, x=0, y=1) {
+    corr = corr %>%
+    mutate(sig = case_when(q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ '')) %>%
+    mutate(text=paste('r =', round(true_mean,2), sig))
+
+    scatter %>%
+    mutate(label = factor(label, ordered=T, levels=unique(.$label))) %>%
+    ggplot(aes(x=weight, y=log2FC)) + 
+    facet_grid(label~G, switch='x') +
+    geom_point(alpha=.3, size=.5, color='darkred') +
+    geom_smooth(method='lm', color='black') +
+    geom_text(data=corr, aes(x=x, y=y, label=text), size=8) +
+    xlab('') +
+    theme_minimal() +
+    theme(
+        aspect.ratio=1,
+        strip.placement='outside',
+        panel.grid.minor=element_blank(),
+        panel.border=element_rect(fill=NA),
+        text=element_text(size=16),
+        strip.text.y=element_text(angle=0),
+        strip.text=element_text(size=22)
+    )
+}
 
 
 # ########### OLD
