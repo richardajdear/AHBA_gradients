@@ -6,22 +6,25 @@ USER root
 RUN sudo apt-get update && \
     apt-get install -y vim tree wget unzip bash-completion && \
     apt-get install -y libudunits2-dev && \
-    apt-get install -y libmagick++-dev && \
     apt-get install -y libnlopt-dev && \
     apt-get install -y default-jre less
+#    apt-get install -y libmagick++-dev && \
+#    apt-get install -y libmagickwand-dev
 
 ### conda install some R packages (needed for ggseg, images)
 RUN conda install -y libgdal r-units
-RUN R -e "install.packages('magick', dependencies=TRUE, repos='http://cran.rstudio.com/')"
-#RUN conda install -y r-magick
 
-### R packages from the R script
+### magick requires r-magick conda build, but it's not currently available for ARM64
+# RUN R -e "install.packages('magick', dependencies=TRUE, repos='http://cran.rstudio.com/')"
+# RUN conda install -c conda-forge r-magick
+
+### R packages
 COPY r-reqs.R ./
 RUN Rscript r-reqs.R
 
-### System deps 'vtk' for python
+### conda install 'vtk' for python
 RUN conda install -y vtk
-#RUN sudo apt-get install -y vtk6 python-vtk
+# RUN sudo apt-get install -y vtk6 python-vtk
 
 ### Python reqs
 COPY python-reqs.txt ./
@@ -30,6 +33,7 @@ ENV PATH $HOME/.cargo/bin:$PATH
 RUN pip3 install gseapy
 RUN pip3 install -r python-reqs.txt
 
+### ENIGMA
 #RUN git clone https://github.com/MICA-MNI/ENIGMA.git
 #RUN python3 ENIGMA/setup.py install
 #ENV PYTHONPATH "${PYTHONPATH}:/home/jovyan/ENIGMA"
@@ -44,8 +48,8 @@ RUN pip3 install -r python-reqs.txt
 #RUN sudo apt-get install -y connectome-workbench
 #RUN sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
 
-ENV MPLCONFIGDIR=~/tmp/matplotlib
 
+ENV MPLCONFIGDIR=~/tmp/matplotlib
 
 ### Jupyter lab and extensions
 RUN pip3 install --upgrade jupyterlab

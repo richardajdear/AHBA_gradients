@@ -59,7 +59,7 @@ ggtitle(title) + xlab("") + ylab("")
 
 
 plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
-                     colors=rev(brewer.rdbu(100)), name='z'
+                     colors=rev(brewer.rdbu(100)), name='Z-score'
                     ) {
         if (!"version" %in% colnames(scores_df)) {
         scores_df <- scores_df %>% mutate(version = '')
@@ -87,7 +87,7 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
     theme_void() + 
     # facet_grid(component~version, switch=switch) +
     theme(legend.position='bottom',
-        #   legend.title=element_text(vjust=1),          
+          legend.title=element_text(vjust=1),          
           strip.text.x=element_text(vjust=1),
           strip.text.y.left = element_text(angle = 0),
           panel.spacing.x = unit(spacing_x, 'lines'),

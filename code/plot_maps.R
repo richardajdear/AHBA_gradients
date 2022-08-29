@@ -18,7 +18,9 @@ mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 
 
 
-plot_maps <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colorscale='symmetric', spacing=0, facet='w', name='z') {
+plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
+                      colors=rev(brewer.rdbu(100)), colorscale='symmetric', 
+                      name='Z-score', labels='none') {
     df <- maps %>%
         rownames_to_column %>%
         mutate(region = recode(rowname,'7Pl'='7PL')) %>% 
@@ -45,6 +47,13 @@ plot_maps <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colo
         m_max <- colorscale[2]
     }
 
+    # set manual axis labels if desired
+    if (labels=='none') {
+        labels = c(round(m_min,2),round(m_max,2))
+    } else if (labels=='centile') {
+        labels = c(round(m_min+0.5,2),round(m_max+0.5,2))
+    }
+
     p <- ggplot(df) + 
     geom_brain(
         atlas=glasser,
@@ -56,7 +65,7 @@ plot_maps <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colo
     scale_fill_gradientn(
         colors=colors, 
         limits=c(m_min,m_max), oob=squish, breaks=c(m_min,m_max), 
-        labels=c(round(m_min,2),round(m_max,2)), 
+        labels=labels, 
         name=name
     ) +
     theme_void() + 
@@ -81,7 +90,9 @@ ggtitle(title) + xlab("") + ylab("")
 }
 
 
-plot_maps_dk <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), colorscale='symmetric', spacing=0, facet='w', name='z') {
+plot_maps_dk <- function(maps, title="", ncol=3, facet='w', spacing=0,
+                      colors=rev(brewer.rdbu(100)), colorscale='symmetric', 
+                      name='Z-score', labels='none') {
     df <- maps %>%
         rownames_to_column %>%
         rename(label = rowname) %>%
@@ -103,7 +114,14 @@ plot_maps_dk <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), c
     } else if (colorscale=='absolute') {
         m_min <- df %>% .$value %>% quantile(.01)
     }
-    
+
+    # set manual axis labels if desired
+    if (labels=='none') {
+        labels = c(round(m_min,2),round(m_max,2))
+    } else if (labels=='centile') {
+        labels = c(round(m_min+0.5,2),round(m_max+0.5,2))
+    }
+
     p <- ggplot(df) + 
     geom_brain(
         atlas=dk,
@@ -114,7 +132,7 @@ plot_maps_dk <- function(maps, title="", ncol=3, colors=rev(brewer.rdbu(100)), c
     scale_fill_gradientn(
         colors=colors, 
         limits=c(m_min,m_max), oob=squish, breaks=c(m_min,m_max), 
-        labels=c(round(m_min,2),round(m_max,2)), 
+        labels=labels, 
         name=name
     ) +
     guides(fill=guide_colorbar(title.vjust=1)) +
@@ -150,7 +168,7 @@ plot_map_corrs <- function(null_p, size=6) {
     ggplot(aes(x=G, y=map)) +
     geom_raster(aes(fill=r)) + 
     geom_text(aes(label=p_level), vjust=.5, hjust=.5, size=size, color='white') +
-    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), name='r', 
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), name='R', 
                         limits=c(-lim,lim), breaks=c(-floor(lim*10)/10,floor(lim*10)/10)) +
     scale_x_discrete(position='top') +
     guides(fill=guide_colorbar(barwidth=5)) +
@@ -197,7 +215,7 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', x=0, 
     mutate(sig_label=ifelse(q<0.001, '***',
                    ifelse(q<0.01, '**',
                    ifelse(q<0.05, '*','')))) %>%
-    mutate(r_label=paste('r =', round(r,2), sig_label))
+    mutate(r_label=paste('R =', round(r,2), sig_label))
     # mutate(x=-1, y=2)
 
     # if (!is.null(which) ) {
@@ -256,7 +274,7 @@ plot_maps_pca_scatter <- function(maps_pca_scatter, maps_pca_corrs, size=7, ncol
     mutate(sig_label=ifelse(q<0.001, '***',
                    ifelse(q<0.01, '**',
                    ifelse(q<0.05, '*','')))) %>%
-    mutate(r_label=paste('r =', round(r,2), sig_label))
+    mutate(r_label=paste('R =', round(r,2), sig_label))
     
     maps_pca_scatter %>%
     ggplot(aes(x=`AHBA DM`, y=`MRI PCA`)) +

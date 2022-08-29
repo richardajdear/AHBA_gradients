@@ -8,17 +8,17 @@ library(ggradar)
 plot_enrichment_bars <- function(null_p, xlab='Corr', lim='none') {
     
     if (lim=='none') {
-        lim <- max(abs(null_p$true_mean))
+        lim <- max(abs(null_p$r))
     }
     
     null_p %>% 
     mutate(sig = case_when(
         q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
         )) %>%
-    mutate(hjust=ifelse(z < 0, 1, 0)) %>%
-    ggplot(aes(x=true_mean, y=label)) + 
+    mutate(hjust=ifelse(r < 0, 1, 0)) %>%
+    ggplot(aes(x=r, y=label)) + 
     facet_grid(.~G) +
-    geom_col(aes(fill=true_mean)) +
+    geom_col(aes(fill=r)) +
     geom_text(aes(label=sig, vjust=.7, hjust=hjust), size=6) +
     # scale_alpha_manual(values=c(0.2,1)) +
     geom_hline(yintercept=0) +
@@ -205,7 +205,7 @@ plot_weight_scatters_with_labels <- function(weights_labels, title='', colors=br
 
 
 
-plot_go_enrichments <- function(enrichments, size=4) {
+plot_go_enrichments <- function(enrichments, size=4, name='Enrichment FDR') {
     df <- enrichments %>%
     mutate(neglogFDR_fill = ifelse(direction=='top', -neglogFDR, neglogFDR)) %>%
     mutate(rank = ifelse(direction=='top', -rank, rank)) %>%
@@ -222,10 +222,10 @@ plot_go_enrichments <- function(enrichments, size=4) {
     geom_col(aes(x=rank, y=neglogFDR, fill=neglogFDR_fill), alpha=.2) +
     geom_text(aes(x=rank, y=0, label=description, hjust=0), size=size, family='Calibri') +
     theme_minimal() +
-    ylab('FDR') + xlab('') +
+    ylab(name) + xlab('') +
     # xlab('GO Biological\nProcess\nEnrichment') +
     scale_x_continuous(breaks=c(-5,5),labels=c('-','+')) +
-    scale_y_continuous(breaks=c(0,1.3,3), labels=c(0, 0.05, 0.001)) +
+    scale_y_continuous(breaks=c(0,1.3,3,4), labels=c(0, 0.05, 0.001, 0.0001)) +
     scale_fill_gradientn(colors=rev(brewer.rdbu(200)), guide='none',
                          limits=c(-lim,lim)) +
     theme(

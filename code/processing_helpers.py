@@ -333,11 +333,11 @@ def fetch_schaefer(size=400):
     """
     Get Schaefer atlas
     """
-    s200_info = (
-        pd.read_csv("../data/parcellations/schaefer200_ggseg_labels.csv")
-        .assign(structure='cortex', hemisphere='L')
-        #.loc[lambda x: x['id']!=1] # drop medial wall
-    )
+    # s200_info = (
+    #     pd.read_csv("../data/parcellations/schaefer200_ggseg_labels.csv")
+    #     .assign(structure='cortex', hemisphere='L')
+    #     #.loc[lambda x: x['id']!=1] # drop medial wall
+    # )
 
     # Path to Schaefer200 image
     img_path = f'../data/parcellations/Schaefer2018_{size}Parcels_17Networks_order_FSLMNI152_1mm.nii.gz'

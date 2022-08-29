@@ -93,7 +93,7 @@ plot_triplets_v2 <- function(triplets_plot_v2, facet='h', ncol=4,
         ) +
         scale_y_continuous(breaks=seq(0,1,.2), 
                            # position='right',
-                           name='Inter-triplet correlation (abs.)') +
+                           name='Disjoint triplet correlation') +
         theme_minimal() + 
         theme(
             panel.grid.minor.y=element_blank(),
@@ -115,6 +115,37 @@ plot_triplets_v2 <- function(triplets_plot_v2, facet='h', ncol=4,
     }
     
 }
+
+
+plot_triplets_simple <- function(triplets_plot_v2, facet='h', colors=mycolors) {
+
+    p <- triplets_plot_v2 %>%
+    filter(DS == 0) %>%
+    filter(component <= 3) %>%
+    ggplot(aes(x=component, y=corr_abs)) +
+        geom_jitter(aes(color=component), width=0.1) +
+        scale_color_manual(values=colors, name='',labels=c('G1','G2','G3')) +
+        scale_fill_manual(values=colors, name='',labels=c('G1','G2','G3')) +
+        scale_x_discrete(labels=c('PC1','PC2','PC3')) +
+        scale_y_continuous(breaks=seq(0,1,.2), 
+                           # position='right',
+                           name='Disjoint triplet correlation') +
+        theme_minimal() + 
+        theme(panel.grid.minor=element_blank(),
+            axis.text=element_text(size=20, color='grey7', family='Calibri'),
+              # legend.position=c(.9,.3),
+              legend.position='bottom',
+              # axis.text.y = element_text(margin=margin(r=-1)),
+              panel.spacing=unit(2,'lines')
+             )
+    
+    if (facet=='h') {
+        p + facet_grid(.~method)
+    } else if (facet=='w') {
+        p + facet_wrap(~method)
+    }
+}
+
 
 plot_scatter_corrs <- function(versions_scatter, xlab='', ylab='', size=6) {
     corrs <- versions_scatter %>% group_by(G) %>% 

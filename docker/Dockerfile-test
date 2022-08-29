@@ -1,0 +1,22 @@
+### Base
+FROM jupyter/datascience-notebook:aarch64-python-3.10.5
+
+
+### apt-get installs
+USER root
+RUN sudo apt-get update && \
+    apt-get install -y vim tree wget unzip bash-completion && \
+    apt-get install -y libudunits2-dev && \
+    apt-get install -y libnlopt-dev && \
+    apt-get install -y default-jre less && \
+    apt-get install -y libmagick++-dev && \
+    apt-get install -y libmagickwand-dev
+
+### conda install some R packages (needed for ggseg, images)
+RUN conda install -y libgdal r-units
+RUN R -e "install.packages('magick', dependencies=TRUE, repos='http://cran.rstudio.com/')"
+# RUN conda install -c conda-forge imagemagick
+
+### R packages from the R script
+COPY r-reqs.R ./
+RUN Rscript r-reqs.R

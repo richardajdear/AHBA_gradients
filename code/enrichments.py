@@ -187,9 +187,9 @@ def make_gene_maps(version, gene_labels, atlas='hcp', normalize='std', method='m
         gene_maps = gene_maps.apply(lambda x: 0.5*(1 + (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x)) ))
     
     if atlas == 'hcp':
-        gene_maps = gene_maps.join(get_labels_hcp()).set_index('label')
+        gene_maps = gene_maps.join(get_labels_hcp())#.set_index('label')
     elif atlas == 'dk':
-        gene_maps = gene_maps.join(get_labels_dk()).set_index('label')
+        gene_maps = gene_maps.join(get_labels_dk())#.set_index('label')
         
     return gene_maps
 
@@ -331,7 +331,7 @@ def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include
 
 
 
-def get_cell_genes(which='wen', include=None, subtype=False, combine_layers=False, combine_ex_in=False, add_synapses=False):
+def get_cell_genes(which='jakob', include=None, subtype=False, combine_layers=False, combine_ex_in=False, add_synapses=False):
     """
     Read cell genes table
     """
@@ -442,7 +442,7 @@ def get_cell_genes_weighted(which=None, normalize=True):
         return pd.concat([lake_ex, lake_in])
 
 
-def get_layer_gene_stats(weights, null_weights, which='both'):
+def get_layer_genes(which='both', add_hse_genes=False):
     he_layers = (pd.read_csv("../data/he_layers.csv")
                 .loc[:,['Gene symbol', 'Layer marker in human', 'Log2FC to other layers in human']]
                 .set_axis(['gene', 'label', 'log2FC'], axis=1)
@@ -480,6 +480,7 @@ def get_layer_gene_stats(weights, null_weights, which='both'):
                             maynard_layers.replace({'L6':'L6', 'WM':'L6'})
                         ]).drop_duplicates() 
     
+
     if which=='he':
         layer_genes = he_layers
     elif which=='maynard':
@@ -487,6 +488,32 @@ def get_layer_gene_stats(weights, null_weights, which='both'):
     elif which=='both':
         layer_genes = he_maynard_layers
 
-    layer_stats = compute_null_p(*compute_enrichments(weights, null_weights, layer_genes))
+    hse_genes = ['BEND5',
+                'C1QL2',
+                'CACNA1E',
+                'COL24A1',
+                'COL6A1',
+                'CRYM',
+                'KCNC3',
+                'KCNH4',
+                'LGALS1',
+                'MFGE8',
+                'NEFH',
+                'PRSS12',
+                'SCN3B',
+                'SCN4B',
+                'SNCG',
+                'SV2C',
+                'SYT2',
+                'TPBG',
+                'VAMP1'
+                ]
+    hse_genes = pd.DataFrame({'gene':hse_genes, 'label':'HSE'})
 
-    return layer_stats
+    if add_hse_genes:
+        layer_genes = pd.concat([hse_genes, layer_genes])
+
+    return layer_genes
+    # layer_stats = compute_null_p(*compute_enrichments(weights, null_weights, layer_genes))
+
+    # return layer_stats
