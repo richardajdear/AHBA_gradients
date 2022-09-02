@@ -4,6 +4,8 @@ import numpy as np, pandas as pd
 from scipy.linalg import orthogonal_procrustes
 from itertools import combinations
 from processing_helpers import *
+from brainsmash.mapgen.base import Base
+from statsmodels.formula.api import ols
 
 
 def correlate(a,b):
@@ -31,8 +33,105 @@ def make_corrs_plot(corrs_dict, weights=True):
              )
     return corrs_plot
 
-        
+
+
+### Smoothness
+def get_moran_I(scores,
+                pct_include = 25,
+                distmat = '../data/LeftParcelGeodesicDistmat.txt'):
+    # Get distmat matching scores
+    inds = [i-1 for i in scores.index]
+    distmat=np.loadtxt(distmat)[inds,:][:, inds]
+
+    # # Get indices of region pairs to define distances
+    triangle = np.triu_indices(scores.shape[0], k=1)
+    distances = distmat[triangle]
+
+    # Filter for distances < percentile
+    include = distances < np.percentile(distances, pct_include)
+    z_i = scores.values[triangle[0][include]]
+    z_j = scores.values[triangle[1][include]]
+
+    # Define weights as 1/distance
+    w_ij = 1/distances[include]
+
+    # Compute Moran's I
+    I = len(scores) / np.sum(w_ij) * \
+        np.sum(w_ij * z_i * z_j) / np.sum(np.square(scores))
+
+    return I
+
+def get_version_variograms(scores, 
+                           distmat='../data/LeftParcelGeodesicDistmat.txt',
+                           smoothed=False, n_bins=25,
+                           return_variograms=True):
+    """
+    Make variograms for all components in a gradient version
+    """
+    variograms = {}
+    slopes = {}
+    for g in ['G1','G2','G3']:
+        _scores = scores.loc[:,g]
+        variograms[g] = get_variogram(_scores, distmat=distmat, 
+                                      smoothed=smoothed, n_bins=n_bins)
+        slopes[g] = fit_variogram_slope(variograms[g])
     
+    variograms = pd.concat(variograms).reset_index(level=0).rename({'level_0':'G'},axis=1)
+    slopes = pd.concat(slopes).unstack()
+    if return_variograms:
+        return slopes, variograms
+    else:
+        return slopes
+
+def get_variogram(scores, distmat='../data/LeftParcelGeodesicDistmat.txt', 
+                  n_bins=25, pct_include=.25,
+                  smoothed=False):
+    """
+    Make variogram of scores based on distance matrix
+    """
+    # Filter distmat to match nonmissing scores
+    inds = [i-1 for i in scores.index]
+    distmat=np.loadtxt(distmat)[inds,:][:, inds]
+    
+    # Get indices of region pairs
+    triangle = np.triu_indices(scores.shape[0], k=1)
+
+    # Select distances from distmat and bin
+    x = distmat[triangle]
+    bin_counts, bin_edges = np.histogram(x, bins=n_bins)
+    bin_centers = (bin_edges[:-1] + bin_edges[1:])/2
+    bin_inds = np.digitize(x, bin_edges[:-1]) # drop rightmost edge to include max value
+
+    # Get squared diff, and bin
+    diff_ij = scores.values[triangle[0]] - scores.values[triangle[1]]
+    var = np.square(diff_ij)*0.5
+    bin_vars = [var[bin_inds==i].mean() for i in np.unique(bin_inds)]
+
+    # Make variogram
+    variogram = pd.DataFrame({
+        'distance':bin_centers, 
+        'variance':bin_vars,
+        'counts': bin_counts,
+        'include': bin_counts.cumsum()/bin_counts.sum() < pct_include
+        })
+
+    # Optionally use smoothing kernel version
+    if smoothed:
+        mapgen = Base(scores.values, D=distmat, nh=n_bins, pv=100)
+        variogram['distance'] = mapgen.h
+        variogram['variance'] = mapgen._smvar
+    
+    return variogram
+
+def fit_variogram_slope(variogram):
+    """
+    Fit linear model to variogram, ignore last n points
+    Return slope and intercept
+    """
+    variogram_include = variogram.loc[lambda x: x['include']]
+    fit = ols(formula='variance ~ distance', data=variogram_include).fit()
+    return fit.params
+
 
 ### Enrichment
 

@@ -106,7 +106,9 @@ plot_triplets_v2 <- function(triplets_plot_v2, facet='h', ncol=4,
 
     if (smooth) {
         p <- p + geom_smooth(aes(group=component, fill=component, color=component), method='loess', span=1)
-    }    
+    } else {
+        p <- p + stat_summary(geom='line', fun.y=median, aes(group=component, fill=component, color=component))
+    }
     
     if (facet=='h') {
         p + facet_grid(.~method)

@@ -19,7 +19,7 @@ from processing_helpers import *
 
 class gradientVersion():
     
-    def __init__(self, n_components=5, approach='dm', sparsity=0, kernel='normalized_angle', 
+    def __init__(self, n_components=5, approach='dm', sparsity=0, kernel=None, 
                 marker_genes=['NEFL', 'LGALS1', 'SYT6'], 
                 **kwargs):
         """
@@ -35,6 +35,7 @@ class gradientVersion():
         
         if approach == 'dm':
             kwargs['alpha'] = kwargs.get('alpha', 1) # set alpha=1 as default, but only for approach = 'dm'
+            kwargs['kernel'] = kwargs.get('kernel', 'normalized_angle')
         self.params = kwargs # set embedding-specific parameters
         
         self.expression = None
@@ -43,7 +44,7 @@ class gradientVersion():
 
         
     def fit(self, expression, scale=False, message=True, 
-            data_dir = "../data/abagen-data/expression/"):
+            data_dir = "../data/abagen-data/expression/", name=''):
         """
         Fit to data
         Marker genes is a list of genes to define the gradient direction, if gradient n is inversely aligned to marker n, the gradient will be flipped
@@ -53,7 +54,7 @@ class gradientVersion():
             X = pd.read_csv(data_dir + expression + '.csv', index_col=0)
         else:
             X = expression
-            expression = '' # for printing output
+            expression = name # for printing output
             
         # Clean data: drop regions with all nulls, and genes with any nulls
         X = X.dropna(axis=0, how='all').dropna(axis=1, how='any')
@@ -75,7 +76,7 @@ class gradientVersion():
         self.weights = self.fit_weights()
     
         if message:
-            print(f"New gradients version: method={self.approach}, params={self.params}, kernel={self.kernel}, sparsity={self.sparsity}, data={expression}")
+            print(f"New gradients version: method={self.approach}, kernel={self.kernel}, sparsity={self.sparsity}, data={expression}")
         
         return self
     
