@@ -60,7 +60,7 @@ ggtitle(title) + xlab("") + ylab("")
 
 
 plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
-                     colors=rev(brewer.rdbu(100)), name='Z-score'
+                     colors=rev(brewer.rdbu(100)), name='Z-score', G_PC_labels=F
                     ) {
         if (!"version" %in% colnames(scores_df)) {
         scores_df <- scores_df %>% mutate(version = '')
@@ -77,6 +77,12 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
         df %>% .$score %>% quantile(.01, na.rm=T) %>% abs
     )
     
+    if (G_PC_labels) {
+        df <- df %>%
+            mutate(component=factor(component, ordered=T, levels=c('G1','G2','G3'),
+            labels=c('PC1\n(G1)','PC2\n(G2)','PC3\n(G3)')))
+    }
+
     p <- ggplot(df) + 
     geom_brain(
         atlas=glasser,

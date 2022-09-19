@@ -266,7 +266,8 @@ def clean_enrichment(file, direction=None, clean_terms=True, filter_001=True):
             'Cellular process involved in reproduction in':'Cellular process involved in reproduction',
             'Regulation of dendritic spine development':'Dendritic spine development',
             'Regulation of dendrite development':'Dendrite development',
-            'Serotonin receptor signaling pathway':'Serotonin receptor signaling'
+            'Serotonin receptor signaling pathway':'Serotonin receptor signaling',
+            'SRP-dependent cotranslational protein targeting': 'SRP-dependent protein targeting'
         }
         enrichment.replace(replacements, inplace=True, regex=True)
         
@@ -295,7 +296,7 @@ def clean_enrichment(file, direction=None, clean_terms=True, filter_001=True):
 
 def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include_g1=False, directed=False, top_n=None, **kwargs):
     """
-    Combine enrichments
+    Combine enrichments from STRING
     """
     directions = {'G1':'top', 'G2':'bottom', 'G3':'bottom'}
     if not directed:

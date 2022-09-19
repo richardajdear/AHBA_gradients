@@ -19,7 +19,7 @@ from processing_helpers import *
 
 class gradientVersion():
     
-    def __init__(self, n_components=5, approach='dm', sparsity=0, kernel=None, 
+    def __init__(self, n_components=5, approach='dm', sparsity=0, kernel=None,
                 marker_genes=['NEFL', 'LGALS1', 'SYT6'], 
                 **kwargs):
         """
@@ -29,14 +29,15 @@ class gradientVersion():
         self.marker_genes=marker_genes
         
         self.approach = approach
-        self.kernel = kernel
         self.sparsity=sparsity
-        self.gradients = GradientMaps(n_components=n_components, approach=approach, kernel=kernel)    
-        
+
         if approach == 'dm':
             kwargs['alpha'] = kwargs.get('alpha', 1) # set alpha=1 as default, but only for approach = 'dm'
-            kwargs['kernel'] = kwargs.get('kernel', 'normalized_angle')
+            kernel = 'normalized_angle' if kernel is None else kernel
         self.params = kwargs # set embedding-specific parameters
+        self.kernel = kernel
+
+        self.gradients = GradientMaps(n_components=n_components, approach=approach, kernel=kernel)    
         
         self.expression = None
         self.scores = None

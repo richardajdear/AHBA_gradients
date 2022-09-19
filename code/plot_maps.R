@@ -21,6 +21,11 @@ mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
                       colors=rev(brewer.rdbu(100)), colorscale='symmetric', 
                       name='Z-score', labels='none') {
+    
+    if ("label" %in% colnames(maps)) {
+        maps <- maps %>% remove_rownames %>% column_to_rownames('label')
+    }
+
     df <- maps %>%
         rownames_to_column %>%
         mutate(region = recode(rowname,'7Pl'='7PL')) %>% 

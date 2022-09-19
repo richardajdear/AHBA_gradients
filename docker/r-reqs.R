@@ -15,6 +15,7 @@ package_list <- c(
 	'ggseg3d', 
 	'ggrepel',
 	'ggridges',
+        'ggwordcloud',
 	'ggtext',
 	'ggpubr',
 	'ggh4x',

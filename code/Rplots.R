@@ -14,6 +14,62 @@ mycolors = brewer.set1(5)[c(1,4,2)]
 mycolorscale = brightness(rev(brewer.rdbu(100)), delta(-.1))
 
 
+plot_triplets_raster <- function(triplets_raster, n_components=3) {
+    triplets_raster <- triplets_raster %>% 
+    mutate(method=factor(method, ordered=T, levels=c('pca','dm'),
+            labels=c('PCA', 'DME'))) %>%
+    filter(component <= n_components) %>%
+    mutate(component=factor(component, ordered=T, levels=seq(1,5),
+            labels=c('PC1\n(G1)','PC2\n(G2)','PC3\n(G3)','PC4\n(G4)','PC5\n(G5)')))
+
+    highlight = triplets_raster %>% 
+    filter(
+            ((method=='PCA') & (gene_filter==0.0) & (donors_filter==1)) |
+            ((method=='PCA') & (gene_filter==0.7) & (donors_filter==3)) |
+            ((method=='DME') & (gene_filter==0.5) & (donors_filter==3)) |
+            ((method=='DME') & (gene_filter==0.8) & (donors_filter==1))
+    ) %>% 
+    arrange(component, method, gene_filter, donors_filter) %>%
+    mutate(label=rep(c('(1)','(2)','(3)','(4)'), n_components))
+
+    triplets_raster %>%
+    ggplot(aes(x=gene_filter, y=donors_filter, fill=corr_abs)) + 
+    geom_tile() +
+    geom_text(aes(label=label), data=highlight, color='grey7', family='Calibri', size=8) +
+    # geom_text(aes(label='★'), data=triplets_raster %>% filter(corr_abs>0.6), color='gray30', size=5) +
+    # geom_tile(aes(x=gene_filter, y=donors_filter), fill=NA, color='white', size=1,
+    #             data=triplets_raster %>% filter(corr_abs > 0.6)
+    # ) +
+    facet_grid(component~method, switch='y') +
+    scale_fill_gradientn(
+            colors=rev(brewer.spectral(100)),
+            limits=c(0,1), breaks=seq(0,1,.2), 
+            labels=c('0.0', '0.2', '0.4', '0.6', '0.8', '1.0'),
+            name='Median \ntriplet \ncorrelation'
+    ) +
+    scale_x_continuous(
+            breaks=c(0,.5,.9), minor_breaks=c(.3,.7),
+            labels=c('All\ngenes','Top 50%\ngenes','Top 10%\ngenes'),
+            name=''
+    ) +
+    scale_y_discrete(position='right',
+            labels=c('All regions','2+ donor regions','3+ donor regions'),
+            name=''
+    ) +
+    guides(fill=guide_colorbar(barheight=20)) +
+    theme_minimal() +
+    theme(
+        text=element_text(size=22),
+        axis.text = element_text(size=22, color='grey7', family='Calibri'),
+        aspect.ratio=1/3.8,
+        panel.grid=element_blank(),
+        legend.title=element_text(vjust=3),
+        # legend.position='bottom',
+        strip.text.y.left=element_text(angle=0)
+    )
+}
+
+
 plot_dist_donors_hcp <- function(df_donors) {
     df_donors %>%
     ggplot() + 
@@ -119,13 +175,13 @@ plot_triplets_v2 <- function(triplets_plot_v2, facet='h', ncol=4,
 }
 
 
-plot_triplets_simple <- function(triplets_plot_v2, facet='h', colors=mycolors) {
+plot_triplets_simple <- function(triplets_plot_v2, facet='h', colors=mycolors, size=1, alpha=.8) {
 
     p <- triplets_plot_v2 %>%
     filter(DS == 0) %>%
     filter(component <= 3) %>%
     ggplot(aes(x=component, y=corr_abs)) +
-        geom_jitter(aes(color=component), width=0.1) +
+        geom_jitter(aes(color=component), width=0.2, size=size, alpha=alpha) +
         scale_color_manual(values=colors, name='',labels=c('G1','G2','G3')) +
         scale_fill_manual(values=colors, name='',labels=c('G1','G2','G3')) +
         scale_x_discrete(labels=c('PC1','PC2','PC3')) +
@@ -134,7 +190,7 @@ plot_triplets_simple <- function(triplets_plot_v2, facet='h', colors=mycolors) {
                            name='Disjoint triplet correlation') +
         theme_minimal() + 
         theme(panel.grid.minor=element_blank(),
-            axis.text=element_text(size=20, color='grey7', family='Calibri'),
+              axis.text=element_text(size=20, color='grey7', family='Calibri'),
               # legend.position=c(.9,.3),
               legend.position='bottom',
               # axis.text.y = element_text(margin=margin(r=-1)),
@@ -301,7 +357,7 @@ plot_atlas_violins <- function(regions, sig, classes=Mesulam,
           axis.text=element_blank(),
           axis.title=element_blank(),
           panel.grid.minor=element_blank(),
-          panel.grid.major.y=element_blank(),
+          panel.grid.major.x=element_line(color='gray50'),
           strip.placement='outside',
           plot.margin = unit(c(t=1,r=1,b=5,l=1), "lines"),
           text=element_text(size=30),
