@@ -300,13 +300,12 @@ def clean_brainspan(bs_exp, bs_col, bs_row, bs_mapping):
 def aggregate_brainspan_by_age(bs_clean, normalize=True):
     """
     Aggregate Brainspan donor brains by ages
-    Drop donors with <=3 samples
+    Drop age groups with <=3 samples
     """
     # Drop brains with <= 3 missing samples
-    bs_age_counts = bs_clean.groupby(['age']).size()
-                #.loc[lambda x: x>0].sort_index(level=1)
-    bs_keep = bs_age_counts > 8
-    ix_keep = pd.IndexSlice[:, bs_keep[bs_keep].index.get_level_values('age')]
+    bs_donor_counts = bs_clean.groupby(['donor_id']).size()
+    bs_keep = bs_donor_counts > 3
+    ix_keep = pd.IndexSlice[bs_keep[bs_keep].index.get_level_values('donor_id'), :]
     bs_clean = bs_clean.loc[ix_keep,:]
 
     # Optionally normalize by donor

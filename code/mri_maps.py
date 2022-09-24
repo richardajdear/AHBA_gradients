@@ -257,7 +257,35 @@ def maps_pca(maps, short_names=None):
         pca_weights = pca_weights.assign(map_name = lambda x: x.index.map(short_names))
     
     return pca_scores, pca_var, pca_weights
-    
+
+
+def maps_pca_boot(version, maps, n_boot=10, n_sample=5, replace=False):
+    """
+    Test maps PCA over random permutations
+    """
+    pca_corrs_boot = {}
+    for i in range(n_boot):
+        maps_boot = maps.sample(n=n_sample, replace=replace, axis=1)
+        pca_scores, pca_var, pca_weights = maps_pca(maps_boot)
+        corrs = get_corrs(version.clean_scores(), pca_scores).abs()
+        matches = version.match_components(corrs, n_components=3)
+        var = pd.Series(pca_var, index=['MRI PC1','MRI PC2', 'MRI PC3'], name='var')
+
+        MRI_PC = [ix[0] for ix in matches[0]]
+        G = [ix[1] for ix in matches[0]]
+        pca_corrs_boot[i] = (pd.DataFrame({
+                                'MRI_PC':MRI_PC, 
+                                'G':G, 
+                                'boot':i,
+                                'r':matches[1]
+                                })
+                        .set_index('MRI_PC').join(var)
+                        .reset_index()
+                        )
+
+    pca_corrs_boot = pd.concat(pca_corrs_boot).reset_index(drop=True)
+    return pca_corrs_boot
+
 
 # Atlas regions enrichment
 def compute_region_means(scores, null_scores, regions_series, method='median'):

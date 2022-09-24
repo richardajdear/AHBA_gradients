@@ -60,7 +60,8 @@ ggtitle(title) + xlab("") + ylab("")
 
 
 plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
-                     colors=rev(brewer.rdbu(100)), name='Z-score', G_PC_labels=F
+                     colors=rev(brewer.rdbu(100)), name='Z-score', 
+                     G_PC_labels=F
                     ) {
         if (!"version" %in% colnames(scores_df)) {
         scores_df <- scores_df %>% mutate(version = '')
@@ -80,7 +81,9 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
     if (G_PC_labels) {
         df <- df %>%
             mutate(component=factor(component, ordered=T, levels=c('G1','G2','G3'),
-            labels=c('PC1\n(G1)','PC2\n(G2)','PC3\n(G3)')))
+            labels=c("atop('PC1','(G1)')",
+                     "atop('PC2','(G2)')",
+                     "atop('PC3','(G3)')")))
     }
 
     p <- ggplot(df) + 
@@ -109,7 +112,7 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
     ggtitle(title) + xlab("") + ylab("")
     
     if (facet=='h') {
-        p + facet_grid(component~version, switch=switch)
+        p + facet_grid(component~version, switch=switch, labeller=label_parsed)
     } else if (facet=='w') {
         p + facet_wrap(~component, ncol=1)
     } else {
@@ -364,7 +367,10 @@ plot_hcp_dist <- function(dist_hcp, title="",
 
 
 
-plot_hcp_classes <- function(df, classes=vonEconomo, classcolors=vonEconomo_colors, classnames=vonEconomo_names, ncol=2) {
+plot_hcp_classes <- function(df, classes=vonEconomo, 
+                             classcolors=vonEconomo_colors, 
+                             classnames=vonEconomo_names, ncol=2
+                             ) {
     colors <- df %>% select( {{classes}} ,  {{classcolors}} , {{classnames}} ) %>% 
     unique() %>% drop_na() %>%
     arrange( {{classes}} ) %>% pull( {{classcolors}} )
@@ -385,7 +391,7 @@ plot_hcp_classes <- function(df, classes=vonEconomo, classcolors=vonEconomo_colo
         colour='grey', size=.1
     ) +
     scale_fill_manual(values=colors, labels=names, na.translate=F) +
-    guides(fill=guide_legend(ncol=ncol, title='')) +
+    guides(fill=guide_legend(ncol=ncol, title='', byrow=T)) +
     theme_void() +
     theme(legend.position='bottom')
 }

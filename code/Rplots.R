@@ -14,7 +14,7 @@ mycolors = brewer.set1(5)[c(1,4,2)]
 mycolorscale = brightness(rev(brewer.rdbu(100)), delta(-.1))
 
 
-plot_triplets_raster <- function(triplets_raster, n_components=3) {
+plot_triplets_raster <- function(triplets_raster, n_components=3, highlight = 'options') {
     triplets_raster <- triplets_raster %>% 
     mutate(method=factor(method, ordered=T, levels=c('pca','dm'),
             labels=c('PCA', 'DME'))) %>%
@@ -22,7 +22,7 @@ plot_triplets_raster <- function(triplets_raster, n_components=3) {
     mutate(component=factor(component, ordered=T, levels=seq(1,5),
             labels=c('PC1\n(G1)','PC2\n(G2)','PC3\n(G3)','PC4\n(G4)','PC5\n(G5)')))
 
-    highlight = triplets_raster %>% 
+    highlight_options = triplets_raster %>% 
     filter(
             ((method=='PCA') & (gene_filter==0.0) & (donors_filter==1)) |
             ((method=='PCA') & (gene_filter==0.7) & (donors_filter==3)) |
@@ -30,16 +30,11 @@ plot_triplets_raster <- function(triplets_raster, n_components=3) {
             ((method=='DME') & (gene_filter==0.8) & (donors_filter==1))
     ) %>% 
     arrange(component, method, gene_filter, donors_filter) %>%
-    mutate(label=rep(c('(1)','(2)','(3)','(4)'), n_components))
+    mutate(label=rep(c('1','2','3','4'), n_components))
 
-    triplets_raster %>%
+    g <- triplets_raster %>%
     ggplot(aes(x=gene_filter, y=donors_filter, fill=corr_abs)) + 
     geom_tile() +
-    geom_text(aes(label=label), data=highlight, color='grey7', family='Calibri', size=8) +
-    # geom_text(aes(label='★'), data=triplets_raster %>% filter(corr_abs>0.6), color='gray30', size=5) +
-    # geom_tile(aes(x=gene_filter, y=donors_filter), fill=NA, color='white', size=1,
-    #             data=triplets_raster %>% filter(corr_abs > 0.6)
-    # ) +
     facet_grid(component~method, switch='y') +
     scale_fill_gradientn(
             colors=rev(brewer.spectral(100)),
@@ -63,10 +58,27 @@ plot_triplets_raster <- function(triplets_raster, n_components=3) {
         axis.text = element_text(size=22, color='grey7', family='Calibri'),
         aspect.ratio=1/3.8,
         panel.grid=element_blank(),
-        legend.title=element_text(vjust=3),
+        legend.title=element_text(vjust=3, size=22, color='grey7', family='Calibri'),
         # legend.position='bottom',
-        strip.text.y.left=element_text(angle=0)
+        strip.text.y.left=element_text(angle=0,size=22, color='grey7', family='Calibri'),
+        strip.text.x=element_text(angle=0,size=22, color='grey7', family='Calibri')
     )
+
+    if (highlight=='options') {
+        g + geom_text(aes(label=label), fontface='bold', data=highlight, color='grey7', family='Calibri', size=8)
+        # geom_text(aes(label='★'), data=triplets_raster %>% filter(corr_abs>0.6), color='gray30', size=5) +
+        # geom_tile(aes(x=gene_filter, y=donors_filter), fill=NA, color='white', size=1,
+        #             data=triplets_raster %>% filter(corr_abs > 0.6)
+        # ) +
+    } else if (highlight=='stars') {
+        g + geom_text(aes(label='★'), data=triplets_raster %>% filter(corr_abs>0.6), color='gray30', size=5) +
+            scale_fill_gradientn(
+            colors=rev(brewer.spectral(100)),
+            limits=c(0,1), breaks=seq(0,1,.2), 
+            labels=c('0.0', '0.2', '0.4', '0.6 ★', '0.8', '1.0'),
+            name='Median \ntriplet \ncorrelation'
+        ) 
+    }
 }
 
 
@@ -74,11 +86,18 @@ plot_dist_donors_hcp <- function(df_donors) {
     df_donors %>%
     ggplot() + 
     geom_histogram(aes(x=count), alpha=1, binwidth=1, color='white', size=3, fill=brewer.blues(10)[4]) + 
+    stat_count(binwidth=1, geom="text", size=8,
+        aes(x=count, label=..count..), vjust=-0.2) +
     # scale_fill_manual(values=brewer.blues(10)[c(10,4)], name='', guide='none') +
     geom_vline(xintercept=2.5, linetype=2) +
     scale_x_continuous(breaks=seq(0,6,1)) +
-    theme_minimal() + ylab('Regions') + xlab('Donors sampled') + 
-    theme(legend.position=c(.2,.8), panel.grid=element_blank())    
+    ylim(0,55) +
+    theme_minimal() + ylab('# regions') + xlab('Donors sampled') + 
+    theme(legend.position=c(.2,.8), panel.grid=element_blank(),
+        axis.text.x=element_text(size=22, color='grey7', family='Calibri'),
+        axis.text.y=element_blank(),
+        axis.title.y=element_text(size=22, color='grey7', family='Calibri', margin=margin(r=-50))
+    )    
 }
 
 
@@ -153,7 +172,7 @@ plot_triplets_v2 <- function(triplets_plot_v2, facet='h', ncol=4,
         theme_minimal() + 
         theme(
             panel.grid.minor.y=element_blank(),
-            axis.text=element_text(size=20, color='grey7', family='Calibri'),
+            axis.text=element_text(size=22, color='grey7', family='Calibri'),
               # legend.position=c(.9,.3),
               legend.position='bottom',
               # axis.text.y = element_text(margin=margin(r=-1)),
@@ -325,13 +344,13 @@ plot_atlas_violins <- function(regions, sig, classes=Mesulam,
     
     labels <- regions %>% select( {{classes}} ,  {{classlabels}} ) %>% unique() %>% 
         arrange( {{classes}} ) %>% drop_na() %>% pull( {{classlabels}} )
-    regions_labels <- data.frame(x=seq(1,4), label=labels)
+    regions_labels <- data.frame(m=seq(1,4), label=labels)
+    color_legend <- data.frame(m=factor(seq(1,4)), score=c(-7.1,-8.0,-6.8,-6.5), G='G1')
 
     sig <- mesulam_scores_sig %>% mutate(m=as.character(label)) %>% 
             filter(m != 'NaN', m != 8, m != 0) %>%
             mutate(sig = case_when(q<0.001 ~ '***', q<0.01 ~ '**', q<0.05 ~ '*', TRUE ~ ''))
 
-    
     regions %>% 
     mutate(m=factor( {{classes}} )) %>%
     filter(m != 'NaN', m != 8, m != 0) %>%
@@ -339,28 +358,32 @@ plot_atlas_violins <- function(regions, sig, classes=Mesulam,
     gather(G, score, -m) %>%
     group_by(G, m) %>%
     mutate(med = median(score, na.rm=T), mean = mean(score, na.rm=T)) %>%
-    ggplot(aes(x=m, y=score)) + 
-    facet_grid(.~G, switch='x') +
-    # geom_hline(yintercept=0, color='grey50', size=.2) +
-    geom_violin(aes(fill=m), width=.7, color='grey50') +
+    ggplot(aes(x=m, y=score, fill=m)) + 
+    facet_grid(.~G) +
+    geom_hline(yintercept=0, color='grey50', size=.5) +
+    geom_violin(width=.7, color='grey80') +
     # geom_point(aes(y=med), color='red') +
     # geom_point(aes(y=mean), color='blue') +
     geom_text(data=sig, aes(x=m, y=true_mean, label=sig), size=8, vjust=.75, hjust=.5) +
+    geom_point(data=color_legend, size=8, shape=22, color='grey80') +
     # geom_boxplot(aes(m, score), width=.1) +
     scale_fill_manual(values=colors, guide='none') +
-    scale_y_continuous(breaks=0) +
+    scale_y_continuous(breaks=c(-2,0,2), name='Distribution of axis z-scores') +
+    scale_x_discrete(labels=labels) +
     # scale_fill_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-2,2)) +
     coord_flip(ylim=c(-2.5,2.5), clip='off') +
     # geom_text(aes(x=x,y=-4,label=label),size=8,data=df_labels,angle=35,hjust=1) +
     theme_minimal() + 
     theme(panel.spacing=unit(2,'lines'),
-          axis.text=element_blank(),
-          axis.title=element_blank(),
-          panel.grid.minor=element_blank(),
-          panel.grid.major.x=element_line(color='gray50'),
+          axis.text.x=element_text(size=22, color='grey7', family='Calibri'),
+          axis.text.y=element_text(size=22, color='grey7', family='Calibri'),
+          axis.title.x=element_text(size=22, color='grey7', family='Calibri'),
+          axis.title.y=element_blank(),
+          panel.grid.minor.y=element_blank(),
+          panel.grid.major=element_line(color='gray80', size=.2),
           strip.placement='outside',
           plot.margin = unit(c(t=1,r=1,b=5,l=1), "lines"),
-          text=element_text(size=30),
+        #   text=element_text(size=30),
           aspect.ratio=1
          )
 }

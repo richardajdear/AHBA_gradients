@@ -3,6 +3,7 @@ library(ggseg)
 library(ggsegGlasser)
 # library(ggrepel)
 library(ggh4x)
+library(lemon)
 
 source("../code/brainPlots.R")
 
@@ -19,6 +20,7 @@ mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 
 
 plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
+                      position=position_brain(. ~ side + hemi),
                       colors=rev(brewer.rdbu(100)), colorscale='symmetric', 
                       name='Z-score', labels='none') {
     
@@ -63,6 +65,8 @@ plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
     geom_brain(
         atlas=glasser,
         mapping=aes(fill=value, geometry=geometry, hemi=hemi, side=side, type=type),
+        # position=position_brain(position),
+        position=position,
         colour='grey', size=.1,
         show.legend=T
         ) + 
@@ -210,8 +214,10 @@ plot_pca_weights <- function(pca_weights, size=6) {
 }
 
 
-plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', x=0, y=0,size=8,
-                             xlab='', ylab='') {
+plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switch='both',
+                             x=0, y=0,
+                             size=8, pointsize=3,
+                             xlab='', ylab='', aspect=1) {
     df <- maps_scatter
     # gather(G, G_score, -label, -map, -map_score)
 
@@ -231,7 +237,7 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', x=0, 
     p <- df %>%
     mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
     ggplot(aes(x=G_score, y=map_score)) +
-    geom_point(alpha=.3) +
+    geom_point(alpha=.3, size=pointsize) +
     geom_smooth(method='lm', color=brewer.puor(5)[5], size=2) +
     geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0.5, vjust=0.5,
              face='bold') +
@@ -249,13 +255,13 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', x=0, 
           axis.text = element_blank(),
           axis.title.y = element_text(angle=0, vjust=.5),
           plot.title = element_text(hjust=0.5, vjust=1),
-          aspect.ratio=1
+          aspect.ratio=aspect
          )
     
     if (facet=='v') {
-        p + facet_grid(map~G, switch='both')
+        p + facet_grid(map~G, switch=switch)
     } else if (facet=='h') {
-        p + facet_grid(G~map, switch='y')
+        p + facet_grid(G~map, switch=switch, scales='free')
     } else {
         p
     }
@@ -305,6 +311,7 @@ plot_maps_pca_scatter <- function(maps_pca_scatter, maps_pca_corrs, size=7, ncol
 
 plot_ahba_mri_brains <- function(scores_df, colors=rev(brewer.rdbu(100)), ncol=2) {
     df <- scores_df %>% 
+        # rownames_to_column('label') %>%
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
         gather('component', 'score', -region) %>%
         mutate(component = factor(component, ordered=T, levels=unique(.$component))) %>%
@@ -346,6 +353,50 @@ plot_ahba_mri_brains <- function(scores_df, colors=rev(brewer.rdbu(100)), ncol=2
 }
 
 
+plot_maps_pca_boot <- function(pca_corrs_all, pca_corrs_boot
+                              ) {
+    medians = pca_corrs_boot %>% 
+        rename(`Correlation with\nmatched MRI PC` = r, `MRI PC\nVariance Explained` = var) %>%
+        group_by(G) %>% summarize_all(median) %>%     
+        gather(metric, value, -G, -MRI_PC, -boot) %>%
+        mutate(label=paste('Median:', round(value,2)))
+
+    all_maps = pca_corrs_all %>% 
+        rename(`Correlation with\nmatched MRI PC` = r, `MRI PC\nVariance Explained` = var) %>%
+        gather(metric, value, -G, -MRI_PC) %>% 
+        mutate(label=paste('Original:', round(value,2)))
+
+    pca_corrs_boot %>%
+    rename(`Correlation with\nmatched MRI PC` = r, `MRI PC\nVariance Explained` = var) %>%
+    gather(metric, value, -G, -MRI_PC, -boot) %>%
+    ggplot() +
+    facet_rep_grid(metric~G, switch='y', repeat.tick.labels='x') +
+    geom_histogram(aes(value, fill=metric), alpha=.7) + 
+    geom_vline(data=all_maps, aes(xintercept=value), linetype=2, size=1) +
+    geom_text(data=all_maps, aes(label=label, x=value, y=350), hjust=-0.05, size=8, 
+                family='Calibri', color='grey7') +
+    geom_vline(data=medians, aes(xintercept=value), linetype=3, size=1) +
+    geom_text(data=medians, aes(label=label, x=value, y=300), hjust=-0.05, size=8,
+                family='Calibri', color='grey7') +
+    scale_fill_manual(values=brewer.rdbu(10)[c(3,8)]) +
+    scale_x_continuous(limits=c(0,1), breaks=c(0,.5,1), minor_breaks=c(.25,.75)) +
+    coord_cartesian(clip='off') +
+    guides(fill='none') +
+    ylab('') + xlab('') +
+    # ggtitle('Distribution of PCs with matched AHBA axes\n1000 permutations of 5/10 maps') +
+    # ggtitle('Correlation of MRI PCs with matched AHBA gradients\n1000 permutations of 5/9 maps – Sydnor maps only') +
+    theme_minimal() + 
+    theme(
+        strip.placement='outside',
+        strip.text.y.left=element_text(angle=0, vjust=.5, family='Calibri', color='grey7'),
+        axis.text.y=element_blank(),
+        axis.text.x=element_text(size=22, family='Calibri', color='grey7'),
+        # panel.grid.minor=element_blank(),
+        panel.spacing=unit(2,'lines'),
+        text=element_text(size=22, family='Calibri', color='grey7'),
+        strip.text=element_text(size=22, family='Calibri', color='grey7')
+    )
+}
                     
                     
 ##########################################
