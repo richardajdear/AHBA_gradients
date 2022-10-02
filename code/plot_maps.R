@@ -355,28 +355,35 @@ plot_ahba_mri_brains <- function(scores_df, colors=rev(brewer.rdbu(100)), ncol=2
 
 plot_maps_pca_boot <- function(pca_corrs_all, pca_corrs_boot
                               ) {
+
+    row1_title = 'Correlation\n with matched\nneuroimaging PC'
+    row2_title = 'Neuroimaging PC\nVariance Explained'
+
     medians = pca_corrs_boot %>% 
-        rename(`Correlation with\nmatched MRI PC` = r, `MRI PC\nVariance Explained` = var) %>%
+        filter(G %in% c('G1','G2','G3')) %>%
+        rename(!!row1_title := r, !!row2_title := var) %>%
         group_by(G) %>% summarize_all(median) %>%     
         gather(metric, value, -G, -MRI_PC, -boot) %>%
         mutate(label=paste('Median:', round(value,2)))
 
     all_maps = pca_corrs_all %>% 
-        rename(`Correlation with\nmatched MRI PC` = r, `MRI PC\nVariance Explained` = var) %>%
+        filter(G %in% c('G1','G2','G3')) %>%
+        rename(!!row1_title := r, !!row2_title := var) %>%
         gather(metric, value, -G, -MRI_PC) %>% 
         mutate(label=paste('Original:', round(value,2)))
 
     pca_corrs_boot %>%
-    rename(`Correlation with\nmatched MRI PC` = r, `MRI PC\nVariance Explained` = var) %>%
+    filter(G %in% c('G1','G2','G3')) %>%
+rename(!!row1_title := r, !!row2_title := var) %>%
     gather(metric, value, -G, -MRI_PC, -boot) %>%
     ggplot() +
     facet_rep_grid(metric~G, switch='y', repeat.tick.labels='x') +
     geom_histogram(aes(value, fill=metric), alpha=.7) + 
     geom_vline(data=all_maps, aes(xintercept=value), linetype=2, size=1) +
-    geom_text(data=all_maps, aes(label=label, x=value, y=350), hjust=-0.05, size=8, 
+    geom_text(data=all_maps, aes(label=label, x=value, y=1400), hjust=-0.05, size=8, 
                 family='Calibri', color='grey7') +
     geom_vline(data=medians, aes(xintercept=value), linetype=3, size=1) +
-    geom_text(data=medians, aes(label=label, x=value, y=300), hjust=-0.05, size=8,
+    geom_text(data=medians, aes(label=label, x=value, y=1200), hjust=-0.05, size=8,
                 family='Calibri', color='grey7') +
     scale_fill_manual(values=brewer.rdbu(10)[c(3,8)]) +
     scale_x_continuous(limits=c(0,1), breaks=c(0,.5,1), minor_breaks=c(.25,.75)) +
@@ -391,6 +398,7 @@ plot_maps_pca_boot <- function(pca_corrs_all, pca_corrs_boot
         strip.text.y.left=element_text(angle=0, vjust=.5, family='Calibri', color='grey7'),
         axis.text.y=element_blank(),
         axis.text.x=element_text(size=22, family='Calibri', color='grey7'),
+        panel.border=element_rect(color='grey50', fill=NA),
         # panel.grid.minor=element_blank(),
         panel.spacing=unit(2,'lines'),
         text=element_text(size=22, family='Calibri', color='grey7'),

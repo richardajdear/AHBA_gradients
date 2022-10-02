@@ -5,6 +5,19 @@ from enrichments import *
 from mri_maps import *
 from gradientVersion import *
 
+def get_disgenet_genes():
+    disgenet_genes = (pd.read_csv("../data/disgenet_genes.csv")
+        .assign(score_pct = lambda x: x.groupby('Disease')['Score_gda'].rank(pct=True))
+        # .loc[lambda x: x['score_pct'] >= 0.75]
+        .rename({'Disease':'label','Gene':'gene'},axis=1)
+        .replace({
+            'Autism Spectrum Disorders':'ASD',
+            'Major Depressive Disorder':'MDD',
+            'Schizophrenia':'SCZ'
+        })
+    )
+    return disgenet_genes 
+
 def get_gandal_genes(which='microarray', disorders = ['ASD', 'SCZ', 'MDD']):
     if which == 'microarray':
 

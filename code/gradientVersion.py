@@ -82,7 +82,7 @@ class gradientVersion():
         return self
     
     
-    def clean_scores(self, scores=None, abs=False):
+    def clean_scores(self, scores=None, abs=False, n_components=3):
         """
         Normalize G1-3 scores, add labels
         """
@@ -97,8 +97,8 @@ class gradientVersion():
             labels = get_labels_dx()
         
         scores = (scores
-                  .iloc[:,:3]
-                  .set_axis(['G'+str(i+1) for i in range(3)],axis=1)
+                  .iloc[:,:n_components]
+                  .set_axis(['G'+str(i+1) for i in range(n_components)],axis=1)
                   .apply(lambda x: (x-np.mean(x))/np.std(x))
                   .rename_axis('id')
                  )

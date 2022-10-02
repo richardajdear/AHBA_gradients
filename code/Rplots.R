@@ -101,7 +101,7 @@ plot_dist_donors_hcp <- function(df_donors) {
 }
 
 
-plot_ds_dist_hcp <- function(df_stability) {
+plot_ds_dist <- function(df_stability) {
     ggplot(df_stability) + 
     geom_density(aes(x=ds), size=1, color=brewer.blues(10)[6], fill=brewer.blues(10)[4]) +
     geom_vline(xintercept=0.386, linetype=2) +
@@ -337,17 +337,21 @@ plot_atlas_score_dots <- function(atlas_mean_scores_sig_colors, size=7) {
 
 plot_atlas_violins <- function(regions, sig, classes=Mesulam, 
                                classcolors=Mesulam_colors,
-                               classlabels=Mesulam_names
+                               classlabels=Mesulam_names,
+                               legend_positions=c(-7.1,-8.0,-6.8,-6.5)
                               ) {
     colors <- regions %>% select( {{classes}} ,  {{classcolors}} ) %>% unique() %>% 
         arrange( {{classes}} ) %>% drop_na() %>% pull( {{classcolors}} )
     
     labels <- regions %>% select( {{classes}} ,  {{classlabels}} ) %>% unique() %>% 
         arrange( {{classes}} ) %>% drop_na() %>% pull( {{classlabels}} )
-    regions_labels <- data.frame(m=seq(1,4), label=labels)
-    color_legend <- data.frame(m=factor(seq(1,4)), score=c(-7.1,-8.0,-6.8,-6.5), G='G1')
+    regions_labels <- data.frame(m=factor(seq(1,length(labels))), label=labels) %>%
+                mutate(
+                    # ypos=-nchar(as.character(label))/5 - 6, 
+                    ypos=legend_positions,
+                    G='G1')
 
-    sig <- mesulam_scores_sig %>% mutate(m=as.character(label)) %>% 
+    sig <- sig %>% mutate(m=as.character(label)) %>% 
             filter(m != 'NaN', m != 8, m != 0) %>%
             mutate(sig = case_when(q<0.001 ~ '***', q<0.01 ~ '**', q<0.05 ~ '*', TRUE ~ ''))
 
@@ -365,7 +369,7 @@ plot_atlas_violins <- function(regions, sig, classes=Mesulam,
     # geom_point(aes(y=med), color='red') +
     # geom_point(aes(y=mean), color='blue') +
     geom_text(data=sig, aes(x=m, y=true_mean, label=sig), size=8, vjust=.75, hjust=.5) +
-    geom_point(data=color_legend, size=8, shape=22, color='grey80') +
+    geom_point(data=regions_labels, aes(y=ypos), size=8, shape=22, color='grey80') +
     # geom_boxplot(aes(m, score), width=.1) +
     scale_fill_manual(values=colors, guide='none') +
     scale_y_continuous(breaks=c(-2,0,2), name='Distribution of axis z-scores') +

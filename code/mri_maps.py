@@ -76,7 +76,7 @@ def get_brainchart_maps(data="../data/Peaks_Table_2_2.csv"):
     return maps    
 
 
-def get_corrs(scores, maps, method='pearson', atlas='hcp'):
+def get_corrs(scores, maps, method='pearson', atlas='hcp', n_components=3):
     
     # labels = get_labels_dk() if atlas=='dk' else get_labels_hcp()[:180]
         
@@ -84,8 +84,8 @@ def get_corrs(scores, maps, method='pearson', atlas='hcp'):
         scores
         .set_index('label')
         .join(maps)
-        .corr(method=method).iloc[3:,:3]
-        .set_axis([f'G{i+1}' for i in range(3)], axis=1)
+        .corr(method=method).iloc[n_components:,:n_components]
+        .set_axis([f'G{i+1}' for i in range(n_components)], axis=1)
     )
     return corrs
 
@@ -235,12 +235,12 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr', pool=Fals
     return output_adjusted
 
 
-def maps_pca(maps, short_names=None):
+def maps_pca(maps, short_names=None, n_components=3):
     """
     Run PCA on maps
     """
-    cols = ['MRI PC1','MRI PC2','MRI PC3']
-    pca = PCA(n_components=3).fit(maps)
+    cols = [f'MRI PC{i+1}' for i in range(n_components)]
+    pca = PCA(n_components=n_components).fit(maps)
     pca_scores = (pd.DataFrame(pca.transform(maps), 
                                index=maps.index, 
                                columns=cols
@@ -259,17 +259,19 @@ def maps_pca(maps, short_names=None):
     return pca_scores, pca_var, pca_weights
 
 
-def maps_pca_boot(version, maps, n_boot=10, n_sample=5, replace=False):
+def maps_pca_boot(version, maps, n_boot=10, n_sample=5, n_components=5, replace=False):
     """
     Test maps PCA over random permutations
     """
     pca_corrs_boot = {}
     for i in range(n_boot):
         maps_boot = maps.sample(n=n_sample, replace=replace, axis=1)
-        pca_scores, pca_var, pca_weights = maps_pca(maps_boot)
-        corrs = get_corrs(version.clean_scores(), pca_scores).abs()
-        matches = version.match_components(corrs, n_components=3)
-        var = pd.Series(pca_var, index=['MRI PC1','MRI PC2', 'MRI PC3'], name='var')
+        pca_scores, pca_var, pca_weights = maps_pca(maps_boot, n_components=n_components)
+        version_scores = version.clean_scores(n_components=n_components)
+        corrs = get_corrs(version_scores, pca_scores, n_components=n_components).abs()
+        matches = version.match_components(corrs, n_components=n_components)
+        index_ = [f'MRI PC{i+1}' for i in range(n_components)]
+        var = pd.Series(pca_var, index=index_, name='var')
 
         MRI_PC = [ix[0] for ix in matches[0]]
         G = [ix[1] for ix in matches[0]]
