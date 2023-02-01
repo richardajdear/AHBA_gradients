@@ -36,18 +36,27 @@ def match_genes(gene_labels, weights):
     """
     genes = weights.index
     gene_masks = {}
+    gene_counts = {}
     for l in gene_labels['label'].unique():
-        matches = np.isin(genes, gene_labels.query("label == @l")['gene'])
+        genes_in_label = gene_labels.query("label == @l")['gene']
+        matches = np.isin(genes, genes_in_label)
         if sum(matches)>0:
             gene_masks[l] = matches
-    return gene_masks
+        
+        gene_counts[l] = pd.Series({
+            'n_genes': len(genes_in_label),
+            'n_matches': sum(matches)
+        })
+    gene_counts = pd.concat(gene_counts).unstack()
+    
+    return gene_masks, gene_counts
 
 
-def compute_enrichments(weights, null_weights, gene_labels, how='mean', norm=True, posneg=None):
+def compute_enrichments(weights, null_weights, gene_labels, how='mean', norm=False, posneg=None):
     """
     Compute scores for each gene label, either mean, or median rank
     """
-    gene_masks = match_genes(gene_labels, weights)
+    gene_masks, gene_counts = match_genes(gene_labels, weights)
     
     weights = weights.copy().values
     nulls = null_weights.copy()
@@ -74,18 +83,18 @@ def compute_enrichments(weights, null_weights, gene_labels, how='mean', norm=Tru
         if how == 'mean':
             true_enrichments[label] = pd.Series(np.nanmean(weights[mask, :], axis=0))
             null_enrichments[label] = pd.DataFrame(np.nanmean(nulls[mask, :, :], axis=0)).T
-        elif how == 'median':
+        elif how == 'median': #### not working
             true_ranks = weights.argsort(0).argsort(0)
             true_enrichments[label] = pd.Series(np.nanmedian(true_ranks[mask, :], axis=0))
             null_enrichments[label] = pd.DataFrame(np.nanmedian(nulls[mask, :, :], axis=0)).T
 
     true_enrichments = pd.concat(true_enrichments).unstack(1).set_axis(['G1','G2','G3'], axis=1)
     null_enrichments = pd.concat(null_enrichments).set_axis(['G1','G2','G3'], axis=1).reset_index(level=0).rename({'level_0':'label'}, axis=1)
+
+    return true_enrichments, null_enrichments, gene_counts
     
-    return true_enrichments, null_enrichments
     
-    
-def compute_null_p(true_enrichments, null_enrichments, adjust='fdr_bh', order=None):
+def compute_null_p(true_enrichments, null_enrichments, gene_counts=None, adjust='fdr_bh', order=None):
     """
     Compute null p values
     """
@@ -134,6 +143,9 @@ def compute_null_p(true_enrichments, null_enrichments, adjust='fdr_bh', order=No
               .reset_index()
               .rename({'level_0':'label', 'level_1':'G'}, axis=1)
              )
+    
+    if gene_counts is not None:
+        null_p = null_p.join(gene_counts, on='label')
     
     # Fix order of gene labels
     if order is None:

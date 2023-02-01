@@ -109,6 +109,7 @@ def parcellate_meta(meta_result,
 
 
 def get_parcellated_terms(terms, neurosynth_dataset, estimator='MKDADensity'):
+    "Get parcellated meta analysis maps of a list of terms"
     parcellated_maps = {}
     for i,term in enumerate(terms):
         try:

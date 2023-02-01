@@ -69,7 +69,7 @@ plot_enrichment_bars_z <- function(null_p, xlab='z-score') {
 
 
 
-plot_enrichment_heatmaps <- function(null_p_versions, ncol=3) {
+plot_enrichment_heatmaps <- function(null_p_versions, ncol=3, scales=NULL) {
     lim <- max(abs(null_p_versions$z))
     
     null_p_versions %>%
@@ -79,7 +79,7 @@ plot_enrichment_heatmaps <- function(null_p_versions, ncol=3) {
     mutate_at(vars(label), ~ factor(., levels=rev(unique(.)))) %>% 
     mutate_at(vars(version), ~ factor(., levels=unique(.))) %>%         
     ggplot(aes(x=G, y=label)) + 
-    facet_wrap(~version, ncol=ncol) +
+    facet_wrap(~version, ncol=ncol, scales=scales) +
     geom_tile(aes(fill=z, color=sig), size=2) +
     geom_text(aes(label=paste(round(z, digits = 2), '\n', round(p, digits=3), sig_label)), size=8) +
     scale_color_manual(values=c('transparent','green'), name='FDR sig') +
@@ -91,9 +91,10 @@ plot_enrichment_heatmaps <- function(null_p_versions, ncol=3) {
           axis.title = element_blank(),
           strip.text.x=element_text(size=20),
           strip.placement='outside',
+          aspect.ratio=1,
           text=element_text(size=20)
-         ) +
-    coord_fixed()
+         )
+    # coord_fixed()
 }
 
 

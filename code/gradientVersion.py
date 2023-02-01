@@ -1,13 +1,12 @@
 """
 Version class for analyzing gradients of AHBA
 """
-
+from unittest.mock import patch
 import numpy as np, pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.cross_decomposition import PLSCanonical, PLSRegression
 from sklearn.preprocessing import StandardScaler
-from brainspace.gradient import GradientMaps
-from brainspace.gradient.kernels import compute_affinity
+import brainspace
 from brainsmash.mapgen.base import Base
 from neuromaps.images import annot_to_gifti
 from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
@@ -15,21 +14,32 @@ from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
 from processing_helpers import *
 
 
+### Monkey Patch compute_affinity function to not zero-out negative values
+def compute_affinity_new(x, kernel=None, sparsity=.9, pre_sparsify=True,
+                    non_negative=False, gamma=None):
+
+    # run original function with different output
+    return brainspace.gradient.kernels.compute_affinity(x, kernel=kernel, 
+                sparsity=sparsity, pre_sparsify=pre_sparsify, non_negative=False, gamma=gamma)
+
+# NB: must patch in 'gradient.kernels' namespace, not 'gradient.gradient'
+brainspace.gradient.gradient.compute_affinity = compute_affinity_new
+
 
 
 class gradientVersion():
     
-    def __init__(self, n_components=5, approach='dm', sparsity=0, kernel=None,
+    def __init__(self, approach='dm', n_components=5, sparsity=0, kernel=None,
                 marker_genes=['NEFL', 'LGALS1', 'SYT6'], 
                 **kwargs):
         """
         Initialize
         """
         self.n_components = n_components
-        self.marker_genes=marker_genes
+        self.marker_genes = marker_genes
         
         self.approach = approach
-        self.sparsity=sparsity
+        self.sparsity = sparsity
 
         if approach == 'dm':
             kwargs['alpha'] = kwargs.get('alpha', 1) # set alpha=1 as default, but only for approach = 'dm'
@@ -37,15 +47,14 @@ class gradientVersion():
         self.params = kwargs # set embedding-specific parameters
         self.kernel = kernel
 
-        self.gradients = GradientMaps(n_components=n_components, approach=approach, kernel=kernel)    
-        
         self.expression = None
         self.scores = None
         self.var = None
+        self.gradients = brainspace.gradient.gradient.GradientMaps(n_components=n_components, approach=approach, kernel=kernel)    
 
         
     def fit(self, expression, scale=False, message=True, 
-            data_dir = "../data/abagen-data/expression/", name=''):
+            data_dir = "../data/abagen-data/expression/"):
         """
         Fit to data
         Marker genes is a list of genes to define the gradient direction, if gradient n is inversely aligned to marker n, the gradient will be flipped
@@ -55,11 +64,14 @@ class gradientVersion():
             X = pd.read_csv(data_dir + expression + '.csv', index_col=0)
         else:
             X = expression
-            expression = name # for printing output
-            
+            # expression = name # for printing output
+
         # Clean data: drop regions with all nulls, and genes with any nulls
         X = X.dropna(axis=0, how='all').dropna(axis=1, how='any')
-        
+        if scale:
+            X = X.apply(lambda x: (x-np.mean(x))/np.std(x))
+        self.expression = X
+
         # Fit gradients
         self.gradients.fit(X.values, sparsity=self.sparsity, **self.params)
         
@@ -71,18 +83,18 @@ class gradientVersion():
                 scores.loc[:,i] *= -1
         
         self.scores = scores
-        self.expression = X
-        self.affinity = compute_affinity(X.values, kernel=self.kernel, sparsity=self.sparsity)
-        self.var = self.gradients.lambdas_
+        self.affinity = compute_affinity_new(x=X.values, kernel=self.kernel, sparsity=self.sparsity)
+        self.eigenvalues = self.gradients.lambdas_
         self.weights = self.fit_weights()
     
         if message:
-            print(f"New gradients version: method={self.approach}, kernel={self.kernel}, sparsity={self.sparsity}, data={expression}")
+            data_name = expression if isinstance(expression, str) else '(data given)'
+            print(f"New gradients version: method={self.approach}, kernel={self.kernel}, sparsity={self.sparsity}, data={data_name}")
         
         return self
+
     
-    
-    def clean_scores(self, scores=None, abs=False, n_components=3):
+    def clean_scores(self, scores=None, norm=True, abs=False, n_components=3):
         """
         Normalize G1-3 scores, add labels
         """
@@ -99,10 +111,12 @@ class gradientVersion():
         scores = (scores
                   .iloc[:,:n_components]
                   .set_axis(['G'+str(i+1) for i in range(n_components)],axis=1)
-                  .apply(lambda x: (x-np.mean(x))/np.std(x))
                   .rename_axis('id')
                  )
         
+        if norm:
+            scores = scores.apply(lambda x: (x-np.mean(x))/np.std(x))
+
         if abs:
             scores = scores.abs()
         
@@ -155,24 +169,25 @@ class gradientVersion():
         return scores
     
     
-    def fit_weights(self, expression=None, independent=True, normalize=False, sort=False, save_name=None, overwrite=True):
+    def fit_weights(self, other_expression=None, independent=True, normalize=False, sort=False, save_name=None, overwrite=True):
         """
         Get gene weights from PLS
         Use other expression matrix if provided, otherwise use self
         If independent==True, fit each component separately
         """
         # Use own expression matrix as X, or use matching regions in another expression matrix
-        if expression is None:
+        if other_expression is None:
             X = self.expression
         else:
-            X = expression.dropna(axis=0, how='all').dropna(axis=1, how='any')
+            X = other_expression.dropna(axis=0, how='all').dropna(axis=1, how='any')
             # Make sure X will match onto regions in Y
             X = X.loc[set(X.index).intersection(self.scores.index), :]
         
         # Fit each component independently
+        n_components = self.scores.shape[1]
         if independent:
-            pls_weights = np.zeros((X.shape[1], 5))
-            for i in range(5):
+            pls_weights = np.zeros((X.shape[1], n_components))
+            for i in range(n_components):
                 Y = self.scores.loc[X.index, i]
                 pls_weights[:,i] = PLSCanonical(n_components=1).fit(X,Y).x_weights_.squeeze()
         # Or fit all components together
@@ -287,9 +302,19 @@ class gradientVersion():
 
     
                 
-    def correlate(self, a,b):
-        n = a.shape[1]
-        return pd.concat([a,b],axis=1).corr().iloc[:n,n:]
+    def correlate(self, a, b):
+        # n = a.shape[1]
+        # return pd.concat([a,b],axis=1).corr().iloc[:n,n:]
+
+        n = len(a)
+        a, b = a.values, b.values
+        sums = np.multiply.outer(b.sum(), a.sum())
+        stds = np.multiply.outer(b.std(), a.std())
+        corr = pd.DataFrame((b.T.dot(a) - sums / n) / stds / n, 
+                            b.columns, a.columns)
+        return corr
+
+        
                 
         
     def correlate_genes(self, expression, return_ranks=False):

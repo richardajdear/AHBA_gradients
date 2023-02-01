@@ -193,7 +193,7 @@ def fetch_dk(native=True, only_cortex=True, only_left=False):
         
     if only_cortex:
         if native:
-            for donor, image in atlas_dk['image'].items():
+            for donor, img in atlas_dk['image'].items():
                 img = nib.load(img)
                 atlas_dk['image'][donor] = remove_subcortex(img)
     #         atlas_dk['info'] = pd.read_csv(atlas_dk['info']).replace('subcortex/brainstem','other')

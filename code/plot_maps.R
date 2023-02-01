@@ -2,7 +2,7 @@ library(ggseg)
 # library(ggsegExtra)
 library(ggsegGlasser)
 # library(ggrepel)
-library(ggh4x)
+# library(ggh4x)
 library(lemon)
 
 source("../code/brainPlots.R")
@@ -92,9 +92,10 @@ ggtitle(title) + xlab("") + ylab("")
     } else if (facet=='v') {
         p + facet_grid(map~.)
     } else if (facet=='w') {
-        p + facet_wrap2(~map, ncol=ncol, dir="v",
-                strip=strip_vanilla(clip='off')
-        )
+        # Special facet wrap to remove clipping, requires ggh4x package
+        # p + facet_wrap2(~map, ncol=ncol, dir="v",
+        #         strip=strip_vanilla(clip='off')
+        p + facet_wrap(~map, ncol=ncol, dir="v")
     }
 }
 
