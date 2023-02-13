@@ -10,3 +10,4 @@ git+https://github.com/netneurolab/netneurotools.git
 neuromaps
 brainsmash
 brainspace
+scikit-network

@@ -61,7 +61,7 @@ ggtitle(title) + xlab("") + ylab("")
 
 plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
                      colors=rev(brewer.rdbu(100)), name='Z-score', 
-                     G_PC_labels=F
+                     special_labels=NULL
                     ) {
         if (!"version" %in% colnames(scores_df)) {
         scores_df <- scores_df %>% mutate(version = '')
@@ -71,19 +71,24 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
         gather('component', 'score', -version, -region) %>%
-        group_by(component, version)
+        group_by(component, version) %>%
+        mutate(component=factor(component, ordered=T, levels=unique(.$component)))
 
     m <- pmax(
         df %>% .$score %>% quantile(.99, na.rm=T) %>% abs,
         df %>% .$score %>% quantile(.01, na.rm=T) %>% abs
     )
     
-    if (G_PC_labels) {
+    if (special_labels=='G') {
         df <- df %>%
             mutate(component=factor(component, ordered=T, levels=c('G1','G2','G3'),
             labels=c("atop('PC1','(G1)')",
                      "atop('PC2','(G2)')",
                      "atop('PC3','(G3)')")))
+    } else if (!is.null(special_labels)) {
+       df <- df %>%
+            mutate(component=factor(component, ordered=T, levels=c('G1','G2','G3'),
+            labels=special_labels))
     }
 
     p <- ggplot(df) + 
@@ -116,7 +121,7 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
     } else if (facet=='w') {
         p + facet_wrap(~component, ncol=1)
     } else {
-        p + facet_grid(version~component, switch=switch)   
+        p + facet_grid(version~component, switch=switch, labeller=label_parsed)   
     }
 }
 

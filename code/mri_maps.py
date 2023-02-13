@@ -186,7 +186,8 @@ def generate_simulations(maps, n=10,
     np.save(outfile, null_maps)
 
 
-def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr', pool=False, pool_frac=.3, adjust='fdr_bh'):
+def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr', 
+                          pool=False, pool_frac=.3, adjust='fdr_bh', n_components=3):
     """
     Get correlations with maps from gradient score nulls
     Uses numpy masked array to handle missing values
@@ -195,10 +196,10 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr', pool=Fals
     maps_filter = maps.set_axis(range(1, maps.shape[0]+1)).loc[scores.index, :]
 
     n_maps = maps_filter.shape[1]
-    output_frame = np.zeros((3*n_maps, 2))
-    output_index = pd.MultiIndex.from_product([scores.iloc[:,:3].columns, maps_filter.columns])
+    output_frame = np.zeros((n_components*n_maps, 2))
+    output_index = pd.MultiIndex.from_product([scores.iloc[:,:n_components].columns, maps_filter.columns])
 
-    # For each gradient...
+    # For each gradient
     for g in range(null_grads.shape[1]):
         _scores = scores.iloc[:,g].values
         _scores = _scores.astype(np.longdouble) # hack to force ValueError in compare_images

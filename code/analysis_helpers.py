@@ -6,7 +6,9 @@ from itertools import combinations
 from processing_helpers import *
 from brainsmash.mapgen.base import Base
 from statsmodels.formula.api import ols
-
+from sklearn.linear_model import LinearRegression
+from scipy import sparse
+import networkx as nx
 
 def correlate(a,b):
     """
@@ -32,6 +34,72 @@ def make_corrs_plot(corrs_dict, weights=True):
               .set_axis(['how','version', 'x','y','corr'], axis=1)
              )
     return corrs_plot
+
+
+def make_var_exp_df(version_dict):
+    """
+    Get df of variance explained % from dictionary of PCA versions for plotting
+    Note: unclear how to calculate this for DME
+    """
+    dict_var_exp = {name: version.eigenvalues / version.expression.var().sum()
+        for name, version in version_dict.items()
+    }
+    df_var_exp = (pd.DataFrame(dict_var_exp, index=[i+1 for i in range(5)])
+        .melt(ignore_index=False).reset_index().set_axis(['PC','version','var'],axis=1)
+    )
+    return df_var_exp
+
+
+### Regress out axes
+def regress_out_axes(version, n_axes = 1, norm=False):
+    data = version.expression
+    axes = version.scores.iloc[:, 0:n_axes]
+    lm = LinearRegression().fit(axes, data)
+    estimated_data = lm.predict(axes)
+    residuals = data - estimated_data
+
+    if norm:
+        residuals = residuals.apply(lambda x: (x-np.mean(x))/np.std(x))
+    return residuals
+
+### Get region-region coexpression matrix
+def get_coexp(expression, order=''):
+
+    coexp = expression.T.corr()
+
+    if order=='louvain':
+        # Sort by louvain modules
+        sp = sparse.csr_matrix(coexp+1)
+        modules = Louvain(resolution=1.2).fit_transform(sp)
+        ord = modules.argsort()
+        coexp = coexp.iloc[ord, ord]
+    else:
+        # Sort by anatomy
+        ord = (fetch_hcp()['info'][:180]
+              .sort_values(['Lobe', 'cortex'])
+              .set_index('id')
+              .loc[expression.index]
+              .index
+            )
+        coexp = coexp.loc[ord, ord]
+    
+    coexp = coexp.set_axis(range(expression.shape[0])).set_axis(range(expression.shape[0]), axis=1)
+    return coexp
+
+### Clustering coefficients
+def get_clustering_coef(coexp, threshold=None):
+    # sp = sparse.csr_matrix(coexp+1)
+    # return Triangles().fit(sp).clustering_coef_
+    if threshold is not None:
+        # Binarise network
+        A = coexp.values > threshold
+    else:
+        # Weighted network
+        A = coexp.values
+    G = nx.from_numpy_array(A)
+    node_coefs = nx.clustering(G, weight='weight')
+    global_coef = np.array([*node_coefs.values()]).mean()
+    return global_coef
 
 
 

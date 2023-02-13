@@ -13,13 +13,13 @@ from processing_helpers import *
 ### Functions to compute enrichment from a set of genes, with or without weights
 
 
-def shuffle_gene_weights(weights, n=100, rank=False):
+def shuffle_gene_weights(weights, n=100, rank=False, n_components=3):
     """
     Make 'naive' null model by randomizing gene weights / ranks
     """
-    null_weights = np.repeat(weights.values[:,:3,np.newaxis], n, axis=2)
+    null_weights = np.repeat(weights.values[:,:n_components, np.newaxis], n, axis=2)
     # null_weights = np.take_along_axis(null_weights, np.random.randn(*null_weights.shape).argsort(axis=0), axis=0)
-    for g in range(3):
+    for g in range(n_components):
         for i in range(n):
             np.random.shuffle(null_weights[:,g,i])
     
@@ -52,7 +52,8 @@ def match_genes(gene_labels, weights):
     return gene_masks, gene_counts
 
 
-def compute_enrichments(weights, null_weights, gene_labels, how='mean', norm=False, posneg=None):
+def compute_enrichments(weights, null_weights, gene_labels, 
+                        how='mean', norm=False, posneg=None, n_components=3):
     """
     Compute scores for each gene label, either mean, or median rank
     """
@@ -88,8 +89,9 @@ def compute_enrichments(weights, null_weights, gene_labels, how='mean', norm=Fal
             true_enrichments[label] = pd.Series(np.nanmedian(true_ranks[mask, :], axis=0))
             null_enrichments[label] = pd.DataFrame(np.nanmedian(nulls[mask, :, :], axis=0)).T
 
-    true_enrichments = pd.concat(true_enrichments).unstack(1).set_axis(['G1','G2','G3'], axis=1)
-    null_enrichments = pd.concat(null_enrichments).set_axis(['G1','G2','G3'], axis=1).reset_index(level=0).rename({'level_0':'label'}, axis=1)
+    axis_names = [f'G{i+1}' for i in range(n_components)]
+    true_enrichments = pd.concat(true_enrichments).unstack(1).set_axis(axis_names, axis=1)
+    null_enrichments = pd.concat(null_enrichments).set_axis(axis_names, axis=1).reset_index(level=0).rename({'level_0':'label'}, axis=1)
 
     return true_enrichments, null_enrichments, gene_counts
     

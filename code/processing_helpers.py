@@ -84,8 +84,8 @@ def get_expression_abagen(atlas,
     else:
         expression_all = _out
 
-    # Drop right hemisphere
-    expression_all = [e.iloc[:180] for e in expression_all]
+    # Drop rows with all 0
+    # expression_all = [e for e in expression_all]
     
     # Filter for stable regions
     expression_stable_regions, region_stability = keep_stable_regions(
@@ -242,6 +242,19 @@ def fetch_hcp(native=True, only_left=False):
             atlas_hcp['image'][donor] = remove_right(image)
 
     return atlas_hcp
+
+
+def fetch_hcp_ex():
+    """
+    Get HCP atlas with subcortex, data from https://github.com/wayalan/HCPex
+    """
+
+    atlas_hcp_ex = {
+        'image': '../data/parcellations/HCPex.nii.gz',
+        'info': '../data/parcellations/HCPex_info.csv'
+    }
+
+    return atlas_hcp_ex
 
 
 

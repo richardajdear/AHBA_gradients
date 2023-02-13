@@ -37,8 +37,8 @@ plot_triplets_raster <- function(triplets_raster, n_components=3, highlight = 'o
     geom_tile() +
     facet_grid(component~method, switch='y') +
     scale_fill_gradientn(
-            colors=rev(brewer.spectral(100)),
             limits=c(0,1), breaks=seq(0,1,.2), 
+            colors=rev(brewer.spectral(100)),
             labels=c('0.0', '0.2', '0.4', '0.6', '0.8', '1.0'),
             name='Median \ntriplet \ncorrelation'
     ) +
@@ -277,6 +277,51 @@ plot_weight_corrs <- function(weight_corrs, spacing=8, ylab='') {
 }
 
 
+plot_var_exp <- function(df_var) {
+    df_var %>% 
+    mutate(version = factor(version, ordered=T, levels=unique(.$version))) %>% 
+    mutate(PC = factor(PC, ordered=T, levels=unique(.$PC))) %>% 
+    ggplot() + 
+    geom_line(aes(PC, var, color=version, group=version),size=1) + 
+    scale_color_manual(values=cols25(10), name='') +
+    theme_minimal() +
+    theme(panel.grid.minor = element_blank()) +
+    theme(legend.position=c(.5,.8), legend.justification='left', legend.title=element_blank()) +
+    ylab('Variance Explained') + xlab('PC') #+ ylim(c(0,.4))
+}
+
+
+plot_score_corr <- function(corr, facetting='h', xlab='', ylab='', size=8,
+                rownames=c('G1','G2','G3'), colnames=c('G1','G2','G3')) {
+    
+    rownames(corr) <- rownames
+    colnames(corr) <- colnames
+
+    corr %>% 
+    rownames_to_column('x') %>% 
+    pivot_longer(-x, names_to='y', values_to='r') %>% 
+    ggplot() +
+    geom_tile(aes(x,y, fill=r)) +
+    geom_text(aes(x,y, label=sprintf("%0.2f", round(r, digits = 2))), size=size) +
+    scale_fill_gradientn(colours=rev(brewer.rdbu(100)[20:80]), limits=c(-1,1), guide='colourbar') +
+    scale_y_discrete(limits=rev) +
+    guides(fill=guide_colourbar(title='r', barheight=10)) +
+    theme_minimal() + 
+    theme(panel.spacing=unit(4,'lines'), 
+          text=element_text(size=22, color='gray7', family='Calibri'), 
+          axis.text=element_text(size=22, color='gray7', family='Calibri'), 
+          strip.text.y=element_text(size=22, color='gray7', family='Calibri'),
+          strip.text.x=element_text(size=22, color='gray7', family='Calibri'),
+          strip.placement='outside',
+          legend.position='right',
+          legend.title.align = 0.5,
+          aspect.ratio=1
+         ) +
+    # coord_fixed() +
+    xlab(xlab) + ylab(ylab) + ggtitle('')
+}
+
+
 
 plot_corrs <- function(df, facetting='h', xlab='', ylab='', size=8) {
     p <- df %>% 
@@ -482,20 +527,6 @@ plot_xyz <- function(df, component=G1, title='G1', colors=brewer.set1(5)) {
 
 
 
-
-
-
-
-
-plot_var_exp <- function(df_var) {
-    ggplot(df_var) + 
-    geom_line(aes(PC, var, color=which, group=which),size=1) + 
-    scale_color_manual(values=cols25(10), name='') +
-    theme_minimal() +
-    theme(panel.grid.minor = element_blank()) +
-    theme(legend.position=c(.6,.8), legend.title=element_blank()) +
-    ylab('Variance Explained') + xlab('') #+ ylim(c(0,.4))
-}
 
 
 

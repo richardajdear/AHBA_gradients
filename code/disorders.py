@@ -18,11 +18,18 @@ def get_disgenet_genes():
     )
     return disgenet_genes 
 
-def get_gandal_genes(which='microarray', disorders = ['ASD', 'SCZ', 'MDD']):
-    if which == 'microarray':
+def get_gandal_genes(which='microarray', disorders = ['ASD', 'SCZ', 'MDD'], sig_level=.05):
 
+    replace_dict = {'01-Mar':'MARCH1', '02-Mar':'MARCH2', '03-Mar':'MARCH3', '04-Mar':'MARCH4', '05-Mar':'MARCH5', '06-Mar':'MARCH6', '07-Mar':'MARCH7', '08-Mar':'MARCH8', 
+                    '09-Mar':'MARCH9', '10-Mar':'MARCH10', '11-Mar':'MARCH11',
+                    '01-Sep':'SEPT1', '02-Sep':'SEPT2', '03-Sep':'SEPT3', '04-Sep':'SEPT4', '05-Sep':'SEPT5', '06-Sep':'SEPT6', '07-Sep':'SEPT7', '08-Sep':'SEPT8',
+                    '09-Sep':'SEPT9', '10-Sep':'SEPT10', '11-Sep':'SEPT11', '12-Sep':'SEPT12', '13-Sep':'SEPT13', '14-Sep':'SEPT14', '15-Sep':'SEPT15', 
+                    '01-Dec':'DECR1', '02-Dec':'DECR2'}
+
+    if which == 'microarray':
         gandal_genes = (pd.read_csv("../data/gandal_genes_microarray.csv")
                         .rename({'external_gene_id':'gene'},axis=1)
+                        .replace({'gene': replace_dict})
                         .rename({f'{d}.beta_log2FC':f'{d}.log2FC' for d in disorders}, axis=1) 
                         .set_index('gene')
                         .assign(rank = lambda x: x.groupby('gene')['start_position'].rank(method='first'))
@@ -33,6 +40,7 @@ def get_gandal_genes(which='microarray', disorders = ['ASD', 'SCZ', 'MDD']):
     elif which == 'rnaseq':
         gandal_genes = (pd.read_csv("../data/gandal_genes_rnaseq.csv")
                         .rename({'gene_name':'gene'},axis=1) 
+                        .replace({'gene':replace_dict})
                         .rename({f'{d}.fdr':f'{d}.FDR' for d in disorders}, axis=1)                         
                         .set_index('gene')
                         .assign(rank = lambda x: x.groupby('gene')['transcript_length'].rank(method='first'))
@@ -42,9 +50,24 @@ def get_gandal_genes(which='microarray', disorders = ['ASD', 'SCZ', 'MDD']):
                        )
         
     for d in disorders:
-        gandal_genes[f'{d}.sig'] = gandal_genes[f'{d}.FDR'] < .05
+        gandal_genes[f'{d}.sig'] = gandal_genes[f'{d}.FDR'] < sig_level
 
-    return gandal_genes
+    gandal_sig = (gandal_genes
+            .loc[:,[f'{d}.sig' for d in disorders]]
+            .melt(ignore_index=False, var_name='label', value_name='sig')
+            .assign(label = lambda x: x['label'].str.replace('.sig','', regex=False))
+            .set_index('label', append=True)
+            )
+
+    gandal_log2FC = (gandal_genes
+            .loc[:,[f'{d}.log2FC' for d in disorders]]
+            .melt(ignore_index=False, var_name='label', value_name='log2FC')
+            .assign(label = lambda x: x['label'].str.replace('.log2FC','', regex=False))
+            .set_index('label', append=True)
+            .join(gandal_sig)
+        )
+
+    return gandal_log2FC
 
 
 def get_gene_weights_with_labels(weights, gandal_genes, 

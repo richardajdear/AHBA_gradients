@@ -28,7 +28,8 @@ package_list <- c(
 	'magick', 
 	'png',
 	'gdtools',
-	'flextable'
+	'flextable',
+	'vctrs=0.5.0'
 )
 install.packages(package_list)
 
