@@ -114,15 +114,15 @@ plot_maps_dk <- function(maps, title="", ncol=3, facet='w', spacing=0,
     
     # set scale limits at 99th percentile
     m_max <- pmax(
-        df %>% .$value %>% quantile(.99) %>% abs,
-        df %>% .$value %>% quantile(.01) %>% abs
+        df %>% .$value %>% quantile(.9, na.rm=T)
+        # df %>% .$value %>% quantile(.01) %>% abs
     )
     if (colorscale=='symmetric') {
         m_min <- -m_max
     } else if (colorscale=='zero') {
         m_min <- 0
     } else if (colorscale=='absolute') {
-        m_min <- df %>% .$value %>% quantile(.01)
+        m_min <- df %>% .$value %>% quantile(.01, na.rm=T)
     }
 
     # set manual axis labels if desired
@@ -216,19 +216,31 @@ plot_pca_weights <- function(pca_weights, size=6) {
 
 
 plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switch='both',
-                             x=0, y=0,
                              size=8, pointsize=3,
                              xlab='', ylab='', aspect=1) {
-    df <- maps_scatter
-    # gather(G, G_score, -label, -map, -map_score)
-
+    
     corrs <- maps_scatter_corrs %>%
     mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
-    mutate(sig_label=ifelse(q<0.001, '***',
+    mutate(p_sig=ifelse(p<0.001, '***',
+                   ifelse(p<0.01, '**',
+                   ifelse(p<0.05, '*','')))) %>%
+    mutate(q_sig=ifelse(q<0.001, '***',
                    ifelse(q<0.01, '**',
                    ifelse(q<0.05, '*','')))) %>%
-    mutate(r_label=paste('R =', round(r,2), sig_label))
+    mutate(r_label=paste0(
+            'r = ', round(r,2), 
+            '\np = ', round(p,3), p_sig,
+            '\nq = ', round(q,3), q_sig
+            )) %>%
+    mutate(sig = case_when(
+        # q < 0.05 ~ 'FDR sig', 
+                           p < 0.05 ~ 'p sig', 
+                           TRUE ~ 'not sig'
+    ))
+            #   ordered=T, levels=c('not sig','p sig','FDR sig'))
     # mutate(x=-1, y=2)
+
+    df <- maps_scatter %>% left_join(corrs, by=c('map','G'))
 
     # if (!is.null(which) ) {
     #     df <- df %>% filter(map %in% which)
@@ -239,11 +251,12 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switc
     mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
     ggplot(aes(x=G_score, y=map_score)) +
     geom_point(alpha=.3, size=pointsize) +
-    geom_smooth(method='lm', color=brewer.puor(5)[5], size=2) +
-    geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0.5, vjust=0.5,
+    geom_smooth(method='lm', aes(color=sig), size=2, se=FALSE) +
+    scale_color_manual(values=c('black', 'green'), name='') +
+    geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0, vjust=0,
              face='bold') +
     # geom_text(data=corrs, aes(label=p_label, x=x, y=y), size=6, hjust=0, vjust=1) +
-    scale_x_continuous(breaks=0, position='top') + scale_y_continuous(breaks=0) +
+    scale_x_continuous(breaks=0, position='top') + scale_y_continuous() +
     # xlim(c(-3,3)) + ylim(c(-3,3)) +
     xlab(xlab) + ylab(ylab) +
     coord_cartesian(clip='off') +
@@ -260,7 +273,7 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switc
          )
     
     if (facet=='v') {
-        p + facet_grid(map~G, switch=switch)
+        p + facet_grid(map~G, switch=switch, scales='free')
     } else if (facet=='h') {
         p + facet_grid(G~map, switch=switch, scales='free')
     } else {

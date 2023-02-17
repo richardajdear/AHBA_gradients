@@ -457,7 +457,7 @@ def get_cell_genes_weighted(which=None, normalize=True):
         return pd.concat([lake_ex, lake_in])
 
 
-def get_layer_genes(which='both', add_hse_genes=False):
+def get_layer_genes(which='maynard', add_hse_genes=False):
     he_layers = (pd.read_csv("../data/he_layers.csv")
                 .loc[:,['Gene symbol', 'Layer marker in human', 'Log2FC to other layers in human']]
                 .set_axis(['gene', 'label', 'log2FC'], axis=1)

@@ -5,6 +5,15 @@ from enrichments import *
 from mri_maps import *
 from gradientVersion import *
 
+replace_dict = {'01-Mar':'MARCH1', '02-Mar':'MARCH2', '03-Mar':'MARCH3', '04-Mar':'MARCH4', '05-Mar':'MARCH5', '06-Mar':'MARCH6', '07-Mar':'MARCH7', '08-Mar':'MARCH8', 
+                '09-Mar':'MARCH9', '10-Mar':'MARCH10', '11-Mar':'MARCH11',
+                '01-Sep':'SEPT1', '02-Sep':'SEPT2', '03-Sep':'SEPT3', '04-Sep':'SEPT4', '05-Sep':'SEPT5', '06-Sep':'SEPT6', '07-Sep':'SEPT7', '08-Sep':'SEPT8',
+                '09-Sep':'SEPT9', '10-Sep':'SEPT10', '11-Sep':'SEPT11', '12-Sep':'SEPT12', '13-Sep':'SEPT13', '14-Sep':'SEPT14', '15-Sep':'SEPT15', 
+                '01-Dec':'DECR1', '02-Dec':'DECR2'}
+
+
+
+
 def get_disgenet_genes():
     disgenet_genes = (pd.read_csv("../data/disgenet_genes.csv")
         .assign(score_pct = lambda x: x.groupby('Disease')['Score_gda'].rank(pct=True))
@@ -18,13 +27,22 @@ def get_disgenet_genes():
     )
     return disgenet_genes 
 
-def get_gandal_genes(which='microarray', disorders = ['ASD', 'SCZ', 'MDD'], sig_level=.05):
 
-    replace_dict = {'01-Mar':'MARCH1', '02-Mar':'MARCH2', '03-Mar':'MARCH3', '04-Mar':'MARCH4', '05-Mar':'MARCH5', '06-Mar':'MARCH6', '07-Mar':'MARCH7', '08-Mar':'MARCH8', 
-                    '09-Mar':'MARCH9', '10-Mar':'MARCH10', '11-Mar':'MARCH11',
-                    '01-Sep':'SEPT1', '02-Sep':'SEPT2', '03-Sep':'SEPT3', '04-Sep':'SEPT4', '05-Sep':'SEPT5', '06-Sep':'SEPT6', '07-Sep':'SEPT7', '08-Sep':'SEPT8',
-                    '09-Sep':'SEPT9', '10-Sep':'SEPT10', '11-Sep':'SEPT11', '12-Sep':'SEPT12', '13-Sep':'SEPT13', '14-Sep':'SEPT14', '15-Sep':'SEPT15', 
-                    '01-Dec':'DECR1', '02-Dec':'DECR2'}
+
+
+def get_gwas(filename='trubetskoy2022'):
+    df = pd.read_csv(f"../data/gwas/{filename}.csv")
+    df = (df.melt(var_name='label', value_name='gene').dropna()
+          .assign(gene = lambda x: x['gene'].str.replace('\\..*','', regex=True)) #drop variants
+          .drop_duplicates()
+          .replace({'gene': replace_dict})
+    )
+    return df
+
+
+
+
+def get_gandal_genes(which='microarray', disorders = ['ASD', 'SCZ', 'MDD'], sig_level=.05):
 
     if which == 'microarray':
         gandal_genes = (pd.read_csv("../data/gandal_genes_microarray.csv")

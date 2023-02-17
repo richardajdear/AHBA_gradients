@@ -277,19 +277,16 @@ plot_enrichments <- function(enrichments, size=4) {
 }
 
 
-plot_log2FC <- function(scatter, corr, x=0, y=1) {
-    corr = corr %>%
-    mutate(sig = case_when(q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ '')) %>%
-    mutate(text=paste('r =', round(true_mean,2), sig))
-
-    scatter %>%
-    mutate(label = factor(label, ordered=T, levels=unique(.$label))) %>%
+plot_log2FC <- function(scatter, corr=NULL, x=0, y=1) {
+    p <- scatter %>%
+    mutate(label = factor(label, ordered=T, levels=rev(unique(.$label)))) %>%
+    mutate(updown = ifelse(log2FC>0,'up','down')) %>%
     ggplot(aes(x=weight, y=log2FC)) + 
     facet_grid(label~G, switch='x') +
-    geom_point(alpha=.3, size=.5, color='darkred') +
+    geom_vline(xintercept=0, size=.2, linetype=1) +
+    geom_point(alpha=.3, size=.5, aes(color=updown)) +
+    scale_color_manual(values=c(brewer.rdbu(10)[c(9,2)])) +
     geom_smooth(method='lm', color='black') +
-    geom_text(data=corr, aes(x=x, y=y, label=text), size=8) +
-    xlab('') +
     theme_minimal() +
     theme(
         aspect.ratio=1,
@@ -297,10 +294,108 @@ plot_log2FC <- function(scatter, corr, x=0, y=1) {
         panel.grid.minor=element_blank(),
         panel.border=element_rect(fill=NA),
         text=element_text(size=16),
+        axis.title.y=element_text(size=20),
+        axis.title.x=element_blank(),
         strip.text.y=element_text(angle=0),
-        strip.text=element_text(size=22)
+        strip.text=element_text(size=20),
+        legend.position = 'bottom',
+        legend.text=element_text(size=20),
+        legend.title=element_blank(),
+        plot.title=element_text(size=22)
     )
+
+    if (!is.null(corr)) {
+        corr = corr %>%
+        mutate(sig = case_when(q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ '')) %>%
+        mutate(text=paste('r =', round(true_mean,2), sig))
+
+        p + geom_text(data=corr, aes(x=x, y=y, label=text), size=8)
+    } else {
+        p
+    }
 }
+
+plot_gene_distributions <- function(dge, null_p=FALSE, split=FALSE, abs=FALSE) {
+    if (null_p) {
+        dge <- dge %>% 
+            mutate(sig = ifelse(q<0.05,'FDR sig','not FDR sig')) %>% 
+            mutate(p_sig = case_when(
+                p < .0001 ~ '****',p < .001 ~ '***',p < .01 ~ '**',p < .05 ~ '*', TRUE ~ ''
+            )) %>%
+            mutate(q_sig = case_when(
+                q < .0001 ~ '****',q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
+            )) %>% 
+            mutate(label = paste0(label, "\n(", n_matches,"/",n_genes, ")"))
+    }
+
+    if (split) {
+        dge <- dge %>% mutate(updown = ifelse(log2FC>0,'up','down'))
+    }
+
+    if (abs) {
+        dge <- dge %>% mutate(weight = abs(weight))
+    }
+    
+    p <- dge %>% 
+    mutate(label = factor(label, ordered=T, levels=rev(unique(.$label)))) %>%
+    group_by(label, G) %>% 
+    mutate(mean_weight = mean(weight)) %>% 
+    ungroup() %>% 
+    ggplot(aes(x=weight)) +
+    facet_grid(label~G, switch='both') +
+    # geom_vline(aes(xintercept=mean_weight), size=.5, linetype=2) +
+    # geom_vline(aes(xintercept=0), size=.5, linetype=1) +
+    theme_minimal() +
+    theme(
+        aspect.ratio=1,
+        strip.placement='outside',
+        panel.grid=element_blank(),
+        panel.border=element_rect(fill=NA),
+        text=element_text(size=16),
+        # axis.title.y=element_text(size=20),
+        axis.text=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title=element_blank(),
+        strip.text.y.left=element_text(angle=0),
+        strip.text=element_text(size=20),
+        # legend.position='none',
+        legend.position = 'bottom',
+        legend.text=element_text(size=20),
+        legend.title=element_blank(),
+        plot.title=element_text(size=22)
+    )
+
+    if (split) {
+        p <- p + 
+            geom_density(aes(y=after_stat(count), fill=updown), alpha=.3, size=.5) +
+            geom_vline(aes(xintercept=mean_weight), linetype=2, size=1) +
+            scale_fill_manual(values=c(brewer.rdbu(10)[c(9,2)]))
+    } else if (!null_p) {
+        p  <- p + 
+            geom_density(aes(y=after_stat(count), fill=mean_weight), alpha=.3, size=.5) +
+            scale_fill_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-.005,.005))
+    } else {
+        data_for_annotate <- dge %>% 
+            select(label,G,true_mean,null_mean,z,p,q,p_sig,q_sig) %>% 
+            unique %>% 
+            mutate(label = factor(label, ordered=T, levels=rev(unique(.$label))))
+
+        p  <- p + 
+            geom_density(aes(fill=z, color=factor(sig)), alpha=.3, size=1.5) +
+            scale_color_manual(values=c('green','darkgrey')) +
+            scale_fill_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-10,10)) +
+            geom_vline(data=data_for_annotate, aes(xintercept=null_mean), linetype=1, size=1) +
+            geom_vline(data=data_for_annotate, aes(xintercept=true_mean), linetype=2, size=1) + 
+            geom_text(data=data_for_annotate, x=0.005, y=30, hjust=0, size=6,
+                    aes(label=paste0("z=",round(z,2),
+                                    "\np=",round(p,2),p_sig,
+                                    "\nq=",round(q,2),q_sig)
+                    ))
+    }
+
+    p
+}
+
 
 
 # ########### OLD

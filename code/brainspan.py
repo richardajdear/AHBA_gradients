@@ -50,6 +50,7 @@ def get_age_groups():
         
         # # Simple groupings ...
         '8 pcw': 'Pre-Birth',
+        '9 pcw': 'Pre-Birth', #
         '12 pcw': 'Pre-Birth',
         '13 pcw': 'Pre-Birth',
         '16 pcw': 'Pre-Birth',
@@ -57,6 +58,9 @@ def get_age_groups():
         '19 pcw': 'Pre-Birth',
         '21 pcw': 'Pre-Birth',
         '24 pcw': 'Pre-Birth',
+        '25 pcw': 'Pre-Birth', #
+        '26 pcw': 'Pre-Birth', #
+        '35 pcw': 'Pre-Birth', #
         '37 pcw': 'Pre-Birth',
         '4 mos': 'Birth-13 yrs',
         '10 mos': 'Birth-13 yrs',
@@ -67,6 +71,7 @@ def get_age_groups():
         '8 yrs': 'Birth-13 yrs',
         '11 yrs': 'Birth-13 yrs',
         '13 yrs': 'Birth-13 yrs',
+        '15 yrs': 'Birth-13 yrs', #
         '18 yrs': '18-40 yrs',
         '19 yrs': '18-40 yrs',
         '21 yrs': '18-40 yrs',
@@ -108,7 +113,7 @@ def get_hcp_bs_mapping_v2():
         pd.read_csv("../data/hcp_bs_mapping_v2.csv", index_col=None)
         # .query("keep==1")
         .assign(structure_name = lambda x: np.where(x['keep']==1, x['structure_name'], np.nan))
-               )
+    )
     
     return hcp_bs_mapping
 
@@ -300,9 +305,9 @@ def clean_brainspan(bs_exp, bs_col, bs_row, bs_mapping):
 def aggregate_brainspan_by_age(bs_clean, normalize=True):
     """
     Aggregate Brainspan donor brains by ages
-    Drop age groups with <=3 samples
+    Drop age groups with >=3 samples
     """
-    # Drop brains with <= 3 missing samples
+    # Drop brains with >= 3 missing samples
     bs_donor_counts = bs_clean.groupby(['donor_id']).size()
     bs_keep = bs_donor_counts > 3
     ix_keep = pd.IndexSlice[bs_keep[bs_keep].index.get_level_values('donor_id'), :]
