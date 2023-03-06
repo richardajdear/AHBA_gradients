@@ -3,6 +3,7 @@ library(pals)
 library(ggridges)
 library(ggrepel)
 library(ggradar)
+library(ggh4x) # needed for facet_grid2 to not clip strip labels
 
 
 plot_enrichment_bars <- function(null_p, xlab='Corr', lim='none') {
@@ -126,8 +127,9 @@ plot_enrichment_heatmaps_2 <- function(null_p_versions, ncol=3, fill_name='pears
 
 
 
-
-plot_weight_scatters_with_labels <- function(weights_labels, title='', colors=brewer.set1(10), drop='') {
+plot_weight_scatters_with_labels <- function(weights_labels, title='', 
+                                             colors=brewer.set1(10), drop='',
+                                             facet='h') {
 
     weights <- weights_labels %>% rename(G1=`0`, G2=`1`, G3=`2`) %>%
                 select(label, contains('cluster'), contains('log2FC'), G1:G3)
@@ -140,8 +142,9 @@ plot_weight_scatters_with_labels <- function(weights_labels, title='', colors=br
     arrange(label, which) %>%
     mutate(which = factor(which, ordered=T, levels=unique(.$which)),
            label = factor(label, ordered=T, levels=unique(.$label)),
+           cluster = factor(cluster, ordered=T, levels=unique(.$cluster) %>% rev)
           )
-
+    
     lim <- max(abs(weights %>% pivot_longer(G1:G3, names_to='G', values_to='weight') %>% .$weight))
     
     df_axs <- rbind(
@@ -167,8 +170,8 @@ plot_weight_scatters_with_labels <- function(weights_labels, title='', colors=br
     facet_grid2(which~label, strip=strip_vanilla(clip='off')) + 
     geom_hline(yintercept=0, color='grey7') + geom_vline(xintercept=0, color='grey7') +
     geom_text(data=df_axs, aes(x=x, y=y, label=ax, hjust=hjust, vjust=vjust), size=6.5, color='grey7') +
-    geom_point(data=df%>%select(-label), aes(x,y), size=.1, color='lightgrey', alpha=.1) +
-    geom_point(aes(x,y, color=colors), size=.5, alpha=.3) +
+    geom_point(data=df%>%filter(is.na(cluster)), aes(x,y), size=1, color='grey', alpha=.3) +
+    geom_point(data=df%>%filter(!is.na(cluster)), aes(x,y, color=colors), size=1.5, alpha=.5) +
     scale_x_continuous(limits=c(-lim,lim)) + 
     scale_y_continuous(limits=c(-lim,lim)) +
     coord_cartesian(clip='off') +
@@ -183,11 +186,19 @@ plot_weight_scatters_with_labels <- function(weights_labels, title='', colors=br
         #   strip.clip='off',
           # plot.margin = margin(t=10),
           # strip.placement='outside',
-          legend.position=c(.5,-0.06),
-          legend.text=element_text(size=20, color='grey7'),
+          legend.position=c(0.1,1),
+          legend.text=element_text(size=20, color='grey7', hjust=0),
           plot.title=element_text(size=24,hjust=0.5,vjust=3)
          )
     
+    if (facet=='v') {
+        p <- p + facet_grid2(label~which, strip=strip_vanilla(clip='off'))
+    } else if (facet=='w') {
+        p <- p + facet_wrap2(label~which, strip=strip_vanilla(clip='off'))
+    } else {
+        p <- p + facet_grid2(which~label, strip=strip_vanilla(clip='off'))
+    }
+
     if ('cluster' %in% colnames(df)) {
         p + scale_color_manual(values=colors, name='')
     } else if ('log2FC' %in% colnames(df)) {

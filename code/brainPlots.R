@@ -59,27 +59,30 @@ ggtitle(title) + xlab("") + ylab("")
 
 
 
-plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
+plot_hcp <- function(scores_df, title="", facet='component~version', switch='y', spacing_x=0,
                      colors=rev(brewer.rdbu(100)), name='Z-score', 
                      special_labels=NULL
                     ) {
-        if (!"version" %in% colnames(scores_df)) {
+    if (!"version" %in% colnames(scores_df)) {
         scores_df <- scores_df %>% mutate(version = '')
     }
     
     df <- scores_df %>% 
         mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
         mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
+        filter(region != '10pp') %>% # region 10pp is not visualised in ggseg
         gather('component', 'score', -version, -region) %>%
         group_by(component, version) %>%
-        mutate(component=factor(component, ordered=T, levels=unique(.$component)))
+        mutate(component=factor(component, ordered=T, levels=unique(.$component), labels=unique(.$component)))
 
     m <- pmax(
         df %>% .$score %>% quantile(.99, na.rm=T) %>% abs,
         df %>% .$score %>% quantile(.01, na.rm=T) %>% abs
     )
     
-    if (special_labels=='G') {
+    if (is.null(special_labels)) {
+
+    } else if (special_labels=='G') {
         df <- df %>%
             mutate(component=factor(component, ordered=T, levels=c('G1','G2','G3'),
             labels=c("atop('PC1','(G1)')",
@@ -91,11 +94,11 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
             labels=special_labels))
     }
 
-    p <- ggplot(df) + 
-    geom_brain(
+    p <- df %>% ggseg(
         atlas=glasser,
         hemi='left',
-        mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
+        # mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
+        mapping=aes(fill=score),
         colour='grey', size=.1,
         show.legend=T
         ) + 
@@ -113,15 +116,15 @@ plot_hcp <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0,
                          limits=c(-m,m), oob=squish, breaks=c(-m,m), 
                          labels=c(round(-m,2),round(m,2)), name=name
                         ) +
-    coord_sf(clip='off') +
+    # coord_sf(clip='off') +
     ggtitle(title) + xlab("") + ylab("")
     
-    if (facet=='h') {
-        p + facet_grid(component~version, switch=switch, labeller=label_parsed)
+    if (!is.null(special_labels)) {
+        p + facet_grid(facet, switch=switch, labeller=label_parsed)
     } else if (facet=='w') {
         p + facet_wrap(~component, ncol=1)
     } else {
-        p + facet_grid(version~component, switch=switch, labeller=label_parsed)   
+        p + facet_grid(facet, switch=switch)   
     }
 }
 
@@ -237,10 +240,11 @@ plot_hcp_wide <- function(scores_df, title="", facet='h', spacing=4) {
 
     glasser$data <- glasser$data %>% filter(hemi=='left')
     
-    p <- ggplot(df) + 
-    geom_brain(
+    p <- df %>% ggseg(
         atlas=glasser,
-        mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
+        # mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
+        mapping=aes(fill=score),
+        hemi='left',
         colour='grey', size=.1,
         show.legend=T
         ) + 

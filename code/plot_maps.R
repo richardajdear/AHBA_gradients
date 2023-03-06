@@ -20,7 +20,7 @@ mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 
 
 plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
-                      position=position_brain(. ~ side + hemi),
+                    #   position=position_brain(. ~ side + hemi),
                       colors=rev(brewer.rdbu(100)), colorscale='symmetric', 
                       name='Z-score', labels='none') {
     
@@ -61,12 +61,12 @@ plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
         labels = c(round(m_min+0.5,2),round(m_max+0.5,2))
     }
 
-    p <- ggplot(df) + 
-    geom_brain(
+    p <- df %>% ggseg(
         atlas=glasser,
-        mapping=aes(fill=value, geometry=geometry, hemi=hemi, side=side, type=type),
+        # mapping=aes(fill=value, geometry=geometry, hemi=hemi, side=side, type=type),
+        mapping=aes(fill=value),
         # position=position_brain(position),
-        position=position,
+        # position=position,
         colour='grey', size=.1,
         show.legend=T
         ) + 
@@ -82,7 +82,8 @@ plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
           legend.title=element_text(vjust=1),
           panel.spacing.x=unit(spacing,'lines'),
           panel.spacing.y=unit(spacing,'lines'),
-          strip.text.x=element_text(vjust=1),
+          strip.text.x=element_text(vjust=1, size=22),
+          text=element_text(size=22),
         #   strip.clip='off',
           plot.title=element_text(hjust=0.5)) +
 ggtitle(title) + xlab("") + ylab("")
@@ -216,7 +217,7 @@ plot_pca_weights <- function(pca_weights, size=6) {
 
 
 plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switch='both',
-                             size=8, pointsize=3,
+                             size=8, pointsize=3, color='black',
                              xlab='', ylab='', aspect=1) {
     
     corrs <- maps_scatter_corrs %>%
@@ -232,13 +233,8 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switc
             '\np = ', round(p,3), p_sig,
             '\nq = ', round(q,3), q_sig
             )) %>%
-    mutate(sig = case_when(
-        # q < 0.05 ~ 'FDR sig', 
-                           p < 0.05 ~ 'p sig', 
-                           TRUE ~ 'not sig'
-    ))
-            #   ordered=T, levels=c('not sig','p sig','FDR sig'))
-    # mutate(x=-1, y=2)
+    mutate(sig = case_when(p < 0.05 ~ 'p sig', TRUE ~ 'not sig')) %>% 
+    mutate(x = ifelse(r>0,0,x))
 
     df <- maps_scatter %>% left_join(corrs, by=c('map','G'))
 
@@ -250,11 +246,11 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switc
     p <- df %>%
     mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
     ggplot(aes(x=G_score, y=map_score)) +
-    geom_point(alpha=.3, size=pointsize) +
+    geom_point(alpha=.3, size=pointsize, color=color) +
     geom_smooth(method='lm', aes(color=sig), size=2, se=FALSE) +
-    scale_color_manual(values=c('black', 'green'), name='') +
+    scale_color_manual(values=c('blue', 'green'), name='') +
     geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0, vjust=0,
-             face='bold') +
+             face='bold', color='blue') +
     # geom_text(data=corrs, aes(label=p_label, x=x, y=y), size=6, hjust=0, vjust=1) +
     scale_x_continuous(breaks=0, position='top') + scale_y_continuous() +
     # xlim(c(-3,3)) + ylim(c(-3,3)) +
@@ -263,12 +259,16 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switc
     theme_minimal() +
     theme(
     # strip.placement='outside',
-          strip.text.x=element_text(),
-          strip.text.y.left=element_text(angle=0),
+          text=element_text(size=22), 
+          strip.text.x=element_text(size=22),
+          strip.text.y.left=element_text(angle=0, size=22),
           panel.grid.minor=element_blank(),
+          panel.border=element_rect(size=.5, fill=NA),
           axis.text = element_blank(),
+          axis.ticks = element_blank(),
           axis.title.y = element_text(angle=0, vjust=.5),
           plot.title = element_text(hjust=0.5, vjust=1),
+          legend.position='bottom',
           aspect.ratio=aspect
          )
     

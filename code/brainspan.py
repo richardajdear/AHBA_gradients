@@ -84,6 +84,25 @@ def get_age_groups():
     return age_groups
 
 
+def age_to_continuous(age_vector):
+    age_vector = age_vector.astype('str')
+
+    is_prenatal = age_vector.str.contains('pcw')
+    pcw = age_vector[is_prenatal].str.replace(' pcw','').astype('int')
+
+    is_months = age_vector.str.contains('mos')
+    months = age_vector[is_months].str.replace(' mos','').astype('int')
+
+    is_years = age_vector.str.contains('yrs')
+    years = age_vector[is_years].str.replace(' yrs','').astype('int')
+
+    age_vector[is_prenatal] = pcw*7 #-1*(40-pcw)/52
+    age_vector[is_months] = 40*7+months*30 #months/12
+    age_vector[is_years] = 40*7+years*365
+
+    return age_vector.astype('float')
+
+
 def get_bs_cortex_mapping():
     """
     Define mapping between Brainspan regions and HCP cortex groups
@@ -284,10 +303,10 @@ def clean_brainspan(bs_exp, bs_col, bs_row, bs_mapping):
     # Filter for only mapped regions (i.e. no subcortex)
     bs_mapped = (pd.concat([
         bs_exp.T,
-        bs_col.set_index('column_num')[['donor_id', 'age', 'structure_name']]
+        bs_col.set_index('column_num')[['donor_id', 'gender', 'age', 'structure_name', 'structure_acronym']]
     ], axis=1)
      .loc[lambda x: np.isin(x['structure_name'], mapped_regions)] # filter for mapped regions
-     .set_index(['donor_id', 'age', 'structure_name'])
+     .set_index(['donor_id', 'gender', 'age', 'structure_name', 'structure_acronym'])
      # .dropna(how='all')
     )
     

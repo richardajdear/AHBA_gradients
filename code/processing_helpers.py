@@ -88,22 +88,22 @@ def get_expression_abagen(atlas,
     # expression_all = [e for e in expression_all]
     
     # Filter for stable regions
-    expression_stable_regions, region_stability = keep_stable_regions(
-        expression_all,
-        threshold=region_stability_threshold,
-        return_stability=True)
-    region_stability = pd.Series(region_stability, index=expression_all[0].index)
-    if region_stability_threshold > 0:
-        print(f'{expression_stable_regions[1].shape[1]} regions remain \
-              after filtering for top {round(1-region_stability_threshold,2)} stability')
+    # if region_stability_threshold > 0:
+    #     expression_stable_regions, region_stability = keep_stable_regions(
+    #         expression_all,
+    #         threshold=region_stability_threshold,
+    #         return_stability=True)
+    #     region_stability = pd.Series(region_stability, index=expression_all[0].index)
+    #     print(f'{expression_stable_regions[1].shape[1]} regions remain \
+    #           after filtering for top {round(1-region_stability_threshold,2)} stability')
 
     # Filter for stable genes
-    expression_stable_genes, gene_stability = keep_stable_genes(
-        expression_stable_regions, 
-        threshold=gene_stability_threshold,
-        return_stability=True)
-    gene_stability = pd.Series(gene_stability, index=expression_stable_regions[0].columns)
     if gene_stability_threshold > 0:
+        expression_stable_genes, gene_stability = keep_stable_genes(
+            expression_all, 
+            threshold=gene_stability_threshold,
+            return_stability=True)
+        gene_stability = pd.Series(gene_stability, index=expression_all[0].columns)
         print(f'{expression_stable_genes[0].shape[1]} genes remain \
               after filtering for top {round(1-gene_stability_threshold,2)} stability')
 

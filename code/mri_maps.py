@@ -129,34 +129,90 @@ def generate_spins(maps, n=10,
     )
     np.save(outfile, spin_maps)
 
-def generate_spins_from_gradients(scores, n=10,
-                           outfile='../outputs/permutations/spin_gradients_1000.npy',
-                           atlas='hcp'):
+
+
+from neuromaps.datasets import fetch_atlas
+from neuromaps.nulls.spins import get_parcel_centroids, gen_spinsamples
+def generate_spins(n=1000, blocks=1):
+    """
+    First generate spins. Do this once so it's not repeated for each gradient
+    Generate in blocks of 1000 to prevent crashes
+    """
+    # Get sphere from which to generate spins (surface, not volume)
+    surfaces = fetch_atlas('fsaverage', '41k')['sphere']
+    # Create hemisphere ids needed to make spins
+    # (This function is named 'get_parcel_centroids' but for cornblath spin method we use vertices)
+    coords, hemiid = get_parcel_centroids(surfaces, method='surface')
+    # Actually generate the spins
+    for i in range(blocks):
+        spins = gen_spinsamples(coords, hemiid, n_rotate=n, verbose=1)
+        if blocks==0:
+            np.save(f"../outputs/permutations/spins_41k_{n}.npy", spins)
+        else:
+            np.save(f"../outputs/permutations/spins_41k_{n}_{i}.npy", spins)
+        print(f"\nGenerated block {i} of {n} spins")
     
-    if atlas == 'dk':
-        atlas = 'aparc'
-        _,_,rh_names = read_annot(f"../data/parcellations/rh.{atlas}.annot")
-        drop = rh_names + ['lh_corpuscallosum', 'lh_unknown']
-    else: 
-        atlas = 'HCPMMP1'
-        _,_,rh_names = read_annot("../data/parcellations/rh.HCPMMP1.annot")
-        # Find regions missing in scores
-        missing_rois = list(set(get_labels_hcp()[:180]).difference(scores['label']))
-        # Fix 7Pl to match HCP codes
-        missing_rois = ['7PL' if x=='7Pl' else x for x in missing_rois]
-        # Drop missing regions
-        rh_names = rh_names + [np.bytes_('L_' + roi + '_ROI') for roi in missing_rois]
-        drop = rh_names
+from neuromaps.nulls import cornblath
+def generate_nulls_from_gradients(scores, spins, hcp_img=None, n=10,
+                           outfile='../outputs/permutations/spin_gradients_10.npy'):
+    ## Next, get parcellation files in the same surface space as the spins (fsaverage)
+    if hcp_img is None:
+        hcp_img_files = ('../data/parcellations/lh.HCPMMP1.annot',
+                         '../data/parcellations/rh.HCPMMP1.annot')
+        hcp_img = annot_to_gifti(hcp_img_files)
+
+    ## Reindex scores to have NA where parcels are missing (including all right hemi)
+    scores_reindex = scores.reindex(range(1,361)).iloc[:,:3].values
+    ### Drop parcels where data are missing in the 10k fsaverage HCPMMP parcellation template
+    ## scores_reindex = np.delete(scores_reindex, [120,300], axis=0)
+
+    ## Finally, for each gradient, compute nulls by projecting up to vertices and reaveraging
+    null_scores = np.zeros([360, 3, n])
+    for i in range(3):
+        _scores = scores_reindex[:,i]
+        null_scores[:,i,:] = cornblath(
+                data=_scores, 
+                atlas='fsaverage', density='10k', 
+                parcellation=hcp_img, 
+                n_perm=n, spins=spins
+                )
+        print(f"\nGenerated {n} null models of axis {i}")
     
-    spin_pcs = nnsurf.spin_data(
-        data = np.array(scores.set_index('label')),
-        drop = drop,
-        version = "fsaverage",
-        lhannot = f"../data/parcellations/lh.{atlas}.annot",
-        rhannot = f"../data/parcellations/rh.{atlas}.annot",
-        n_rotate = n,
-    )
-    np.save(outfile, spin_pcs)
+    # Drop right hemi
+    null_scores = null_scores[:180,:,:]
+
+    np.save(outfile, null_scores)
+
+
+# LEGACY VERSION
+# def generate_spins_from_gradients(scores, n=10,
+#                            outfile='../outputs/permutations/spin_gradients_1000.npy',
+#                            atlas='hcp'):
+    
+#     if atlas == 'dk':
+#         atlas = 'aparc'
+#         _,_,rh_names = read_annot(f"../data/parcellations/rh.{atlas}.annot")
+#         drop = rh_names + ['lh_corpuscallosum', 'lh_unknown']
+#     else: 
+#         atlas = 'HCPMMP1'
+#         _,_,rh_names = read_annot("../data/parcellations/rh.HCPMMP1.annot")
+#         # Find regions missing in scores
+#         missing_rois = list(set(get_labels_hcp()[:180]).difference(scores['label']))
+#         # Fix 7Pl to match HCP codes
+#         missing_rois = ['7PL' if x=='7Pl' else x for x in missing_rois]
+#         # Drop missing regions
+#         rh_names = rh_names + [np.bytes_('L_' + roi + '_ROI') for roi in missing_rois]
+#         drop = rh_names
+    
+#     spin_pcs = nnsurf.spin_data(
+#         data = np.array(scores.set_index('label')),
+#         drop = drop,
+#         version = "fsaverage",
+#         lhannot = f"../data/parcellations/lh.{atlas}.annot",
+#         rhannot = f"../data/parcellations/rh.{atlas}.annot",
+#         n_rotate = n,
+#     )
+#     np.save(outfile, spin_pcs)
 
     
 def generate_simulations(maps, n=10,
@@ -192,17 +248,19 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr',
     Get correlations with maps from gradient score nulls
     Uses numpy masked array to handle missing values
     """
-    # First filter maps for regions in gradients
-    maps_filter = maps.set_axis(range(1, maps.shape[0]+1)).loc[scores.index, :]
+    # Filter maps for regions in gradients
+    # maps_filter = maps.set_axis(range(1, maps.shape[0]+1)).loc[scores.index, :]
+    # Reindex scores to all regions
+    scores = scores.reindex(range(1,181))
 
-    n_maps = maps_filter.shape[1]
+    n_maps = maps.shape[1]
     output_frame = np.zeros((n_components*n_maps, 2))
-    output_index = pd.MultiIndex.from_product([scores.iloc[:,:n_components].columns, maps_filter.columns])
+    output_index = pd.MultiIndex.from_product([scores.iloc[:,:n_components].columns, maps.columns])
 
     # For each gradient
     for g in range(null_grads.shape[1]):
         _scores = scores.iloc[:,g].values
-        _scores = _scores.astype(np.longdouble) # hack to force ValueError in compare_images
+        _scores = _scores.astype(np.longdouble) # force ValueError in compare_images
         # Optionally pool maps together
         if pool:
             # Set dimensions for reshaping
@@ -215,9 +273,9 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr',
             _nulls = null_grads[:,g,:]
         
         # For each map
-        for m in range(maps_filter.shape[1]):
-            _map = maps_filter.iloc[:,m].values
-            _map = _map.astype(np.longdouble) # hack to force ValueError in compare_images
+        for m in range(maps.shape[1]):
+            _map = maps.iloc[:,m].values
+            _map = _map.astype(np.longdouble) # force compare_images to work
             _r, _p = compare_images(_scores, _map, nulls=_nulls, metric=method)
             output_frame[m+g*n_maps,:] = [_r, _p]
 

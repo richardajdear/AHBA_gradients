@@ -41,6 +41,26 @@ def get_gwas(filename='trubetskoy2022'):
 
 
 
+def get_asd_deg():
+    asd_deg = (pd.concat({
+        'gandal2022': pd.read_csv("../data/gandal2022_asd.csv").dropna(),
+        'parikshak2016': pd.read_csv("../data/parikshak2016_genes.csv").dropna(),
+    }).reset_index(0).rename({'level_0':'label'},axis=1)
+        .loc[lambda x: x['FDR']<0.05]
+        .drop('FDR',axis=1)
+        .replace({'gene': replace_dict})
+    )
+
+    gandal2018 = (
+        get_gandal_genes(which='rnaseq', disorders=['ASD'], sig_level=0.05)
+        .reset_index().query('sig').drop('sig', axis=1)
+        .assign(label='gandal2018')
+    )
+
+    return pd.concat([asd_deg, gandal2018])
+
+
+
 
 def get_gandal_genes(which='microarray', disorders = ['ASD', 'SCZ', 'MDD'], sig_level=.05):
 

@@ -5,7 +5,7 @@ from scipy.stats import percentileofscore
 from statsmodels.stats.multitest import multipletests
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-# import gseapy as gp
+import gseapy as gp
 
 from processing_helpers import *
 
