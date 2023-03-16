@@ -227,9 +227,9 @@ def generate_simulations(maps, n=10,
         maps=maps.drop('label', axis=1)
     
     if atlas == 'hcp' and dist_mat is None:
-        dist_mat="../data/LeftParcelGeodesicDistmat.txt"
+        dist_mat="../data/parcellations/LeftParcelGeodesicDistmat.txt"
     elif atlas == 'dk':
-        dist_mat="../data/LeftParcelGeodesicDistmat_DK.txt"
+        dist_mat="../data/parcellations/LeftParcelGeodesicDistmat_DK.txt"
     
     null_maps = np.zeros([maps.shape[0], maps.shape[1], n])
     
@@ -249,9 +249,13 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr',
     Uses numpy masked array to handle missing values
     """
     # Filter maps for regions in gradients
-    # maps_filter = maps.set_axis(range(1, maps.shape[0]+1)).loc[scores.index, :]
-    # Reindex scores to all regions
+    # maps = maps.set_axis(range(1, maps.shape[0]+1)).loc[scores.index, :]
+    # Filter nulls for regions in gradients
+    # null_grads = null_grads[scores.index-1, :, :]
+
+    # # Reindex scores to all regions
     scores = scores.reindex(range(1,181))
+    # null_grads = null_grads
 
     n_maps = maps.shape[1]
     output_frame = np.zeros((n_components*n_maps, 2))

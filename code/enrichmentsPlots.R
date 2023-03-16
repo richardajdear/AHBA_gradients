@@ -2,7 +2,6 @@ suppressPackageStartupMessages(library(tidyverse))
 library(pals)
 library(ggridges)
 library(ggrepel)
-library(ggradar)
 library(ggh4x) # needed for facet_grid2 to not clip strip labels
 
 
@@ -71,7 +70,7 @@ plot_enrichment_bars_z <- function(null_p, xlab='z-score') {
 
 
 
-plot_enrichment_heatmaps <- function(null_p_versions, ncol=3, scales=NULL) {
+plot_enrichment_heatmaps <- function(null_p_versions, ncol=3, scales=NULL, aspect=1) {
     lim <- max(abs(null_p_versions$z))
     
     null_p_versions %>%
@@ -93,7 +92,7 @@ plot_enrichment_heatmaps <- function(null_p_versions, ncol=3, scales=NULL) {
           axis.title = element_blank(),
           strip.text.x=element_text(size=20),
           strip.placement='outside',
-          aspect.ratio=1,
+          aspect.ratio=aspect,
           text=element_text(size=20)
          )
     # coord_fixed()
