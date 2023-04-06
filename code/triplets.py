@@ -66,8 +66,10 @@ def filter_triplet_stability(triplets, stability_threshold=0, which='genes', **k
             
     return triplets_filtered
 
+
 def get_triplets_stability_levels(triplets, **kwargs):
     """
+    Compute gradients over different gene stability levels for each triplet
     """
     triplets_stability_levels = {}
     for stability in [i/10 for i in range(0,10)]:
@@ -78,6 +80,9 @@ def get_triplets_stability_levels(triplets, **kwargs):
 
 
 def disjoint_corrs(triplets_version, how='coefs', match=True):
+    """
+    Correlate all pairs of disjoint triplets for a given parameter setting
+    """
     # Get triplet definitions
     triplets_dict_donors, disjoint_triplets = define_triplets()
     
@@ -104,7 +109,7 @@ def disjoint_corrs(triplets_version, how='coefs', match=True):
 
 def make_triplet_ds_plot(triplets_ds_levels, with_weights=False):
     """
-    x
+    Compile the disjoint correlations from a set of triplets at different ds levels
     """
     
     scores_weights_dict = {}

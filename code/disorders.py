@@ -12,6 +12,95 @@ replace_dict = {'01-Mar':'MARCH1', '02-Mar':'MARCH2', '03-Mar':'MARCH3', '04-Mar
                 '01-Dec':'DECR1', '02-Dec':'DECR2'}
 
 
+def get_gwas_combined():
+    # SCZ data from https://figshare.com/articles/dataset/scz2022/19426775?file=35775617
+    trubetskoy = (pd.read_csv(f"../data/gwas/trubetskoy2022_extended.csv")
+                #   .loc[lambda x: x["Extended.GWAS"]=='YES', 'Symbol.ID']
+                #   .rename('gene')
+                  .loc[lambda x: x["Extended.GWAS"]=='YES', 'Ensembl.ID']
+                  .pipe(ensembl_id_to_gene_symbol)
+                  .rename('gene')
+                  .reset_index(drop=True)
+    )
+
+    # ASD data from https://www.nature.com/articles/s41398-020-00953-9#MOESM1
+    matoba = (pd.read_csv(f"../data/gwas/matoba2020_tableS7.csv")
+                  .loc[lambda x: x['FDR']<=0.05, :]
+                #   .loc[:, 'hgnc_symbol'].rename('gene')
+                  .loc[:, 'GENE']
+                  .pipe(ensembl_id_to_gene_symbol)
+                  .rename('gene')
+                  .reset_index(drop=True)
+    )
+
+    # MDD data from https://www.nature.com/articles/s41593-018-0326-7#MOESM11
+    howard = (pd.read_csv(f"../data/gwas/howard2019_tableS9.csv", header=1)
+                  .loc[:, 'Gene Name'].rename('gene')
+    )
+
+    df = (pd.concat({
+        'ASD': matoba,
+        'MDD': howard,
+        'SCZ': trubetskoy,
+    })
+        .reset_index(0)
+        .rename({'level_0':'label'}, axis=1)
+        .assign(gene = lambda x: x['gene'].str.replace('\\..*','', regex=True)) #drop variants
+        .drop_duplicates()
+        .replace({'gene': replace_dict})
+    )
+    return df
+
+
+import mygene
+def ensembl_id_to_gene_symbol(ensembl_ids):
+    mg = mygene.MyGeneInfo()
+    ensembl_ids = [ens.split('.')[0] for ens in ensembl_ids]
+    matches = mg.querymany(ensembl_ids, scopes='ensembl.gene', as_dataframe=True)['symbol']
+    return(matches)
+
+
+
+def get_deg_combined():
+    deg_dict = {
+        'ASD--Gandal 2022': pd.read_csv("../data/deg/gandal2022_tableS3.csv").loc[lambda x: x['WholeCortex_ASD_FDR']<=0.05, 'external_gene_name'],
+        'ASD--Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['ASD.fdr']<=0.05, 'gene_name'],
+        'ASD--Parikshak2016': pd.read_csv("../data/deg/parikshak2016_tableS2.csv", header=1, dtype={'Chr':'object', 'HGNC Symbol':'object'}).loc[lambda x: x['FDR-adjusted P value, ASD vs CTL']<=0.05, 'HGNC Symbol'],
+        # 'SCZ--Collado-Torres 2019': pd.read_csv("../data/deg/colladotorres2019_tableS11.csv").loc[lambda x: x['adj.P.Val']<=0.05, 'Symbol'],
+        'SCZ--Jaffe 2018': pd.read_csv("../data/deg/jaffe2018_tableS9.csv", header=1).loc[lambda x: x['fdr_qsva']<=0.05, 'Symbol'],
+        'SCZ--Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['SCZ.fdr']<=0.05, 'gene_name'],
+        'SCZ--Fromer 2016': pd.read_csv("../data/deg/fromer2016_tableS3.csv", header=1).loc[lambda x: x['FDR estimate']<=0.05, 'Gene Symbol'],
+    }
+
+    deg_genes = pd.concat(deg_dict).to_frame().reset_index(0).rename({'level_0':'label', 0:'gene'}, axis=1)
+
+    # asd_dict = {
+    #     'Gandal 2022': pd.read_csv("../data/deg/gandal2022_tableS3.csv").loc[lambda x: x['WholeCortex_ASD_FDR']<=0.05, 'external_gene_name'],
+    #     'Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['ASD.fdr']<=0.05, 'gene_name'],
+    #     'Parikshak2016': pd.read_csv("../data/deg/parikshak2016_tableS2.csv", header=1, dtype={'Chr':'object', 'HGNC Symbol':'object'}).loc[lambda x: x['FDR-adjusted P value, ASD vs CTL']<=0.05, 'HGNC Symbol'],
+    # }
+
+    # scz_dict = {
+    #     # 'SCZ (Collado-Torres 2019)': pd.read_csv("../data/deg/colladotorres2019_tableS11.csv").loc[lambda x: x['adj.P.Val']<=0.05, 'Symbol'],
+    #     'Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['SCZ.fdr']<=0.05, 'gene_name'],
+    #     'Jaffe 2018': pd.read_csv("../data/deg/jaffe2018_tableS9.csv", header=1).loc[lambda x: x['fdr_qsva']<=0.05, 'Symbol'],
+    #     'Fromer 2016': pd.read_csv("../data/deg/fromer2016_tableS3.csv", header=1).loc[lambda x: x['FDR estimate']<=0.05, 'Gene Symbol'],
+    # }
+    
+    # deg_genes = (pd.concat({
+    #     'ASD': pd.concat(asd_dict),
+    #     'SCZ': pd.concat(scz_dict)
+    # }).reset_index()
+    #     .rename({'level_0':'disorder', 'level_1':'label', 0:'gene'}, axis=1)
+    #     .drop('level_2', axis=1)
+    #     )
+
+    return deg_genes
+
+
+
+
+
 
 
 def get_disgenet_genes():
@@ -28,8 +117,6 @@ def get_disgenet_genes():
     return disgenet_genes 
 
 
-
-
 def get_gwas(filename='trubetskoy2022'):
     df = pd.read_csv(f"../data/gwas/{filename}.csv")
     df = (df.melt(var_name='label', value_name='gene').dropna()
@@ -41,10 +128,11 @@ def get_gwas(filename='trubetskoy2022'):
 
 
 
+
 def get_asd_deg():
     asd_deg = (pd.concat({
-        'gandal2022': pd.read_csv("../data/gandal2022_asd.csv").dropna(),
-        'parikshak2016': pd.read_csv("../data/parikshak2016_genes.csv").dropna(),
+        'gandal2022': pd.read_csv("../data/deg/gandal2022_asd.csv").dropna(),
+        'parikshak2016': pd.read_csv("../data/deg/parikshak2016_genes.csv").dropna(),
     }).reset_index(0).rename({'level_0':'label'},axis=1)
         .loc[lambda x: x['FDR']<0.05]
         .drop('FDR',axis=1)
@@ -65,7 +153,7 @@ def get_asd_deg():
 def get_gandal_genes(which='microarray', disorders = ['ASD', 'SCZ', 'MDD'], sig_level=.05):
 
     if which == 'microarray':
-        gandal_genes = (pd.read_csv("../data/gandal_genes_microarray.csv")
+        gandal_genes = (pd.read_csv("../data/deg/gandal_genes_microarray.csv")
                         .rename({'external_gene_id':'gene'},axis=1)
                         .replace({'gene': replace_dict})
                         .rename({f'{d}.beta_log2FC':f'{d}.log2FC' for d in disorders}, axis=1) 
@@ -76,7 +164,7 @@ def get_gandal_genes(which='microarray', disorders = ['ASD', 'SCZ', 'MDD'], sig_
                         # .sort_index()
                        )
     elif which == 'rnaseq':
-        gandal_genes = (pd.read_csv("../data/gandal_genes_rnaseq.csv")
+        gandal_genes = (pd.read_csv("../data/deg/gandal_genes_rnaseq.csv")
                         .rename({'gene_name':'gene'},axis=1) 
                         .replace({'gene':replace_dict})
                         .rename({f'{d}.fdr':f'{d}.FDR' for d in disorders}, axis=1)                         

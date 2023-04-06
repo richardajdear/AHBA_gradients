@@ -61,7 +61,9 @@ plot_bs_dk_mapping <- function(dk_bs_mapping,title='',xlab='') {
 plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', rotate=F) {
     g <- bs_scores_corr %>% 
     mutate_at(vars(age), ~ factor(., levels=unique(.))) %>%
-    ggplot() + geom_hline(yintercept=0, color='grey') + geom_vline(xintercept=xint, color='grey') +
+    ggplot() + 
+    geom_hline(yintercept=0, color='grey') + 
+    geom_vline(xintercept=xint, color='grey') +
     geom_line(aes(x=age, y=corr, color=G, group=G), size=1, alpha=1) + 
     geom_point(aes(x=age, y=corr, color=G), size=5) + 
     xlab("") + ylab("AHBA-BrainSpan correlation") +

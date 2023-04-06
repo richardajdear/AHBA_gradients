@@ -25,11 +25,12 @@ plot_dk <- function(scores_df, title="", facet='h', switch=NULL, spacing_x=0) {
         df %>% .$score %>% quantile(.01) %>% abs
     )
     
-    p <- ggplot(df) + 
-    geom_brain(
+    p <- df %>%
+    ggseg(
         atlas=dk,
         hemi='left',
-        mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
+        # mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
+        mapping=aes(fill=score),
         colour='grey', size=.1,
         show.legend=T
         ) + 
@@ -284,10 +285,10 @@ plot_dk_wide <- function(scores_df, title="", facet='h', spacing=4) {
 
     dk$data <- dk$data %>% filter(hemi=='left')
     
-    p <- ggplot(df) + 
-    geom_brain(
+    p <- df %>% ggseg(
         atlas=dk,
-        mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
+        # mapping=aes(fill=score, geometry=geometry, hemi=hemi, side=side, type=type),
+        mapping=aes(fill=score),
         colour='grey', size=.1,
         show.legend=T
         ) + 

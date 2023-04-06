@@ -27,8 +27,8 @@ def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True):
     selected_maps = [
         'T1T2',
         'thickness',
-        #'glasser_CMRO2',
-        #'glasser_CMRGlu',        
+        # 'glasser_CMRO2',
+        'glasser_CMRGlu',        
         'G1_fMRI',        
         'PC1_neurosynth',        
         'externopyramidisation',        
@@ -153,7 +153,7 @@ def generate_spins(n=1000, blocks=1):
         print(f"\nGenerated block {i} of {n} spins")
     
 from neuromaps.nulls import cornblath
-def generate_nulls_from_gradients(scores, spins, hcp_img=None, n=10,
+def generate_nulls_from_gradients(scores, spins, hcp_img=None, n=10, n_components=3, only_left=True,
                            outfile='../outputs/permutations/spin_gradients_10.npy'):
     ## Next, get parcellation files in the same surface space as the spins (fsaverage)
     if hcp_img is None:
@@ -162,12 +162,12 @@ def generate_nulls_from_gradients(scores, spins, hcp_img=None, n=10,
         hcp_img = annot_to_gifti(hcp_img_files)
 
     ## Reindex scores to have NA where parcels are missing (including all right hemi)
-    scores_reindex = scores.reindex(range(1,361)).iloc[:,:3].values
+    scores_reindex = scores.reindex(range(1,361)).iloc[:,:n_components].values
     ### Drop parcels where data are missing in the 10k fsaverage HCPMMP parcellation template
     ## scores_reindex = np.delete(scores_reindex, [120,300], axis=0)
 
     ## Finally, for each gradient, compute nulls by projecting up to vertices and reaveraging
-    null_scores = np.zeros([360, 3, n])
+    null_scores = np.zeros([360, scores_reindex.shape[1], n])
     for i in range(3):
         _scores = scores_reindex[:,i]
         null_scores[:,i,:] = cornblath(
@@ -179,7 +179,8 @@ def generate_nulls_from_gradients(scores, spins, hcp_img=None, n=10,
         print(f"\nGenerated {n} null models of axis {i}")
     
     # Drop right hemi
-    null_scores = null_scores[:180,:,:]
+    if only_left:
+        null_scores = null_scores[:180,:,:]
 
     np.save(outfile, null_scores)
 
@@ -243,6 +244,7 @@ def generate_simulations(maps, n=10,
 
 
 def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr', 
+                          reindex=True,
                           pool=False, pool_frac=.3, adjust='fdr_bh', n_components=3):
     """
     Get correlations with maps from gradient score nulls
@@ -254,7 +256,8 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr',
     # null_grads = null_grads[scores.index-1, :, :]
 
     # # Reindex scores to all regions
-    scores = scores.reindex(range(1,181))
+    if reindex:
+        scores = scores.reindex(range(1,181))
     # null_grads = null_grads
 
     n_maps = maps.shape[1]

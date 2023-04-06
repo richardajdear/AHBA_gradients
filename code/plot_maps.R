@@ -133,10 +133,11 @@ plot_maps_dk <- function(maps, title="", ncol=3, facet='w', spacing=0,
         labels = c(round(m_min+0.5,2),round(m_max+0.5,2))
     }
 
-    p <- ggplot(df) + 
-    geom_brain(
+    p <- df %>% 
+    ggseg(
         atlas=dk,
-        mapping=aes(fill=value, geometry=geometry, hemi=hemi, side=side, type=type),
+        hemi='left',
+        mapping=aes(fill=value),
         colour='grey', size=.1,
         show.legend=T
         ) + 
@@ -216,7 +217,64 @@ plot_pca_weights <- function(pca_weights, size=6) {
 }
 
 
+
 plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switch='both',
+                             x=0, y=0,
+                             size=8, pointsize=3,
+                             xlab='', ylab='', aspect=1) {
+    df <- maps_scatter
+    # gather(G, G_score, -label, -map, -map_score)
+
+    corrs <- maps_scatter_corrs %>%
+    mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
+    mutate(sig_label=ifelse(q<0.001, '***',
+                   ifelse(q<0.01, '**',
+                   ifelse(q<0.05, '*','')))) %>%
+    mutate(r_label=paste('R =', round(r,2), sig_label))
+    # mutate(x=-1, y=2)
+
+    # if (!is.null(which) ) {
+    #     df <- df %>% filter(map %in% which)
+    #     corrs <- corrs %>% filter(map %in% which)
+    # }
+    
+    p <- df %>%
+    mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
+    ggplot(aes(x=G_score, y=map_score)) +
+    geom_point(alpha=.3, size=pointsize) +
+    geom_smooth(method='lm', color=brewer.puor(5)[5], size=2) +
+    geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0.5, vjust=0.5,
+             face='bold') +
+    # geom_text(data=corrs, aes(label=p_label, x=x, y=y), size=6, hjust=0, vjust=1) +
+    scale_x_continuous(breaks=0, position='top') + scale_y_continuous(breaks=0) +
+    # xlim(c(-3,3)) + ylim(c(-3,3)) +
+    xlab(xlab) + ylab(ylab) +
+    coord_cartesian(clip='off') +
+    theme_minimal() +
+    theme(
+    # strip.placement='outside',
+          strip.text.x=element_text(),
+          strip.text.y.left=element_text(angle=0),
+          panel.grid.minor=element_blank(),
+          axis.text = element_blank(),
+          axis.title.y = element_text(angle=0, vjust=.5),
+          plot.title = element_text(hjust=0.5, vjust=1),
+          aspect.ratio=aspect
+         )
+    
+    if (facet=='v') {
+        p + facet_grid(map~G, switch=switch)
+    } else if (facet=='h') {
+        p + facet_grid(G~map, switch=switch, scales='free')
+    } else {
+        p
+    }
+}
+
+
+
+
+plot_maps_scatter_explore <- function(maps_scatter, maps_scatter_corrs, facet='v', switch='both',
                              size=8, pointsize=3, color='black',
                              xlab='', ylab='', aspect=1) {
     
@@ -249,7 +307,7 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switc
     geom_point(alpha=.3, size=pointsize, color=color) +
     geom_smooth(method='lm', aes(color=sig), size=2, se=FALSE) +
     scale_color_manual(values=c('blue', 'green'), name='') +
-    geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0, vjust=0,
+    geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0, vjust=-.1,
              face='bold', color='blue') +
     # geom_text(data=corrs, aes(label=p_label, x=x, y=y), size=6, hjust=0, vjust=1) +
     scale_x_continuous(breaks=0, position='top') + scale_y_continuous() +

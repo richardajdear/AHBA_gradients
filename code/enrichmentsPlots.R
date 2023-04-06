@@ -1,10 +1,10 @@
 suppressPackageStartupMessages(library(tidyverse))
 library(pals)
-library(ggridges)
 library(ggrepel)
 library(ggh4x) # needed for facet_grid2 to not clip strip labels
 
 
+library(ggridges)
 plot_enrichment_bars <- function(null_p, xlab='Corr', lim='none') {
     
     if (lim=='none') {
@@ -69,8 +69,65 @@ plot_enrichment_bars_z <- function(null_p, xlab='z-score') {
 }
 
 
+plot_heatmap_simple <- function(stats, size=6) {
+    lim <- max(abs(stats$z))
+    
+    stats %>%
+    mutate(label = factor(label, ordered=T, levels=rev(unique(.$label)))) %>%
+    mutate(p_level=ifelse(q<0.001, '***',
+                   ifelse(q<0.01, '**',
+                   ifelse(q<0.05, '*','')))) %>%
+    ggplot(aes(x=G, y=label)) +
+    geom_raster(aes(fill=z)) + 
+    geom_text(aes(label=p_level), vjust=.5, hjust=.5, size=size, color='white') +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), name='Enrichment Z-score', 
+                        limits=c(-lim,lim), breaks=c(-floor(lim*10)/10,floor(lim*10)/10)) +
+    scale_x_discrete(position='top') +
+    guides(fill=guide_colorbar(barwidth=5)) +
+    xlab('') + ylab('') +
+    coord_fixed() +
+    theme_minimal() +
+    theme(panel.grid=element_blank(),
+          axis.text = element_text(size=22, color='grey7', family='Calibri'),
+          legend.title=element_text(vjust=1),
+          legend.position='bottom'
+         )
+}
 
-plot_enrichment_heatmaps <- function(null_p_versions, ncol=3, scales=NULL, aspect=1) {
+plot_heatmap_split <- function(stats, size=6) {
+    lim <- max(abs(stats$z))
+    
+    stats %>%
+    mutate(label = factor(label, ordered=T, levels=rev(unique(.$label)))) %>%
+    mutate(p_level=ifelse(q<0.001, '***',
+                   ifelse(q<0.01, '**',
+                   ifelse(q<0.05, '*','')))) %>%
+    ggplot(aes(x=G, y=label)) +
+    # facet_grid(disorder~., scales='free_y', switch='y') +
+    facet_wrap(~disorder, scales='free_y', strip.position="left") +
+    geom_raster(aes(fill=z)) + 
+    geom_text(aes(label=p_level), vjust=.5, hjust=.5, size=size, color='white') +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), name='Enrichment Z-score', 
+                        limits=c(-lim,lim), breaks=c(-floor(lim*10)/10,floor(lim*10)/10)) +
+    scale_x_discrete(position='top') +
+    guides(fill=guide_colorbar(barwidth=5)) +
+    xlab('') + ylab('') +
+    # coord_fixed() +
+    theme_minimal() +
+    theme(panel.grid=element_blank(),
+          axis.text = element_text(size=22, color='grey7', family='Calibri'),
+          legend.title=element_text(vjust=1),
+          legend.position='bottom',
+          aspect.ratio=1,
+          strip.placement='outside',
+          strip.text.y.left = element_text(angle=0, vjust=.5, size=22, face='bold'),
+          strip.text = element_text(angle=0, vjust=.5, size=22, face='bold')
+         )
+}
+
+
+
+plot_enrichment_heatmaps <- function(null_p_versions, ncol=3, scales=NULL) {
     lim <- max(abs(null_p_versions$z))
     
     null_p_versions %>%
@@ -92,7 +149,7 @@ plot_enrichment_heatmaps <- function(null_p_versions, ncol=3, scales=NULL, aspec
           axis.title = element_blank(),
           strip.text.x=element_text(size=20),
           strip.placement='outside',
-          aspect.ratio=aspect,
+          aspect.ratio=1.3,
           text=element_text(size=20)
          )
     # coord_fixed()
@@ -325,9 +382,9 @@ plot_log2FC <- function(scatter, corr=NULL, x=0, y=1) {
     }
 }
 
-plot_gene_distributions <- function(dge, null_p=FALSE, split=FALSE, abs=FALSE) {
+plot_gene_distributions <- function(deg, null_p=FALSE, split=FALSE, abs=FALSE) {
     if (null_p) {
-        dge <- dge %>% 
+        deg <- deg %>% 
             mutate(sig = ifelse(q<0.05,'FDR sig','not FDR sig')) %>% 
             mutate(p_sig = case_when(
                 p < .0001 ~ '****',p < .001 ~ '***',p < .01 ~ '**',p < .05 ~ '*', TRUE ~ ''
@@ -339,20 +396,20 @@ plot_gene_distributions <- function(dge, null_p=FALSE, split=FALSE, abs=FALSE) {
     }
 
     if (split) {
-        dge <- dge %>% mutate(updown = ifelse(log2FC>0,'up','down'))
+        deg <- deg %>% mutate(updown = ifelse(log2FC>0,'up','down'))
     }
 
     if (abs) {
-        dge <- dge %>% mutate(weight = abs(weight))
+        deg <- deg %>% mutate(weight = abs(weight))
     }
     
-    p <- dge %>% 
+    p <- deg %>% 
     mutate(label = factor(label, ordered=T, levels=rev(unique(.$label)))) %>%
     group_by(label, G) %>% 
     mutate(mean_weight = mean(weight)) %>% 
     ungroup() %>% 
     ggplot(aes(x=weight)) +
-    facet_grid(label~G, switch='both') +
+    facet_grid(label~G, switch='both', scales='free') +
     # geom_vline(aes(xintercept=mean_weight), size=.5, linetype=2) +
     # geom_vline(aes(xintercept=0), size=.5, linetype=1) +
     theme_minimal() +
@@ -385,7 +442,7 @@ plot_gene_distributions <- function(dge, null_p=FALSE, split=FALSE, abs=FALSE) {
             geom_density(aes(y=after_stat(count), fill=mean_weight), alpha=.3, size=.5) +
             scale_fill_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-.005,.005))
     } else {
-        data_for_annotate <- dge %>% 
+        data_for_annotate <- deg %>% 
             select(label,G,true_mean,null_mean,z,p,q,p_sig,q_sig) %>% 
             unique %>% 
             mutate(label = factor(label, ordered=T, levels=rev(unique(.$label))))
@@ -406,6 +463,46 @@ plot_gene_distributions <- function(dge, null_p=FALSE, split=FALSE, abs=FALSE) {
     p
 }
 
+
+plot_logFC_groups <- function(dge, group='cell', y_var='logFC') {
+    cell_levels <- c('Neuro-Ex', 'Neuro-In', 'Astro', 'Endo', 'Micro', 'Oligo', 'OPC', 'No celltype')
+    layer_levels <- c('L1','L2','L3','L4','L5','L6','WM','No layer')
+
+    dge_plot <- dge %>% 
+    mutate(cell = factor(cell, ordered=T, levels=cell_levels)) %>% 
+    mutate(layer = factor(layer, ordered=T, levels=layer_levels)) %>% 
+    mutate(label = factor(label, ordered=T, levels=unique(.$label)))
+
+    if (y_var=='logFC') {
+        p <- dge_plot %>% 
+            ggplot(aes(x=get(group), y=log2FC)) +
+            geom_jitter(aes(color=weight))
+    } else {
+        p <- dge_plot %>% 
+            ggplot(aes(x=get(group), y=weight)) +
+            geom_jitter(aes(color=log2FC))
+    }
+    p +
+    facet_grid(label~G, switch='x') +
+    scale_color_gradientn(colors=rev(brewer.rdbu(100))) +
+    theme_minimal() +
+    theme(
+        strip.placement='outside',
+        panel.grid.minor=element_blank(),
+        panel.border=element_rect(fill=NA),
+        text=element_text(size=16),
+        axis.title.y=element_text(size=20),
+        axis.title.x=element_blank(),
+        axis.text.x=element_text(angle=30, hjust=1, size=20),
+        axis.text.y=element_text(angle=0, hjust=1, size=20),
+        strip.text.y=element_text(angle=0),
+        strip.text=element_text(size=20),
+        legend.position = 'right',
+        legend.text=element_text(size=20),
+        # legend.title=element_blank(),
+        plot.title=element_text(size=22)
+    )
+}
 
 
 # ########### OLD

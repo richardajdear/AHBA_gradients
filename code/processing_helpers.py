@@ -98,14 +98,14 @@ def get_expression_abagen(atlas,
     #           after filtering for top {round(1-region_stability_threshold,2)} stability')
 
     # Filter for stable genes
-    if gene_stability_threshold > 0:
-        expression_stable_genes, gene_stability = keep_stable_genes(
-            expression_all, 
-            threshold=gene_stability_threshold,
-            return_stability=True)
-        gene_stability = pd.Series(gene_stability, index=expression_all[0].columns)
-        print(f'{expression_stable_genes[0].shape[1]} genes remain \
-              after filtering for top {round(1-gene_stability_threshold,2)} stability')
+    # if gene_stability_threshold > 0:
+    expression_stable_genes, gene_stability = keep_stable_genes(
+        expression_all, 
+        threshold=gene_stability_threshold,
+        return_stability=True)
+    gene_stability = pd.Series(gene_stability, index=expression_all[0].columns)
+    print(f'{expression_stable_genes[0].shape[1]} genes remain \
+            after filtering for top {round(1-gene_stability_threshold,2)} stability')
 
     # Combine donors together after filtering
     if return_donors:

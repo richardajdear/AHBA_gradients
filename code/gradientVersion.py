@@ -26,8 +26,8 @@ def compute_affinity_new(x, kernel=None, sparsity=.9, pre_sparsify=True,
 brainspace.gradient.gradient.compute_affinity = compute_affinity_new
 
 
-
 class gradientVersion():
+
     
     def __init__(self, approach='dm', n_components=5, sparsity=0, kernel=None,
                 marker_genes=['NEFL', 'LGALS1', 'SYT6'], 
@@ -49,7 +49,6 @@ class gradientVersion():
 
         self.expression = None
         self.scores = None
-        self.var = None
         self.gradients = brainspace.gradient.gradient.GradientMaps(n_components=n_components, approach=approach, kernel=kernel)    
 
         
@@ -167,7 +166,35 @@ class gradientVersion():
             scores = self.clean_scores(scores=scores_dk)
         
         return scores
+
+
+# def hcp_to_dk(maps_hcp,
+#                 hcp_img_path = "../data/parcellations/lh.HCPMMP1.annot",
+#                 dk_img_path = "../data/parcellations/lh.aparc.annot"
+#                 ):
+#     """
+#     Project HCP maps to DK using annot files (left hemi only)
+#     """
+#     hcp_img = annot_to_gifti(hcp_img_path)
+#     dk_img = annot_to_gifti(dk_img_path)
     
+#     n_maps = maps_hcp.shape[1]
+#     maps_dk = np.zeros((34, n_maps))
+#     for i in range(n_maps):
+#         # Re-index gradient null values with NA
+#         _map_hcp = maps_hcp[i].reindex(range(1,181)).values
+#         # Use HCP parcellation image to project HCP data to fsaverage
+#         _map_fsaverage = parcels_to_vertices(_map_hcp, hcp_img)
+#         # Use DK parcellation image to project fsaverage data into DK
+#         _map_dk = vertices_to_parcels(_map_fsaverage, dk_img)
+#         # Add to outputs
+#         maps_dk[:,i] = _map_dk
+    
+#     # Convert to dataframe
+#     maps_dk = pd.DataFrame.from_records(maps_dk, index=list(range(1,35)))
+    
+#     return maps_dk
+
     
     def fit_weights(self, other_expression=None, independent=True, normalize=False, sort=False, save_name=None, overwrite=True):
         """
@@ -362,8 +389,8 @@ class gradientVersion():
 
         xs = [m[0] for m in matches]
         ys = [m[1] for m in matches]
-        x_vars = [self.var[i] for i in xs]
-        y_vars = [other.var[i] for i in ys]
+        x_vars = [self.eigenvalues[i] for i in xs]
+        y_vars = [other.eigenvalues[i] for i in ys]
         mean_vars = [(x+y)/2 for x,y in zip(x_vars, y_vars)]
         sort_idx = np.argsort(mean_vars)[::-1]
 

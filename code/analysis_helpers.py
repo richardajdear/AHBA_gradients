@@ -78,7 +78,7 @@ def get_coexp(expression, order=''):
         ord = (fetch_hcp()['info'][:180]
               .sort_values(['Lobe', 'cortex'])
               .set_index('id')
-              .loc[expression.index]
+              .loc[lambda x: np.isin(x.index, expression.index)]
               .index
             )
         coexp = coexp.loc[ord, ord]
@@ -87,20 +87,26 @@ def get_coexp(expression, order=''):
     return coexp
 
 ### Clustering coefficients
-def get_clustering_coef(coexp, threshold=None):
+def get_graph_metric(coexp, metric='transitivity', threshold=None, nonnegative=True):
     # sp = sparse.csr_matrix(coexp+1)
     # return Triangles().fit(sp).clustering_coef_
+    if nonnegative:
+        A = np.where(coexp.values > 0, coexp.values, 0)
+    else:
+        A = coexp.values
+
     if threshold is not None:
         # Binarise network
-        A = coexp.values > threshold
-    else:
-        # Weighted network
-        A = coexp.values
+        A = A > np.quantile(A.flatten(), threshold)
+    
     G = nx.from_numpy_array(A)
-    node_coefs = nx.clustering(G, weight='weight')
-    global_coef = np.array([*node_coefs.values()]).mean()
-    return global_coef
 
+    if metric=='transitivity':
+        out = nx.transitivity(G)
+    elif metric=='clustering':
+        node_coefs = nx.clustering(G, weight='weight')
+        out = np.array([*node_coefs.values()]).mean()
+    return out
 
 
 ### Smoothness

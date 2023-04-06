@@ -13,10 +13,11 @@ from processing_helpers import *
 ### Functions to compute enrichment from a set of genes, with or without weights
 
 
-def shuffle_gene_weights(weights, n=100, rank=False, n_components=3):
+def shuffle_gene_weights(weights, n=100, rank=False):#, n_components=3):
     """
     Make 'naive' null model by randomizing gene weights / ranks
     """
+    n_components=weights.shape[1]
     null_weights = np.repeat(weights.values[:,:n_components, np.newaxis], n, axis=2)
     # null_weights = np.take_along_axis(null_weights, np.random.randn(*null_weights.shape).argsort(axis=0), axis=0)
     for g in range(n_components):
@@ -53,10 +54,13 @@ def match_genes(gene_labels, weights):
 
 
 def compute_enrichments(weights, null_weights, gene_labels, 
-                        how='mean', norm=False, posneg=None, n_components=3):
+                        how='mean', norm=False, posneg=None):
     """
     Compute scores for each gene label, either mean, or median rank
     """
+    n_components = weights.shape[1]
+    # axis_names = [f'G{i+1}' for i in range(n_components)]
+    axis_names = list(weights.columns)
     gene_masks, gene_counts = match_genes(gene_labels, weights)
     
     weights = weights.copy().values
@@ -89,20 +93,21 @@ def compute_enrichments(weights, null_weights, gene_labels,
             true_enrichments[label] = pd.Series(np.nanmedian(true_ranks[mask, :], axis=0))
             null_enrichments[label] = pd.DataFrame(np.nanmedian(nulls[mask, :, :], axis=0)).T
 
-    axis_names = [f'G{i+1}' for i in range(n_components)]
     true_enrichments = pd.concat(true_enrichments).unstack(1).set_axis(axis_names, axis=1)
     null_enrichments = pd.concat(null_enrichments).set_axis(axis_names, axis=1).reset_index(level=0).rename({'level_0':'label'}, axis=1)
 
     return true_enrichments, null_enrichments, gene_counts
     
     
-def compute_null_p(true_enrichments, null_enrichments, gene_counts=None, adjust='fdr_bh', order=None):
+def compute_null_p(true_enrichments, null_enrichments, 
+                   gene_counts=None, adjust='fdr_bh', adjust_by_label=False,
+                   order=None):
     """
     Compute null p values
     """
     null_pct = np.zeros(true_enrichments.shape)
     for m, label in enumerate(true_enrichments.index):
-        for i in range(3):
+        for i in range(true_enrichments.shape[1]):
             nulls_ = null_enrichments.set_index('label').loc[label].iloc[:,i]
             true_ = true_enrichments.iloc[m, i]
             pct = percentileofscore(nulls_, true_)/100
@@ -117,8 +122,8 @@ def compute_null_p(true_enrichments, null_enrichments, gene_counts=None, adjust=
                  .set_axis(['null_mean', 'null_std'], axis=1)
                 )
             
-    null_p = (pd.DataFrame(null_pct, 
-                           index=true_enrichments.index, 
+    null_p = (pd.DataFrame(null_pct,
+                           index=true_enrichments.index,
                            columns=true_enrichments.columns)
               .stack().rename('pct').to_frame()
               .join(true_mean)
@@ -130,11 +135,22 @@ def compute_null_p(true_enrichments, null_enrichments, gene_counts=None, adjust=
     
     # Apply multiple comparisons
     if adjust is not None:
-        null_p = (null_p
-             .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
-             .assign(sig = lambda x: x['q'] < .05)
-             # .assign(q_abs = lambda x: [1-q if pos else q for pos, q in zip(x['pos'], x['q'])])
-            )
+        # Adjust across axes only (not by label)?
+        if adjust_by_label:
+            null_p = (null_p
+                .assign(q = lambda x: x.groupby(level=0)
+                                       .apply(lambda y: pd.Series(multipletests(y['p'], method=adjust)[1], index=y.index))
+                                       .reset_index(0, drop=True) # make index match
+                                       )
+                .assign(sig = lambda x: x['q'] < .05)
+                # .assign(q_abs = lambda x: [1-q if pos else q for pos, q in zip(x['pos'], x['q'])])
+                )
+        else:
+            null_p = (null_p
+                .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
+                .assign(sig = lambda x: x['q'] < .05)
+                # .assign(q_abs = lambda x: [1-q if pos else q for pos, q in zip(x['pos'], x['q'])])
+                )
     else:
         null_p = (null_p
              .assign(q = lambda x: x['p'])

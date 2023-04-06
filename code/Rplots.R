@@ -277,17 +277,48 @@ plot_weight_corrs <- function(weight_corrs, spacing=8, ylab='') {
 }
 
 
+plot_coexp <- function(df_coexp) {
+    q99 <- df_coexp %>% filter(x!=y) %>% .$r %>% abs %>% quantile(.99)
+
+    df_coexp %>%
+        mutate(version = factor(version, ordered=T, levels=unique(.$version))) %>%
+        ggplot(aes(x, rev(y))) +
+        # facet_grid(. ~ version, switch='y') +
+        facet_wrap(~ version) +
+        geom_raster(aes(fill=r)) +
+        scale_fill_gradientn(colors=rev(brewer.rdbu(200)), limits=c(-q99,q99), name='R') +
+        coord_cartesian(clip='off') +
+        theme_void() +
+        guides(fill=guide_colorbar(barwidth=10, title.vjust=1)) +
+        theme(aspect.ratio=1,  
+              text = element_text(size=20),
+              legend.position=c(.5,-.1),
+              legend.direction='horizontal',
+              panel.spacing.x = unit(5,'lines')
+              )
+
+}
+
+
 plot_var_exp <- function(df_var) {
     df_var %>% 
-    mutate(version = factor(version, ordered=T, levels=unique(.$version))) %>% 
+    # mutate(version = factor(version, ordered=T, levels=unique(.$version))) %>% 
     mutate(PC = factor(PC, ordered=T, levels=unique(.$PC))) %>% 
     ggplot() + 
-    geom_line(aes(PC, var, color=version, group=version),size=1) + 
-    scale_color_manual(values=cols25(10), name='') +
+    geom_line(aes(PC, var, group=1), size=1, color=brewer.rdbu(10)[2]) +
+    # geom_line(aes(PC, var, color=version, group=version),size=1) + 
+    # scale_color_manual(values=brewer.rdbu(10)[2], name='') +
     theme_minimal() +
-    theme(panel.grid.minor = element_blank()) +
-    theme(legend.position=c(.5,.8), legend.justification='left', legend.title=element_blank()) +
-    ylab('Variance Explained') + xlab('PC') #+ ylim(c(0,.4))
+    theme(
+        text=element_text(size=22, color='grey7'),
+        axis.text=element_text(size=22, color='grey7'),
+        panel.grid.minor = element_blank(),
+        legend.position=c(.5,.8), 
+        # legend.justification='left', 
+        legend.title=element_blank(),
+        aspect.ratio=1
+        ) +
+    ylab('% Variance Explained') + xlab('Component') #+ ylim(c(0,.4))
 }
 
 
@@ -805,8 +836,8 @@ plot_triplet_ds_corrs <- function(df_ds_corrs) {
 #     colors <- df %>% select( {{classes}} ,  {{classcolors}} ) %>% unique() %>% 
 #         arrange( {{classes}} ) %>% drop_na() %>% pull( {{classcolors}} )
     
-#     labels <- df %>% select( {{classes}} ,  {{classlabels}} ) %>% unique() %>% 
 #         arrange( {{classes}} ) %>% drop_na() %>% pull( {{classlabels}} )
+#     labels <- df %>% select( {{classes}} ,  {{classlabels}} ) %>% unique() %>% 
 #     df_labels <- data.frame(x=seq(1,7), label=labels)
     
 #     df %>% 
