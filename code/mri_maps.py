@@ -28,12 +28,12 @@ def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True):
         'T1T2',
         'thickness',
         # 'glasser_CMRO2',
-        'glasser_CMRGlu',        
-        'G1_fMRI',        
-        'PC1_neurosynth',        
-        'externopyramidisation',        
+        # 'glasser_CMRGlu',
+        'G1_fMRI',
+        'PC1_neurosynth',
+        'externopyramidisation',
         'glasser_GI',
-        'hill.evo_remapped',        
+        'hill.evo_remapped',    
         'hill.dev_remapped',
         'glasser_CBF',
         'allom',
@@ -50,6 +50,20 @@ def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True):
         maps = maps.loc[:, selected_maps]
         
     return maps
+
+
+def get_ctmt(project_to_hcp=True):
+    ctmt = (
+        pd.read_csv("../data/whitakervertes2016_complete.csv", index_col=0)
+        .query('hemi=="l"')
+        .set_index('label')
+        .loc[:, ['CT','CT_delta','MT','MT_delta']]#,'PLS2']]
+    )
+    
+    if project_to_hcp:
+        ctmt = ctmt.pipe(dk_to_hcp).set_axis(get_labels_hcp()[:180])
+            
+    return ctmt
 
 
 def get_disorder_maps(data_dir="../data/lifespan_dx_DKatlas.csv"):
@@ -88,6 +102,37 @@ def get_corrs(scores, maps, method='pearson', atlas='hcp', n_components=3):
         .set_axis([f'G{i+1}' for i in range(n_components)], axis=1)
     )
     return corrs
+
+
+
+def dk_to_hcp(maps,
+                hcp_img_path = "../data/parcellations/lh.HCPMMP1.annot",
+                dk_img_path = "../data/parcellations/lh.aparc.annot"
+                ):
+    """
+    Project DK scores to HCP
+    """
+    hcp_img = annot_to_gifti(hcp_img_path)
+    dk_img = annot_to_gifti(dk_img_path)
+    n_maps = maps.shape[1]
+    
+    maps_hcp = np.zeros((180,n_maps))
+    for i in range(n_maps):
+        g_dk = maps.iloc[:,i].values
+        # Use DK parcellation image to project DK data to fsaverage
+        g_fsaverage = parcels_to_vertices(g_dk, dk_img)
+        # Use HCP parcellation image to project fsaverage data into HCP
+        g_hcp = vertices_to_parcels(g_fsaverage, hcp_img)
+        # Add to outputs
+        maps_hcp[:,i] = g_hcp
+    
+    # Convert to dataframe
+    maps_hcp = pd.DataFrame.from_records(maps_hcp, 
+                                         index=list(range(1,181)),
+                                         columns=maps.columns
+                                         )
+    
+    return maps_hcp
 
 
 def generate_shuffles(maps, n=1000,

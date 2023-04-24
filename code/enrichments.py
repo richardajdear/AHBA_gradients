@@ -177,6 +177,44 @@ def compute_null_p(true_enrichments, null_enrichments,
 
 
 
+def make_axis_quantiles(weights, q=10, labels=None, levels=None, na_value=np.NaN):
+    """
+    Split weights by axis quantiles, then match to labels
+    """
+    weights_with_quantiles = (weights
+            .melt(ignore_index=False, var_name='G', value_name='G_score')
+            .reset_index().rename({'index':'gene'}, axis=1)
+            .assign(G_quantile = lambda x: x.groupby('G').apply(lambda y: pd.qcut(y['G_score'], q=q, labels=range(q))).reset_index(0, drop=True))
+    )
+    if labels is None:
+        return weights_with_quantiles
+    else:
+        if levels is None:
+            levels = labels['label'].unique()
+        return (weights_with_quantiles
+                .join(labels.set_index('gene'), on='gene')
+                .fillna({'label': na_value})
+                .assign(label = lambda x: pd.Categorical(x['label'], ordered=True, categories=levels))
+                .sort_values(['label','G_score'], ascending=False)
+                .assign(rank_in_quantile = lambda x: x.groupby(['G','G_quantile']).cumcount()+1)
+                .sort_values(['G_quantile','rank_in_quantile'])
+            )
+
+
+def make_label_quantiles_by_axis(weights, labels, q=10):
+    """
+    Split labels into quantiles by axis weights
+    """
+    label_percentiles = (labels.loc[:, ['label','gene']]
+        .join(weights.melt(ignore_index=False, var_name='G',value_name='G_score'), on='gene')
+        .dropna()
+        .reset_index(drop=True)
+        .assign(G_quantile = lambda x: x.groupby(['G','label'])['G_score'].apply(lambda y: pd.qcut(y, q=q, labels=range(q))))
+    )
+    return label_percentiles
+
+
+
 def make_gene_maps(version, gene_labels, atlas='hcp', normalize='std', method='mean', order=None, use_weights=True):
     gene_maps = {}
     for label in gene_labels['label'].unique():

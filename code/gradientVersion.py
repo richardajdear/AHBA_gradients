@@ -243,7 +243,7 @@ class gradientVersion():
                 self.sort_weights(pls_weights).to_csv("../outputs/" + save_name + ".csv")
             return self.sort_weights(pls_weights)
         else:
-            return pls_weights
+            return pls_weights.set_axis(['G'+str(i+1) for i in range(n_components)], axis=1)
 
         
         

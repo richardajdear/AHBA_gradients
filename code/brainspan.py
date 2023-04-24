@@ -2,6 +2,33 @@
 
 import numpy as np, pandas as pd
 from processing_helpers import *
+import statsmodels.api as sm
+from statsmodels.gam.api import GLMGam, BSplines
+import statsmodels.formula.api as smf
+
+
+def get_brainspan_curves_by_gene(genes, return_points=False, alpha=0.5):
+    """
+    1. Get BrainSpan data and match regions to HCP parcellation
+    2. Convert age to continuous variable
+    3. Fit and predict GAM curves for selected genes
+    """
+    # 1
+    bs_exp, bs_col, bs_row = get_brainspan()
+    hcp_bs_mapping = get_hcp_bs_mapping_v2()
+    bs_clean = clean_brainspan(bs_exp, bs_col, bs_row, hcp_bs_mapping)
+    # 2
+    bs_continuous = make_continuous(bs_clean, norm_samples=True)
+    # 3
+    genes_to_fit = np.intersect1d(bs_clean.columns, genes)
+    models = fit_gam_models(bs_continuous, genes_to_fit, alpha=alpha)
+    curves, points = predict_gam_curves(models, bs_continuous, genes_to_fit)
+    
+    if return_points:
+        return curves, points
+    else:
+        return curves
+
 
 def get_brainspan(bs_dir = "../data/brainspan-data/gene_matrix_rnaseq/"):
     """
@@ -18,36 +45,125 @@ def get_brainspan(bs_dir = "../data/brainspan-data/gene_matrix_rnaseq/"):
     return bs_exp, bs_col, bs_row
 
 
+def get_hcp_bs_mapping_v2():
+    """
+    Define mapping between individual HCP regions and BrainSpan
+    """
+    hcp_bs_mapping = (
+        pd.read_csv("../data/hcp_bs_mapping_v2.csv", index_col=None)
+        # .query("keep==1")
+        .assign(structure_name = lambda x: np.where(x['keep']==1, x['structure_name'], np.nan))
+    )
+    
+    return hcp_bs_mapping
+
+
+def age_to_continuous(age_vector):
+    """
+    Parse BrainSpan age labels ('pcw','mos','yrs') to days post conception
+    """
+    age_vector = age_vector.astype('str')
+
+    is_prenatal = age_vector.str.contains('pcw')
+    pcw = age_vector[is_prenatal].str.replace(' pcw','').astype('int')
+
+    is_months = age_vector.str.contains('mos')
+    months = age_vector[is_months].str.replace(' mos','').astype('int')
+
+    is_years = age_vector.str.contains('yrs')
+    years = age_vector[is_years].str.replace(' yrs','').astype('int')
+
+    age_vector[is_prenatal] = pcw*7 #-1*(40-pcw)/52
+    age_vector[is_months] = 40*7+months*30 #months/12
+    age_vector[is_years] = 40*7+years*365
+
+    return age_vector.astype('float')
+
+
+def make_continuous(bs_clean, log=True, norm_samples=True):
+    """
+    Convert BrainSpan age labels to continuous variable using age_to_continuous
+    """
+    if log:
+        _bs = bs_clean.applymap(lambda x: np.log10(x))
+    else:
+        _bs = bs_clean
+
+    if norm_samples:
+        _bs = _bs.apply(lambda x: x/np.mean(x), axis=1)
+
+    return (_bs
+        .rename_axis(None, axis=1)
+        .reset_index()
+        .assign(age = lambda x: age_to_continuous(x['age']))
+        .assign(age_log10 = lambda x: np.log10(x['age']))
+        .drop('structure_name', axis=1)
+        .rename({'structure_acronym':'region'}, axis=1)
+    )
+
+
+def fit_gam_models(bs_continuous, genes_to_fit, age_var='age_log10', df=12, degree=3, alpha=1.0):
+    """
+    Fit GAM for each gene using continuous age
+    """
+    spline_x = bs_continuous[age_var]
+    basis_splines = BSplines(spline_x, df=df, degree=degree)
+    alpha=alpha
+
+    models = {}
+    for gene in genes_to_fit:
+        # models[gene] = GLMGam(endog=bs_continuous[gene], exog=bs_continuous.loc[:, ['gender', 'region']],
+        #                                 smoother=basis_splines, alpha=alpha).fit()
+        formula = f'Q("{gene}") ~ {age_var} + gender + region'
+        models[gene] = GLMGam.from_formula(formula=formula, data=bs_continuous, 
+                                        smoother=basis_splines, alpha=alpha).fit()
+        # models[gene] = smf.ols(formula=formula, data=bs_continuous).fit()
+        
+    return models
+
+
+def predict_gam_curves(models, bs_continuous, genes_to_fit,
+                       region='DFC', age_var='age_log10', n_preds=100):
+    """
+    Predict GAM curves for a single region and both genders
+    """
+    # Clean up input data
+    df_data = (bs_continuous
+                .drop('donor_id', axis=1)
+                .loc[lambda x: x['region']==region, [age_var, 'gender'] + list(genes_to_fit)]
+                .melt(id_vars=[age_var, 'gender'], var_name='gene', value_name='true')
+                #  .assign(age = lambda x: (10**x[age_var]-40*7)/365)
+    )
+
+    # Vector of ages to predict at
+    ages_to_predict = np.linspace(min(df_data[age_var]), max(df_data[age_var]), n_preds)
+    # Dataframe to predict (repeat eachand F)
+    df_preds = pd.DataFrame({
+        age_var: np.repeat(ages_to_predict, 2),
+        'gender': ['F','M'] * n_preds,
+        'region': region
+    })
+
+    # Make predictions for each gene
+    preds = {gene:models[gene].predict(df_preds, exog_smooth=df_preds[age_var]) for gene in genes_to_fit}
+    # Combine genes into df
+    df_preds = (df_preds
+                .join(pd.concat(preds,axis=1))
+                .melt(id_vars=[age_var, 'gender', 'region'], var_name='gene', value_name='pred')
+                # Add gene predictions normalised to 75th quantile
+                .assign(pred_q75=lambda x: x.groupby(['gene','gender','region'])
+                        .apply(lambda y: y['pred']/np.quantile(y['pred'],.75)).reset_index([0,1,2], drop=True))
+                # .assign(age = lambda x: (10**x['age_log10']-40*7)/365)
+    )   
+    return df_preds, df_data
+
+
+
 def get_age_groups():
     """
     Define age groupings for use in Brainspan analysis
     """
     age_groups = {        
-        # 'Best' groupings ...
-        # '12 pcw': '12-17 pcw',
-        # '13 pcw': '12-17 pcw',
-        # '16 pcw': '12-17 pcw',
-        # '17 pcw': '12-17 pcw',
-        # '19 pcw': '19-37 pcw',
-        # '21 pcw': '19-37 pcw',
-        # '24 pcw': '19-37 pcw',
-        # '37 pcw': '19-37 pcw',
-        # '4 mos': '4 mos',
-        # '1 yrs': '1 yrs',
-        # '2 yrs': '2 yrs',
-        # '3 yrs': '3 yrs',
-        # '8 yrs': '8-13 yrs',
-        # '11 yrs': '8-13 yrs',
-        # '13 yrs': '8-13 yrs',
-        # '18 yrs': '18-40 yrs',
-        # '19 yrs': '18-40 yrs',
-        # '21 yrs': '18-40 yrs',
-        # '23 yrs': '18-40 yrs',
-        # '30 yrs': '18-40 yrs',
-        # '36 yrs': '18-40 yrs',
-        # '37 yrs': '18-40 yrs',
-        # '40 yrs': '18-40 yrs',   
-        
         # # Simple groupings ...
         '8 pcw': 'Pre-Birth',
         '9 pcw': 'Pre-Birth', #
@@ -84,156 +200,6 @@ def get_age_groups():
     return age_groups
 
 
-def age_to_continuous(age_vector):
-    age_vector = age_vector.astype('str')
-
-    is_prenatal = age_vector.str.contains('pcw')
-    pcw = age_vector[is_prenatal].str.replace(' pcw','').astype('int')
-
-    is_months = age_vector.str.contains('mos')
-    months = age_vector[is_months].str.replace(' mos','').astype('int')
-
-    is_years = age_vector.str.contains('yrs')
-    years = age_vector[is_years].str.replace(' yrs','').astype('int')
-
-    age_vector[is_prenatal] = pcw*7 #-1*(40-pcw)/52
-    age_vector[is_months] = 40*7+months*30 #months/12
-    age_vector[is_years] = 40*7+years*365
-
-    return age_vector.astype('float')
-
-
-def get_bs_cortex_mapping():
-    """
-    Define mapping between Brainspan regions and HCP cortex groups
-    """
-    bs_cortex_mapping = {
-        'primary visual cortex (striate cortex, area V1/17)': 'Primary_Visual',
-        'posteroventral (inferior) parietal cortex': 'Inferior_Parietal',
-        'primary somatosensory cortex (area S1, areas 3,1,2)': 'Somatosensory',
-        'primary motor cortex (area M1, area 4)': 'Motor',
-        'dorsolateral prefrontal cortex': 'Dorsolateral_Prefrontal',
-        'ventrolateral prefrontal cortex': 'Inferior_Frontal',    
-        'anterior (rostral) cingulate (medial prefrontal) cortex': 'Anterior_Cingulate_and_Medial_Prefrontal',
-        'orbital frontal cortex': 'Orbital_and_Polar_Frontal',
-        'inferolateral temporal cortex (area TEv, area 20)': 'Lateral_Temporal',
-        'primary auditory cortex (core)': 'Early_Auditory',
-        'posterior (caudal) superior temporal cortex (area 22c)': 'Auditory_Association'
-    }
-    
-    return bs_cortex_mapping
-
-
-def get_hcp_bs_mapping_v2():
-    """
-    Define mapping between individual HCP regions and BrainSpan
-    """
-    hcp_bs_mapping = (
-        pd.read_csv("../data/hcp_bs_mapping_v2.csv", index_col=None)
-        # .query("keep==1")
-        .assign(structure_name = lambda x: np.where(x['keep']==1, x['structure_name'], np.nan))
-    )
-    
-    return hcp_bs_mapping
-
-def get_hcp_bs_mapping_v3():
-    """
-    Define mapping between individual HCP regions and BrainSpan
-    """
-    hcp_bs_mapping = (
-        pd.read_csv("../data/hcp_bs_mapping_v3.csv", index_col=None)
-        # .query("keep==1")
-        .assign(structure_name = lambda x: np.where(x['keep']==1, x['structure_name'], np.nan))
-               )
-    
-    return hcp_bs_mapping
-
-
-def get_dk_bs_mapping():
-    """
-    Define mapping between Brainspan regions and HCP cortex groups
-    """
-    dk_bs_mapping = {
-        'pericalcarine':'primary visual cortex (striate cortex, area V1/17)',
-        'inferior parietal':'posteroventral (inferior) parietal cortex',
-        'postcentral':'primary somatosensory cortex (area S1, areas 3,1,2)',
-        'precentral':'primary motor cortex (area M1, area 4)',
-        'caudal middle frontal':'dorsolateral prefrontal cortex',
-        'rostral middle frontal':'dorsolateral prefrontal cortex',
-        'pars orbitalis':'ventrolateral prefrontal cortex',
-        'pars opercularis':'ventrolateral prefrontal cortex',
-        'pars triangularis':'ventrolateral prefrontal cortex',
-        'rostral anterior cingulate':'anterior (rostral) cingulate (medial prefrontal) cortex',
-        'caudal anterior cingulate':'anterior (rostral) cingulate (medial prefrontal) cortex',
-        'frontal pole':'orbital frontal cortex',
-        'lateral orbitofrontal':'orbital frontal cortex',
-        'medial orbitofrontal':'orbital frontal cortex',
-        'inferior temporal':'inferolateral temporal cortex (area TEv, area 20)',
-        'fusiform':'inferolateral temporal cortex (area TEv, area 20)',
-        'transverse temporal':'primary auditory cortex (core)',
-        'superior temporal':'posterior (caudal) superior temporal cortex (area 22c)'
-    }
-
-    dk_bs_mapping = (
-        pd.DataFrame.from_dict(dk_bs_mapping, orient='index')
-        .assign(label = lambda x: 'lh_' + x.index.str.replace(' ',''))
-        .set_index('label')
-        .reindex(get_labels_dk()[:34])
-        .set_axis(['structure_name'], axis=1)
-        .assign(structure_name = lambda x: x['structure_name'].astype('string'))
-        .reset_index()
-    )
-    
-    return dk_bs_mapping
-
-
-
-def get_short_bs_names():
-    """
-    Short Brainspan region names for plotting
-    """
-    bs_structure_name_short = {
-        'primary visual cortex (striate cortex, area V1/17)': 'primary visual cortex',
-        'posteroventral (inferior) parietal cortex': 'inferior parietal cortex',
-        'primary somatosensory cortex (area S1, areas 3,1,2)': 'primary somatosensory cortex',
-        'primary motor cortex (area M1, area 4)': 'primary motor cortex',
-        'dorsolateral prefrontal cortex': 'dorsolateral prefrontal cortex',
-        'ventrolateral prefrontal cortex': 'ventrolateral prefrontal cortex',
-        'anterior (rostral) cingulate (medial prefrontal) cortex': 'medial prefrontal cortex',
-        'orbital frontal cortex': 'orbital frontal cortex',
-        'inferolateral temporal cortex (area TEv, area 20)': 'inferolateral temporal cortex',
-        'primary auditory cortex (core)': 'primary auditory cortex',
-        'posterior (caudal) superior temporal cortex (area 22c)':'posterior superior temporal cortex'
-    }
-    return bs_structure_name_short
-
-
-def get_hcp_bs_mapping(hcp_info_file = "../data/parcellations/HCP-MMP1_UniqueRegionList.txt"):
-    """
-    Get HCP regions mapped to Brainspan from Brainspan cortex mapping
-    """
-    # Read HCP info file
-    hcp_info = pd.read_csv(hcp_info_file)
-    # Split somatosensory-Motor cortex
-    hcp_info = (hcp_info.assign(cortex = lambda x: np.select(
-        condlist = [(x['cortex'] == 'Somatosensory_and_Motor') & (x['region'] == '4'), 
-                    (x['cortex'] == 'Somatosensory_and_Motor') & (x['region'] != '4')],
-        choicelist = ['Motor', 'Somatosensory'], 
-        default = x['cortex']
-    )))
-    # Get bs cortex mapping and invert
-    bs_cortex_mapping = get_bs_cortex_mapping()
-    cortex_bs_mapping = {v:k for k,v in bs_cortex_mapping.items()}
-    # Explode BS regions to all HCP regions
-    hcp_bs_mapping = (hcp_info
-     .loc[lambda x: x['LR'] == 'L', ['region', 'cortex']]
-     .assign(structure_name = lambda x: x['cortex'].map(cortex_bs_mapping).astype('string'))
-     .assign(structure_name_short = lambda x: x['structure_name'].map(get_short_bs_names()))
-     .sort_values('structure_name')
-     .rename({'region':'label'}, axis=1)
-                     )
-    return hcp_bs_mapping
-    
 
 def get_mapped_scores(version, version_to_bs_mapping, mean=True):
     """
@@ -257,29 +223,6 @@ def get_mapped_scores(version, version_to_bs_mapping, mean=True):
         return scores_mean
     else:
         return scores_filtered
-
-    
-# def get_mapped_pcs(pc_version, hcp_base, hcp_bs_mapping):
-#     """
-#     Get PC scores in mapped Brainspan regions
-#     """
-#     # Get PCs filtered to HCP regions matched in brainspan
-#     pcs_filtered = (
-#      hcp_base.score_from(pc_version)
-#      .join(get_labels_hcp())
-#      .rename_axis('id')
-#      .join(hcp_bs_mapping.set_index('region'), on='label')
-#      .dropna(axis=0)
-#     )
-
-#     pcs_cortex = (pcs_filtered
-#      .groupby('cortex')
-#      .mean()
-#      .apply(lambda x: (x-np.mean(x))/np.std(x))
-#     )
-    
-#     return pcs_filtered, pcs_cortex
-
 
 def count_samples(bs_col, bs_cortex_mapping):
     """
@@ -317,7 +260,7 @@ def clean_brainspan(bs_exp, bs_col, bs_row, bs_mapping):
      .loc[:, lambda x: (x != 0).all(axis=0)] # drop zero and na columns
      .loc[:, lambda x: ~x.columns.duplicated()] # some columns are duplicates
     )
-    
+
     return bs_clean
 
 
@@ -461,6 +404,160 @@ def make_brain_plots(version, version_to_bs_mapping, bs_scores):
     )
     
     return scores_plot
+
+
+
+
+
+## LEGACY
+
+
+def get_bs_cortex_mapping():
+    """
+    Define mapping between Brainspan regions and HCP cortex groups
+    """
+    bs_cortex_mapping = {
+        'primary visual cortex (striate cortex, area V1/17)': 'Primary_Visual',
+        'posteroventral (inferior) parietal cortex': 'Inferior_Parietal',
+        'primary somatosensory cortex (area S1, areas 3,1,2)': 'Somatosensory',
+        'primary motor cortex (area M1, area 4)': 'Motor',
+        'dorsolateral prefrontal cortex': 'Dorsolateral_Prefrontal',
+        'ventrolateral prefrontal cortex': 'Inferior_Frontal',    
+        'anterior (rostral) cingulate (medial prefrontal) cortex': 'Anterior_Cingulate_and_Medial_Prefrontal',
+        'orbital frontal cortex': 'Orbital_and_Polar_Frontal',
+        'inferolateral temporal cortex (area TEv, area 20)': 'Lateral_Temporal',
+        'primary auditory cortex (core)': 'Early_Auditory',
+        'posterior (caudal) superior temporal cortex (area 22c)': 'Auditory_Association'
+    }
+    
+    return bs_cortex_mapping
+
+
+
+
+def get_hcp_bs_mapping_v3():
+    """
+    Define mapping between individual HCP regions and BrainSpan
+    """
+    hcp_bs_mapping = (
+        pd.read_csv("../data/hcp_bs_mapping_v3.csv", index_col=None)
+        # .query("keep==1")
+        .assign(structure_name = lambda x: np.where(x['keep']==1, x['structure_name'], np.nan))
+               )
+    
+    return hcp_bs_mapping
+
+
+
+
+def get_dk_bs_mapping():
+    """
+    Define mapping between Brainspan regions and HCP cortex groups
+    """
+    dk_bs_mapping = {
+        'pericalcarine':'primary visual cortex (striate cortex, area V1/17)',
+        'inferior parietal':'posteroventral (inferior) parietal cortex',
+        'postcentral':'primary somatosensory cortex (area S1, areas 3,1,2)',
+        'precentral':'primary motor cortex (area M1, area 4)',
+        'caudal middle frontal':'dorsolateral prefrontal cortex',
+        'rostral middle frontal':'dorsolateral prefrontal cortex',
+        'pars orbitalis':'ventrolateral prefrontal cortex',
+        'pars opercularis':'ventrolateral prefrontal cortex',
+        'pars triangularis':'ventrolateral prefrontal cortex',
+        'rostral anterior cingulate':'anterior (rostral) cingulate (medial prefrontal) cortex',
+        'caudal anterior cingulate':'anterior (rostral) cingulate (medial prefrontal) cortex',
+        'frontal pole':'orbital frontal cortex',
+        'lateral orbitofrontal':'orbital frontal cortex',
+        'medial orbitofrontal':'orbital frontal cortex',
+        'inferior temporal':'inferolateral temporal cortex (area TEv, area 20)',
+        'fusiform':'inferolateral temporal cortex (area TEv, area 20)',
+        'transverse temporal':'primary auditory cortex (core)',
+        'superior temporal':'posterior (caudal) superior temporal cortex (area 22c)'
+    }
+
+    dk_bs_mapping = (
+        pd.DataFrame.from_dict(dk_bs_mapping, orient='index')
+        .assign(label = lambda x: 'lh_' + x.index.str.replace(' ',''))
+        .set_index('label')
+        .reindex(get_labels_dk()[:34])
+        .set_axis(['structure_name'], axis=1)
+        .assign(structure_name = lambda x: x['structure_name'].astype('string'))
+        .reset_index()
+    )
+    
+    return dk_bs_mapping
+
+
+
+def get_short_bs_names():
+    """
+    Short Brainspan region names for plotting
+    """
+    bs_structure_name_short = {
+        'primary visual cortex (striate cortex, area V1/17)': 'primary visual cortex',
+        'posteroventral (inferior) parietal cortex': 'inferior parietal cortex',
+        'primary somatosensory cortex (area S1, areas 3,1,2)': 'primary somatosensory cortex',
+        'primary motor cortex (area M1, area 4)': 'primary motor cortex',
+        'dorsolateral prefrontal cortex': 'dorsolateral prefrontal cortex',
+        'ventrolateral prefrontal cortex': 'ventrolateral prefrontal cortex',
+        'anterior (rostral) cingulate (medial prefrontal) cortex': 'medial prefrontal cortex',
+        'orbital frontal cortex': 'orbital frontal cortex',
+        'inferolateral temporal cortex (area TEv, area 20)': 'inferolateral temporal cortex',
+        'primary auditory cortex (core)': 'primary auditory cortex',
+        'posterior (caudal) superior temporal cortex (area 22c)':'posterior superior temporal cortex'
+    }
+    return bs_structure_name_short
+
+
+def get_hcp_bs_mapping(hcp_info_file = "../data/parcellations/HCP-MMP1_UniqueRegionList.txt"):
+    """
+    Get HCP regions mapped to Brainspan from Brainspan cortex mapping
+    """
+    # Read HCP info file
+    hcp_info = pd.read_csv(hcp_info_file)
+    # Split somatosensory-Motor cortex
+    hcp_info = (hcp_info.assign(cortex = lambda x: np.select(
+        condlist = [(x['cortex'] == 'Somatosensory_and_Motor') & (x['region'] == '4'), 
+                    (x['cortex'] == 'Somatosensory_and_Motor') & (x['region'] != '4')],
+        choicelist = ['Motor', 'Somatosensory'], 
+        default = x['cortex']
+    )))
+    # Get bs cortex mapping and invert
+    bs_cortex_mapping = get_bs_cortex_mapping()
+    cortex_bs_mapping = {v:k for k,v in bs_cortex_mapping.items()}
+    # Explode BS regions to all HCP regions
+    hcp_bs_mapping = (hcp_info
+     .loc[lambda x: x['LR'] == 'L', ['region', 'cortex']]
+     .assign(structure_name = lambda x: x['cortex'].map(cortex_bs_mapping).astype('string'))
+     .assign(structure_name_short = lambda x: x['structure_name'].map(get_short_bs_names()))
+     .sort_values('structure_name')
+     .rename({'region':'label'}, axis=1)
+                     )
+    return hcp_bs_mapping
+    
+    
+# def get_mapped_pcs(pc_version, hcp_base, hcp_bs_mapping):
+#     """
+#     Get PC scores in mapped Brainspan regions
+#     """
+#     # Get PCs filtered to HCP regions matched in brainspan
+#     pcs_filtered = (
+#      hcp_base.score_from(pc_version)
+#      .join(get_labels_hcp())
+#      .rename_axis('id')
+#      .join(hcp_bs_mapping.set_index('region'), on='label')
+#      .dropna(axis=0)
+#     )
+
+#     pcs_cortex = (pcs_filtered
+#      .groupby('cortex')
+#      .mean()
+#      .apply(lambda x: (x-np.mean(x))/np.std(x))
+#     )
+    
+#     return pcs_filtered, pcs_cortex
+
+
 
 
 #########################################################

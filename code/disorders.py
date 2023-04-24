@@ -46,8 +46,9 @@ def get_gwas_combined():
         .reset_index(0)
         .rename({'level_0':'label'}, axis=1)
         .assign(gene = lambda x: x['gene'].str.replace('\\..*','', regex=True)) #drop variants
-        .drop_duplicates()
         .replace({'gene': replace_dict})
+        .drop_duplicates()
+        .dropna()
     )
     return df
 
@@ -61,42 +62,73 @@ def ensembl_id_to_gene_symbol(ensembl_ids):
 
 
 
-def get_deg_combined():
+def get_deg_combined(scz_only=False):
     deg_dict = {
-        'ASD--Gandal 2022': pd.read_csv("../data/deg/gandal2022_tableS3.csv").loc[lambda x: x['WholeCortex_ASD_FDR']<=0.05, 'external_gene_name'],
-        'ASD--Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['ASD.fdr']<=0.05, 'gene_name'],
-        'ASD--Parikshak2016': pd.read_csv("../data/deg/parikshak2016_tableS2.csv", header=1, dtype={'Chr':'object', 'HGNC Symbol':'object'}).loc[lambda x: x['FDR-adjusted P value, ASD vs CTL']<=0.05, 'HGNC Symbol'],
-        # 'SCZ--Collado-Torres 2019': pd.read_csv("../data/deg/colladotorres2019_tableS11.csv").loc[lambda x: x['adj.P.Val']<=0.05, 'Symbol'],
-        'SCZ--Jaffe 2018': pd.read_csv("../data/deg/jaffe2018_tableS9.csv", header=1).loc[lambda x: x['fdr_qsva']<=0.05, 'Symbol'],
-        'SCZ--Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['SCZ.fdr']<=0.05, 'gene_name'],
-        'SCZ--Fromer 2016': pd.read_csv("../data/deg/fromer2016_tableS3.csv", header=1).loc[lambda x: x['FDR estimate']<=0.05, 'Gene Symbol'],
+        'ASD--Gandal 2022': pd.read_csv("../data/deg/gandal2022_tableS3.csv").loc[lambda x: x['WholeCortex_ASD_FDR']<=0.05, ['external_gene_name', 'WholeCortex_ASD_logFC']],
+        # 'ASD--Ramaswami 2020': pd.read_csv("../data/deg/ramaswami2020_tableS2.csv", header=1).loc[lambda x: x['p.condition.fdr']<=0.05, 'Gene'].pipe(ensembl_id_to_gene_symbol),
+        'ASD--Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['ASD.fdr']<=0.05, ['gene_name', 'ASD.log2FC']],
+        'ASD--Parikshak 2016': pd.read_csv("../data/deg/parikshak2016_tableS2.csv", header=1, dtype={'Chr':'object', 'HGNC Symbol':'object'}).loc[lambda x: x['FDR-adjusted P value, ASD vs CTL']<=0.05, ['HGNC Symbol', 'log2(FC) ASD vs CTL']],
+        'MDD--Jaffe 2022': pd.read_csv("../data/deg/jaffe2022_dataS1.csv", header=0, usecols=['Symbol','Cortex_logFC_MDD','Cortex_adjPVal_MDD']).loc[lambda x: x['Cortex_adjPVal_MDD']<=0.05, ['Symbol','Cortex_logFC_MDD']],
+        'SCZ--Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['SCZ.fdr']<=0.05, ['gene_name', 'SCZ.log2FC']],
+        'SCZ--Fromer 2016': pd.read_csv("../data/deg/fromer2016_tableS3.csv", header=1).loc[lambda x: x['FDR estimate']<=0.05, ['Gene Symbol','logFC']],
+        'SCZ--Collado-Torres 2019': pd.read_csv("../data/deg/colladotorres2019_tableS11.csv").query("region=='DLPFC'").loc[lambda x: x['adj.P.Val']<=0.05, ['Symbol', 'logFC']],
+        'SCZ--Jaffe 2018': pd.read_csv("../data/deg/jaffe2018_tableS9.csv", header=1).loc[lambda x: x['fdr_qsva']<=0.05, ['Symbol', 'log2FC_qsva']],
     }
+    deg_dict = {name:deg.set_axis(['gene', 'log2FC'], axis=1) for name, deg in deg_dict.items()}
 
-    deg_genes = pd.concat(deg_dict).to_frame().reset_index(0).rename({'level_0':'label', 0:'gene'}, axis=1)
+    deg_genes = (pd.concat(deg_dict)
+                 .reset_index(0).rename({'level_0':'label'}, axis=1)
+                 .replace({'gene': replace_dict})
+                 .drop('log2FC', axis=1) # drop logFC to cleanly remove duplicates
+                #  .assign(upreg = lambda x: x['log2FC']>0)
+                 .drop_duplicates()
+                 .dropna()
+    )
 
-    # asd_dict = {
-    #     'Gandal 2022': pd.read_csv("../data/deg/gandal2022_tableS3.csv").loc[lambda x: x['WholeCortex_ASD_FDR']<=0.05, 'external_gene_name'],
-    #     'Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['ASD.fdr']<=0.05, 'gene_name'],
-    #     'Parikshak2016': pd.read_csv("../data/deg/parikshak2016_tableS2.csv", header=1, dtype={'Chr':'object', 'HGNC Symbol':'object'}).loc[lambda x: x['FDR-adjusted P value, ASD vs CTL']<=0.05, 'HGNC Symbol'],
-    # }
+    if scz_only:
+        deg_genes = (deg_genes
+                     .loc[lambda x: x['label'].str.contains('SCZ'),:]
+                     .assign(label = lambda x: x['label'].str.replace("SCZ--",""))
+        )
 
-    # scz_dict = {
-    #     # 'SCZ (Collado-Torres 2019)': pd.read_csv("../data/deg/colladotorres2019_tableS11.csv").loc[lambda x: x['adj.P.Val']<=0.05, 'Symbol'],
-    #     'Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['SCZ.fdr']<=0.05, 'gene_name'],
-    #     'Jaffe 2018': pd.read_csv("../data/deg/jaffe2018_tableS9.csv", header=1).loc[lambda x: x['fdr_qsva']<=0.05, 'Symbol'],
-    #     'Fromer 2016': pd.read_csv("../data/deg/fromer2016_tableS3.csv", header=1).loc[lambda x: x['FDR estimate']<=0.05, 'Gene Symbol'],
-    # }
-    
-    # deg_genes = (pd.concat({
-    #     'ASD': pd.concat(asd_dict),
-    #     'SCZ': pd.concat(scz_dict)
-    # }).reset_index()
-    #     .rename({'level_0':'disorder', 'level_1':'label', 0:'gene'}, axis=1)
-    #     .drop('level_2', axis=1)
-    #     )
-
+    deg_genes = deg_genes.assign(label = lambda x: pd.Categorical(x['label'], 
+                                                    ordered=True, categories=x['label'].unique()))
     return deg_genes
 
+def get_deg_consensus():
+    deg_all = get_deg_combined()
+
+    deg_consensus = (deg_all
+                    .assign(
+                        study = lambda x: x['label'].str.split('--', expand=True)[1],
+                        label = lambda x: x['label'].str.split('--', expand=True)[0]
+                        )
+                    #  .assign(
+                    #     n_studies = lambda x: x.groupby(['label','gene'], as_index=False)['study'].transform('nunique')
+                    #  )
+                    .groupby(['label','gene'], as_index=False)['study'].nunique()
+                    .loc[lambda x: (x['study'] >= 2) | (x['label']=='MDD')] # either 2+ studies, or MDD
+                    )
+    
+    return deg_consensus
+
+def make_deciles_plot_with_degs(deciles_plot, deg_genes):
+    deciles_plot_with_degs = deciles_plot.copy()
+    studies = deg_genes['label'].unique()
+
+    for study in studies:
+        study_degs = deg_genes.loc[lambda x: x['label']==study, 'gene']
+        deciles_plot_with_degs[study] = np.isin(deciles_plot_with_degs['gene'], study_degs)
+
+    deciles_plot_with_degs = (deciles_plot_with_degs
+        .drop(['G_score'], axis=1)
+        .melt(id_vars=['gene','label','G','G_decile','rank_in_decile'], var_name='study', value_name='in_study')
+        .loc[lambda x: x['in_study']]
+        .assign(study = lambda x: pd.Categorical(x['study'], ordered=True, categories = studies))
+        .sort_values(['study','G','G_decile','label'], ascending=True)
+        .assign(rank_in_decile = lambda x: x.groupby(['study','G','G_decile']).cumcount()+1)
+    )
+    return deciles_plot_with_degs
 
 
 

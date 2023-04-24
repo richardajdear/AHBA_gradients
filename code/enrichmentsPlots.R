@@ -2,9 +2,48 @@ suppressPackageStartupMessages(library(tidyverse))
 library(pals)
 library(ggrepel)
 library(ggh4x) # needed for facet_grid2 to not clip strip labels
+# library(ggridges)
 
 
-library(ggridges)
+plot_deciles_histogram <- function(deciles_by_label, facet='study') {
+    if (facet=='study') {
+        deciles_by_label <- deciles_by_label %>% 
+        mutate(study = factor(study, ordered=T, levels=unique(.$study)))
+    }
+
+    n_labels <- deciles_by_label$label %>% unique %>% length
+
+    p <- deciles_by_label %>% 
+    mutate(label = factor(label, ordered=T, levels=unique(.$label))) %>% 
+    ggplot(aes(x=G_decile, y=rank_in_decile)) +
+    # facet_grid(study~G, scales='free') + 
+    geom_raster(aes(fill=label)) + 
+    geom_vline(xintercept=5.5, color='grey', size=.3) +
+    # scale_fill_viridis_d() + 
+    scale_fill_manual(values=c('gray30',brewer.spectral(n_labels-1)), name='') +
+    # scale_fill_manual(values=c('gray30',viridis(7)), name='') +
+    guides(fill=guide_legend(reverse=T)) +
+    scale_x_discrete(labels=function(x) as.integer(x)+1) +
+    ylab('') +
+    xlab('AHBA axis decile') +
+    # ggtitle('Histogram of SCZ DEGs by AHBA axis decile and layer annotation') +
+    theme_minimal() + 
+    theme(
+        text=element_text(size=20),
+        axis.text=element_text(size=20, color='grey7', family='Calibri'), 
+        panel.grid=element_blank(),
+        strip.text.y.left = element_text(angle=0),
+        strip.placement='outside',
+        plot.title.position='plot'
+    )
+
+    if (facet=='study') {
+        p + facet_wrap(~study, scales='free', ncol=4)
+    } else {
+        p
+    }
+}
+
 plot_enrichment_bars <- function(null_p, xlab='Corr', lim='none') {
     
     if (lim=='none') {
@@ -102,7 +141,7 @@ plot_heatmap_split <- function(stats, size=6) {
     mutate(p_level=ifelse(q<0.001, '***',
                    ifelse(q<0.01, '**',
                    ifelse(q<0.05, '*','')))) %>%
-    ggplot(aes(x=G, y=label)) +
+    ggplot(aes(x=G, y=label, width=1, height=1)) +
     # facet_grid(disorder~., scales='free_y', switch='y') +
     facet_wrap(~disorder, scales='free_y', strip.position="left") +
     geom_raster(aes(fill=z)) + 
@@ -112,13 +151,12 @@ plot_heatmap_split <- function(stats, size=6) {
     scale_x_discrete(position='top') +
     guides(fill=guide_colorbar(barwidth=5)) +
     xlab('') + ylab('') +
-    # coord_fixed() +
     theme_minimal() +
     theme(panel.grid=element_blank(),
           axis.text = element_text(size=22, color='grey7', family='Calibri'),
           legend.title=element_text(vjust=1),
           legend.position='bottom',
-          aspect.ratio=1,
+        #   aspect.ratio=1,
           strip.placement='outside',
           strip.text.y.left = element_text(angle=0, vjust=.5, size=22, face='bold'),
           strip.text = element_text(angle=0, vjust=.5, size=22, face='bold')
