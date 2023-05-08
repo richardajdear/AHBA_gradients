@@ -209,7 +209,8 @@ def make_label_quantiles_by_axis(weights, labels, q=10):
         .join(weights.melt(ignore_index=False, var_name='G',value_name='G_score'), on='gene')
         .dropna()
         .reset_index(drop=True)
-        .assign(G_quantile = lambda x: x.groupby(['G','label'])['G_score'].apply(lambda y: pd.qcut(y, q=q, labels=range(q))))
+        .assign(G_quantile = lambda x: x.groupby(['G','label'])['G_score'].apply(lambda y: pd.qcut(y, q=q, labels=range(1,q+1
+        ))))
     )
     return label_percentiles
 

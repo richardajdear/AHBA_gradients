@@ -20,8 +20,8 @@ mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 
 
 plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
-                    #   position=position_brain(. ~ side + hemi),
-                      colors=rev(brewer.rdbu(100)), colorscale='symmetric', 
+                    #   position="stacked",
+                      colors=rev(brewer.rdbu(100)), colorscale='symmetric',
                       name='Z-score', labels='none') {
     
     if ("label" %in% colnames(maps)) {
@@ -30,13 +30,11 @@ plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
 
     df <- maps %>%
         rownames_to_column %>%
-        mutate(region = recode(rowname,'7Pl'='7PL')) %>% 
+        mutate(region = recode(rowname,'7Pl'='7PL')) %>%
         select(-rowname) %>%
         gather('map', 'value', -region) %>%
-        mutate_at(vars(map), ~ factor(., levels=unique(.))) %>% 
+        mutate_at(vars(map), ~ factor(., levels=unique(.))) %>%
         group_by(map)
-    
-    glasser$data <- glasser$data %>% filter(hemi=='left')
     
     # set scale limits at 99th percentile
     m_max <- pmax(
@@ -63,9 +61,10 @@ plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
 
     p <- df %>% ggseg(
         atlas=glasser,
+        hemi='left',
         # mapping=aes(fill=value, geometry=geometry, hemi=hemi, side=side, type=type),
         mapping=aes(fill=value),
-        # position=position_brain(position),
+        # position=position_brain(c('left lateral','left medial')),
         # position=position,
         colour='grey', size=.1,
         show.legend=T
@@ -86,7 +85,7 @@ plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
           text=element_text(size=22),
         #   strip.clip='off',
           plot.title=element_text(hjust=0.5)) +
-ggtitle(title) + xlab("") + ylab("")
+    ggtitle(title) + xlab("") + ylab("")
     
     if (facet=='h') {
         p + facet_grid(.~map)
@@ -242,7 +241,7 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switc
     mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
     ggplot(aes(x=G_score, y=map_score)) +
     geom_point(alpha=.3, size=pointsize) +
-    geom_smooth(method='lm', color=brewer.puor(5)[5], size=2) +
+    geom_smooth(method='lm', color=brewer.rdbu(5)[5], size=2) +
     geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0.5, vjust=0.5,
              face='bold') +
     # geom_text(data=corrs, aes(label=p_label, x=x, y=y), size=6, hjust=0, vjust=1) +

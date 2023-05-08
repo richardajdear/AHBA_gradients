@@ -30,7 +30,8 @@ class gradientVersion():
 
     
     def __init__(self, approach='dm', n_components=5, sparsity=0, kernel=None,
-                marker_genes=['NEFL', 'LGALS1', 'SYT6'], 
+                 marker_genes=['NEFL', 'LGALS1', 'SYT6'], 
+                 # marker_genes=['NEFL', 'LGALS1', 'RFTN1'], 
                 **kwargs):
         """
         Initialize
@@ -67,6 +68,7 @@ class gradientVersion():
 
         # Clean data: drop regions with all nulls, and genes with any nulls
         X = X.dropna(axis=0, how='all').dropna(axis=1, how='any')
+        # Optionally z-score expression
         if scale:
             X = X.apply(lambda x: (x-np.mean(x))/np.std(x))
         self.expression = X
@@ -93,7 +95,7 @@ class gradientVersion():
         return self
 
     
-    def clean_scores(self, scores=None, norm=True, abs=False, n_components=3):
+    def clean_scores(self, scores=None, norm=True, n_components=3):
         """
         Normalize G1-3 scores, add labels
         """
@@ -116,9 +118,6 @@ class gradientVersion():
         if norm:
             scores = scores.apply(lambda x: (x-np.mean(x))/np.std(x))
 
-        if abs:
-            scores = scores.abs()
-        
         return scores.join(labels)
     
     
@@ -126,17 +125,33 @@ class gradientVersion():
         """
         Score from other weights
         """
-        gene_intersection = set(self.expression.columns).intersection(other.weights.index)
-        expression_ = self.expression.loc[:,gene_intersection]
-        weights_ = other.weights.loc[gene_intersection, :]
+        other_weights = other.weights.set_axis(range(other.weights.shape[1]), axis=1)
+        gene_intersection = np.intersect1d(self.expression.columns, other_weights.index)
+        _expression = self.expression.loc[:, gene_intersection]
+        _weights = other_weights.loc[gene_intersection, :]
         
-        scores = expression_ @ weights_
+        scores = _expression @ _weights
         
         if clean:
             scores = self.clean_scores(scores=scores)
             
         return scores
 
+
+    def fill_missing_scores(self, other, clean=True):
+        """
+        Fill in NA regions in this set of scores using scores from other version
+        """
+        filled_scores = (self.scores
+                         .reindex(range(1,181))
+                         .fillna(other.scores)
+                         .dropna()
+                         )
+        
+        if clean:
+            filled_scores = self.clean_scores(scores=filled_scores)
+            
+        return filled_scores
     
     def score_in_dk(self, clean=True,
                     hcp_img_path = "../data/parcellations/lh.HCPMMP1.annot",
@@ -167,36 +182,25 @@ class gradientVersion():
         
         return scores
 
+    
+    def fit_weights(self):
+        """
+        Get gene weights by correlating expression with scores
+        """
+        x = self.expression.values
+        y = self.scores.values
+        xv = x - x.mean(axis=0)
+        yv = y - y.mean(axis=0)
+        xvss = (xv * xv).sum(axis=0)
+        yvss = (yv * yv).sum(axis=0)
+        result = np.matmul(xv.transpose(), yv) / np.sqrt(np.outer(xvss, yvss))
+        # bound the values to -1 to 1 in the event of precision issues
+        result = np.maximum(np.minimum(result, 1.0), -1.0)
 
-# def hcp_to_dk(maps_hcp,
-#                 hcp_img_path = "../data/parcellations/lh.HCPMMP1.annot",
-#                 dk_img_path = "../data/parcellations/lh.aparc.annot"
-#                 ):
-#     """
-#     Project HCP maps to DK using annot files (left hemi only)
-#     """
-#     hcp_img = annot_to_gifti(hcp_img_path)
-#     dk_img = annot_to_gifti(dk_img_path)
-    
-#     n_maps = maps_hcp.shape[1]
-#     maps_dk = np.zeros((34, n_maps))
-#     for i in range(n_maps):
-#         # Re-index gradient null values with NA
-#         _map_hcp = maps_hcp[i].reindex(range(1,181)).values
-#         # Use HCP parcellation image to project HCP data to fsaverage
-#         _map_fsaverage = parcels_to_vertices(_map_hcp, hcp_img)
-#         # Use DK parcellation image to project fsaverage data into DK
-#         _map_dk = vertices_to_parcels(_map_fsaverage, dk_img)
-#         # Add to outputs
-#         maps_dk[:,i] = _map_dk
-    
-#     # Convert to dataframe
-#     maps_dk = pd.DataFrame.from_records(maps_dk, index=list(range(1,35)))
-    
-#     return maps_dk
+        return pd.DataFrame(result, index=self.expression.columns)
 
-    
-    def fit_weights(self, other_expression=None, independent=True, normalize=False, sort=False, save_name=None, overwrite=True):
+
+    def fit_weights_PLS(self, other_expression=None, independent=True, normalize=False, sort=False, save_name=None, overwrite=True):
         """
         Get gene weights from PLS
         Use other expression matrix if provided, otherwise use self
@@ -208,7 +212,7 @@ class gradientVersion():
         else:
             X = other_expression.dropna(axis=0, how='all').dropna(axis=1, how='any')
             # Make sure X will match onto regions in Y
-            X = X.loc[set(X.index).intersection(self.scores.index), :]
+            X = X.loc[np.intersect1d(X.index, self.scores.index), :]
         
         # Fit each component independently
         n_components = self.scores.shape[1]
@@ -217,10 +221,12 @@ class gradientVersion():
             for i in range(n_components):
                 Y = self.scores.loc[X.index, i]
                 pls_weights[:,i] = PLSCanonical(n_components=1).fit(X,Y).x_weights_.squeeze()
+                # pls_weights[:,i] = PLSCanonical(n_components=1).fit(X,Y).x_loadings_.squeeze()
         # Or fit all components together
         else:
             Y = self.scores.loc[X.index, :]
-            pls_weights = PLSCanonical(n_components=5).fit(X,Y).x_weights_
+            # pls_weights = PLSCanonical(n_components=5).fit(X,Y).x_weights_
+            pls_weights = PLSCanonical(n_components=5).fit(X,Y).x_loadings_
         
         # Normalize
         if normalize:
@@ -244,6 +250,7 @@ class gradientVersion():
             return self.sort_weights(pls_weights)
         else:
             return pls_weights.set_axis(['G'+str(i+1) for i in range(n_components)], axis=1)
+
 
         
         
@@ -275,11 +282,11 @@ class gradientVersion():
         
         return null_scores
         
-        
+
     
     def make_null_weights(self, null_scores, save_name = None):
         """
-        Generate null weights from PLS on null maps x 
+        Generate null weights from PLS on null maps
         """
         n_genes = self.weights.shape[0]
         n = null_scores.shape[2]

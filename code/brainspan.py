@@ -85,7 +85,7 @@ def make_continuous(bs_clean, log=True, norm_samples=True):
     Convert BrainSpan age labels to continuous variable using age_to_continuous
     """
     if log:
-        _bs = bs_clean.applymap(lambda x: np.log10(x))
+        _bs = bs_clean.pipe(np.log10)
     else:
         _bs = bs_clean
 
@@ -236,7 +236,7 @@ def count_samples(bs_col, bs_cortex_mapping):
 
 
 
-def clean_brainspan(bs_exp, bs_col, bs_row, bs_mapping):
+def clean_brainspan(bs_exp, bs_col, bs_row, bs_mapping, log=False, norm_samples=False):
     """
     Clean up Brainspan data into dataframe
     """
@@ -260,6 +260,12 @@ def clean_brainspan(bs_exp, bs_col, bs_row, bs_mapping):
      .loc[:, lambda x: (x != 0).all(axis=0)] # drop zero and na columns
      .loc[:, lambda x: ~x.columns.duplicated()] # some columns are duplicates
     )
+
+    if log:
+        bs_clean = bs_clean.pipe(np.log10)
+
+    if norm_samples:
+        bs_clean = bs_clean.apply(lambda x: x/np.mean(x), axis=1)
 
     return bs_clean
 

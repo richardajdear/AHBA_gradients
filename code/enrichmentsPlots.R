@@ -2,6 +2,7 @@ suppressPackageStartupMessages(library(tidyverse))
 library(pals)
 library(ggrepel)
 library(ggh4x) # needed for facet_grid2 to not clip strip labels
+library(eulerr)
 # library(ggridges)
 
 
@@ -380,6 +381,77 @@ plot_enrichments <- function(enrichments, size=4) {
           text=element_text(size=20)
          )
 }
+
+
+
+plot_venn <- function(overlap_deg_gwas, disorder) {
+    title <- paste(disorder,'genes')
+    disorder <- enquo(disorder)
+    counts <- overlap_deg_gwas %>% 
+    filter(disorder==!!disorder) %>% 
+    group_by(gene) %>% 
+    summarise(
+        GWAS=sum(label=='GWAS'),
+        RNAseq=sum(label=='DEG')
+        ) %>% 
+    group_by(GWAS, RNAseq) %>% 
+    count() %>% ungroup() %>% 
+    mutate(
+        names = case_when(GWAS+RNAseq==2 ~ 'GWAS&RNAseq', GWAS==1 ~ 'GWAS', RNAseq==1 ~ 'RNAseq'),
+        pct = n/sum(n)
+    )
+    x <- counts$n
+    names(x) <- counts$names
+    plot <- plot(euler(x), 
+                fills = list(fill = brewer.rdbu(5)[c(1,5)], alpha = 0.5),
+                labels = list(col = "black", fontsize = 22, font='plain', cex=1, fontfamily='Calibri'),
+                quantities = list(col = "black", fontsize = 22, fontfamily='Calibri')
+                ) %>% 
+        wrap_elements +
+        ggtitle(title) +
+        theme( 
+            text=element_text(size=20),
+            plot.margin = margin(t=0, r=10, b=0, l=10, "pt"),
+            plot.title=element_text(size=22, color='grey7', face='plain', family='Calibri', hjust=.5, vjust=-1)
+        )
+    return(plot)
+}
+
+
+plot_quantile_steps <- function(quantile_steps, facet='', ncol=3) {
+    n_labels <- quantile_steps$label %>% unique %>% length
+    
+    p <- quantile_steps %>% 
+    arrange(desc(label)) %>% 
+    mutate(label = factor(label, ordered=T, levels=unique(.$label))) %>% 
+    ggplot(aes(x=layer, y=pct, group=label)) + 
+    geom_step(aes(color=label, alpha=label), size=1.5, direction='mid') + 
+    facet_wrap(~data) +
+    # scale_color_manual(values=viridis(n_labels), name='') +
+    # scale_alpha_manual(values=rep(1,n_labels), name='') +
+    ylab('% of genes') +
+    xlab('Cortical layer') +
+    guides(fill=guide_legend(reverse=T), alpha='none') +
+    theme_minimal() +
+    theme(
+        text=element_text(size=20),
+        axis.text=element_text(size=20, color='grey7', family='Calibri'), 
+        panel.grid=element_blank(),
+        strip.text.y.left = element_text(angle=0),
+        strip.placement='outside',
+        plot.title.position='plot'
+    )
+    
+
+    if (facet=='') {
+        p
+    } else (
+        p + facet_wrap(as.formula(facet), scales='free', ncol=ncol)
+    )
+}
+
+
+
 
 
 plot_log2FC <- function(scatter, corr=NULL, x=0, y=1) {

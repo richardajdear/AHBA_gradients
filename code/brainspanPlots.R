@@ -166,33 +166,41 @@ plot_hcp_bs_mapping <- function(hcp_bs_mapping) {
 
 
 
-plot_quantile_curves <- function(quantile_curves, facet='', ncol=3, which='pred') {
+plot_quantile_curves <- function(quantile_curves, facet='', continuous=FALSE, ncol=3, which='pred') {
     n_labels <- quantile_curves$label %>% unique %>% length
 
     p <- quantile_curves %>% 
     mutate(curve = get(which)) %>% 
+    arrange(desc(label)) %>% 
     mutate(label = factor(label, ordered=T, levels=unique(.$label))) %>% 
     ggplot(aes(x=age_log10, y=10**curve)) +
-    geom_line(aes(color=label, group=label), size=1) +
+    geom_line(aes(color=label, group=label, alpha=label), size=1.5) +
     scale_x_continuous(
         breaks=log10(c(-0.5,0,1,5,14,40)*365+40*7),
         labels=function(x) round((10**x - 40*7)/365,2)) +
-    scale_color_manual(values=viridis(n_labels), name='') +
-    # scale_color_manual(values=c('gray30',viridis(7)), name='') +
-    # scale_color_manual(values=c('gray30',brewer.spectral(7)), name='') +
-    guides(fill=guide_legend(reverse=T)) +
+    guides(fill=guide_legend(reverse=T), alpha='none') +
     ylab('log10 RPKM') +
     xlab('Age') +
     theme_minimal() + 
-    theme_minimal() + 
     theme(
-        text=element_text(size=20),
-        axis.text=element_text(size=20, color='grey7', family='Calibri'), 
+        text=element_text(size=22, color='grey7', family='Calibri'),
+        axis.text=element_text(size=22, color='grey7', family='Calibri'), 
         panel.grid.minor=element_blank(),
-        strip.text.y.left = element_text(angle=0),
+        strip.text.y.left = element_text(angle=0, size=22, color='grey7', family='Calibri'),
+        strip.text.x = element_text(angle=0, size=22, color='grey7', family='Calibri'),
         strip.placement='outside',
         plot.title.position='plot'
     )
+
+    if (!continuous) {
+        p <- p + 
+            scale_color_manual(values=viridis(n_labels), name='') +
+            scale_alpha_manual(values=rep(1,n_labels), name='')
+    } else {
+        p <- p + 
+            scale_color_gradientn(colors=viridis(100), name='') + 
+            scale_alpha_continuous(limits=c(1,1))
+    }
 
     if (facet=='') {
         p
@@ -227,7 +235,7 @@ plot_quantiles_age_curves <- function(quantiles_age_curves_plot, facet='w', ncol
     theme(
         text=element_text(size=20),
         axis.text=element_text(size=20, color='grey7', family='Calibri'), 
-        panel.grid.minor=element_blank(),
+        panel.grid=element_blank(),
         strip.text.y.left = element_text(angle=0),
         strip.placement='outside',
         plot.title.position='plot'

@@ -268,17 +268,6 @@ def get_rare_genes():
     return rare_genes
 
 
-def np_pearson_corr(x, y):
-    """
-    Fast pearson correlation (don't cross-correlate all the nulls with each other)
-    """
-    xv = x - x.mean(axis=0)
-    yv = y - y.mean(axis=0)
-    xvss = (xv * xv).sum(axis=0)
-    yvss = (yv * yv).sum(axis=0)
-    result = np.matmul(xv.transpose(), yv) / np.sqrt(np.outer(xvss, yvss))
-    # bound the values to -1 to 1 in the event of precision issues
-    return np.maximum(np.minimum(result, 1.0), -1.0)
 
 def get_gene_corr(weights, null_weights, gandal_genes, sig_thresh=1, adjust='fdr_bh', disorders = ['ASD', 'MDD', 'SCZ']):
     """

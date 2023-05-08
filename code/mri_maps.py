@@ -27,8 +27,8 @@ def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True):
     selected_maps = [
         'T1T2',
         'thickness',
-        # 'glasser_CMRO2',
-        # 'glasser_CMRGlu',
+        'glasser_CMRO2',
+        'glasser_CMRGlu',
         'G1_fMRI',
         'PC1_neurosynth',
         'externopyramidisation',
@@ -197,6 +197,7 @@ def generate_spins(n=1000, blocks=1):
             np.save(f"../outputs/permutations/spins_41k_{n}_{i}.npy", spins)
         print(f"\nGenerated block {i} of {n} spins")
     
+
 from neuromaps.nulls import cornblath
 def generate_nulls_from_gradients(scores, spins, hcp_img=None, n=10, n_components=3, only_left=True,
                            outfile='../outputs/permutations/spin_gradients_10.npy'):
@@ -328,7 +329,7 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr',
         for m in range(maps.shape[1]):
             _map = maps.iloc[:,m].values
             _map = _map.astype(np.longdouble) # force compare_images to work
-            _r, _p = compare_images(_scores, _map, nulls=_nulls, metric=method)
+            _r, _p = compare_images(_scores, _map, nulls=_nulls, metric=method, ignore_zero=False)
             output_frame[m+g*n_maps,:] = [_r, _p]
 
     # Output clean dataframe
