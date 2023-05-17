@@ -8,51 +8,141 @@ from neuromaps.stats import compare_images
 # from scipy.stats import percentileofscore
 from statsmodels.stats.multitest import multipletests
 from nibabel.freesurfer.io import read_annot
-from brainsmash.mapgen.base import Base
+# from brainsmash.mapgen.base import Base
 from sklearn.decomposition import PCA
 # from nilearn.input_data import NiftiLabelsMasker
+import bct
 
 
 
+def get_maps(data_dir="../data/cortical_maps.csv"):
+    names = {
+        'paquola_FC': 'Functional Hubs (FC)',
+        'T1T2': 'Myelination (T1w/T2w)',
+        'MEG_theta': 'MEG Theta (MEGθ)',
+        'glasser_GI': 'Aerobic Glycolysis (AG)',
+        'd_intramod60': 'Age 14-26 change in Short-Range\nIntramodular Connectivity (ΔShIm)',
+        'dMT': 'Age 14-26 change in \n Myelination (ΔMT)',
+    }
 
-def get_maps(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True):
-    maps = (
-        pd.read_csv(data_dir)
-        .apply(lambda x: (x-np.mean(x))/np.std(x))
-        .sort_index(axis=1)
-        .set_index(get_labels_hcp()[:180])
-        # .rename_axis('region')#.reset_index()
+    maps = (pd.read_csv(data_dir)
+            .apply(lambda x: (x-np.mean(x))/np.std(x))
+            .set_index(get_labels_hcp()[:180])
     )
-    
-    selected_maps = [
-        'T1T2',
-        'thickness',
-        'glasser_CMRO2',
-        'glasser_CMRGlu',
-        'G1_fMRI',
-        'PC1_neurosynth',
-        'externopyramidisation',
-        'glasser_GI',
-        'hill.evo_remapped',    
-        'hill.dev_remapped',
-        'glasser_CBF',
-        'allom',
-        
-        # 'glasser_CBV',
-        # 'asl',
-        
-        # 'x':'X axis',
-        # 'y':'Y axis',
-        # 'z':'Z axis'
-    ]
-    
-    if filter:
-        maps = maps.loc[:, selected_maps]
-        
+
     return maps
 
+def get_mesulam_ve_yeo(data_dir="../data/mesulam_ve_yeo.csv"):
+    short_names_dict = {
+        'Mesulam_names': {
+            'Heteromodal':'Het.',
+            'Unimodal':'Uni.',
+            'Paralimbic':'Par.',
+            'Idiotypic':'Idi.'
+        },
+        'Yeo_names': {
+            'Visual':'VIS',
+            'Somatomotor':'SMN',
+            'Dorsal attention':'DAN',
+            'Central attention':'CAN',
+            'Default mode':'DMN',
+            'Frontoparietal':'FPN',
+            'Limbic':'LIM'
+        },
+    }
 
-def get_ctmt(project_to_hcp=True):
+    mesulam_ve_yeo = (pd.read_csv(data_dir, index_col=0)
+                      .drop(['x','y','z'], axis=1)
+                      .replace({'label':{'7PL':'7Pl'}})
+                      .replace({'Mesulam':{4:1,2:4,3:2}})
+                    #   .replace({'Yeo_names':{'Central attention':'Central atten.','Dorsal attention':'Dorsal atten.'}})
+                      .replace(short_names_dict)
+                      .set_index('label'))
+    return mesulam_ve_yeo
+
+
+def make_correlation_matrix(maps, gamma=1, seed=1):
+    rename_dict = {
+        'T1T2': 'T1/T2',
+        'paquola_FC': 'FC',
+        'glasser_GI': 'AG',
+        'MEG_theta': 'MEGθ',
+        'dMT': 'ΔMT',
+        'd_intramod60': 'ΔIntraFC',
+        'hill_evo': 'Evo Exp',
+        'hill_dev': 'Dev Exp',
+        'externopyramidisation': 'Ext',
+        'thickness': 'CT',
+        'dCT': 'ΔCT',
+        'PC1_neurosynth': 'NS PC1',
+        'G1_fMRI': 'fMRI G1',
+        'allom': 'Allom',
+        'CBF': 'CBF',
+    }
+
+    corrmat = maps.rename(rename_dict, axis=1).corr()
+    G1_ranks = corrmat.abs()['G1'].rank(ascending=False)
+    G2_ranks = corrmat.abs()['G2'].rank(ascending=True)
+    G3_ranks = corrmat.abs()['G3'].rank(ascending=True)
+    combo_ranks = G1_ranks + G3_ranks
+
+    corrmat = corrmat.iloc[combo_ranks.argsort(),:].iloc[:,combo_ranks.argsort()]
+
+    clusters = bct.community_louvain(corrmat.abs().values, gamma=gamma, seed=seed)[0]
+    print('n clusters', len(np.unique(clusters)))
+
+    clusters = pd.Series(clusters, index=corrmat.index)
+
+    corrmat = corrmat.iloc[np.argsort(clusters), :].iloc[:, np.argsort(clusters)]
+
+    corrmat_for_plot = (corrmat
+            .rename_axis('x')
+            .melt(ignore_index=False, var_name='y', value_name='r')
+            .reset_index()
+            .assign(cluster = lambda x: x['x'].map(clusters))
+    )
+    return corrmat_for_plot
+
+
+
+# def get_mri_maps_OLD(data_dir="../data/stat_maps_HCP_forRichard.csv", filter=True):
+#     maps = (
+#         pd.read_csv(data_dir)
+#         .apply(lambda x: (x-np.mean(x))/np.std(x))
+#         .sort_index(axis=1)
+#         .set_index(get_labels_hcp()[:180])
+#         # .rename_axis('region')#.reset_index()
+#     )
+    
+#     selected_maps = [
+#         'T1T2',
+#         'thickness',
+#         'glasser_CMRO2',
+#         'glasser_CMRGlu',
+#         'G1_fMRI',
+#         'PC1_neurosynth',
+#         'externopyramidisation',
+#         'glasser_GI',
+#         'hill.evo_remapped',    
+#         'hill.dev_remapped',
+#         'glasser_CBF',
+#         'allom',
+        
+#         # 'glasser_CBV',
+#         # 'asl',
+        
+#         # 'x':'X axis',
+#         # 'y':'Y axis',
+#         # 'z':'Z axis'
+#     ]
+    
+#     if filter:
+#         maps = maps.loc[:, selected_maps]
+        
+#     return maps
+
+
+def get_ctmt_from_dk(project_to_hcp=True):
     ctmt = (
         pd.read_csv("../data/whitakervertes2016_complete.csv", index_col=0)
         .query('hemi=="l"')
@@ -133,6 +223,7 @@ def dk_to_hcp(maps,
                                          )
     
     return maps_hcp
+
 
 
 def generate_shuffles(maps, n=1000,
@@ -290,8 +381,9 @@ def generate_simulations(maps, n=10,
 
 
 def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr', 
-                          reindex=True,
-                          pool=False, pool_frac=.3, adjust='fdr_bh', n_components=3):
+                          reindex=True, pool=False, pool_frac=.3, 
+                          adjust='fdr_bh', adjust_by_label=False,
+                          n_components=3):
     """
     Get correlations with maps from gradient score nulls
     Uses numpy masked array to handle missing values
@@ -340,7 +432,18 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr',
     
     # Multiple comparisons
     if adjust is not None:
-        output_adjusted = output_adjusted.assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
+        # Adjust across axes only (not by label)?
+        if adjust_by_label:
+            output_adjusted = (output_adjusted
+                .assign(q = lambda x: x.groupby('G')
+                                       .apply(lambda y: pd.Series(multipletests(y['p'], method=adjust)[1], index=y.index))
+                                       .reset_index(0, drop=True) # make index match
+                                       )
+                )
+        else:
+            output_adjusted = (output_adjusted
+                .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
+                )
     else:       
         output_adjusted = output_adjusted.assign(q = lambda x: x['p'])
 

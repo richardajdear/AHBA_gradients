@@ -17,12 +17,11 @@ mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 
 
 
-
-
-plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
+plot_maps <- function(maps, title="", ncol=3, facet='w', 
+                      spacing_x=0.5, spacing_y=0.5,
                     #   position="stacked",
-                      colors=rev(brewer.rdbu(100)), colorscale='symmetric',
-                      name='Z-score', labels='none') {
+                      colors=rev(brewer.rdbu(100)), colorscale=c(-3,3),
+                      name='', labels=c('-3σ','+3σ')) {
     
     if ("label" %in% colnames(maps)) {
         maps <- maps %>% remove_rownames %>% column_to_rownames('label')
@@ -41,19 +40,24 @@ plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
         df %>% .$value %>% quantile(.99, na.rm=T) %>% abs,
         df %>% .$value %>% quantile(.01, na.rm=T) %>% abs
     )
-    if (colorscale=='symmetric') {
+
+    if (length(colorscale > 1)) {
+        m_min <- colorscale[1]
+        m_max <- colorscale[2]
+    } else if (colorscale=='symmetric') {
         m_min <- -m_max
     } else if (colorscale=='zero') {
         m_min <- 0
     } else if (colorscale=='absolute') {
         m_min <- df %>% .$value %>% quantile(.01)
     } else {
-        m_min <- colorscale[1]
-        m_max <- colorscale[2]
+        print("Invalid colorscale")
     }
 
     # set manual axis labels if desired
-    if (labels=='none') {
+    if (length(labels)>1) {
+        labels = labels
+    } else if (labels=='none') {
         labels = c(round(m_min,2),round(m_max,2))
     } else if (labels=='centile') {
         labels = c(round(m_min+0.5,2),round(m_max+0.5,2))
@@ -74,17 +78,20 @@ plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
         colors=colors, 
         limits=c(m_min,m_max), oob=squish, breaks=c(m_min,m_max), 
         labels=labels, 
+        # guide=guide_colorbar(barheight=10),
         name=name
     ) +
     theme_void() + 
     theme(legend.position='bottom',
           legend.title=element_text(vjust=1),
-          panel.spacing.x=unit(spacing,'lines'),
-          panel.spacing.y=unit(spacing,'lines'),
-          strip.text.x=element_text(vjust=1, size=22),
-          text=element_text(size=22),
-        #   strip.clip='off',
-          plot.title=element_text(hjust=0.5)) +
+          panel.spacing.x=unit(spacing_x,'lines'),
+          panel.spacing.y=unit(spacing_y,'lines'),
+          strip.text.x=element_text(vjust=1, size=20),
+          text=element_text(size=20),
+          strip.clip='off',
+          plot.title=element_text(hjust=0.5),
+          plot.tag.position = c(0,1)
+    ) +
     ggtitle(title) + xlab("") + ylab("")
     
     if (facet=='h') {
@@ -100,9 +107,181 @@ plot_maps <- function(maps, title="", ncol=3, facet='w', spacing=0,
 }
 
 
+plot_scatter_with_colors <- function(data, corrs, x_name, x_var, y_var, color_var=NULL, left_margin=0) {
+    
+    data <- data %>% 
+        filter(!is.na(get(x_var)), !is.na(get(y_var))) %>% 
+        arrange(get(color_var)) %>% 
+        mutate(
+            x=get(x_var), y=get(y_var),
+            color = get(paste0(color_var,'_colors')),
+            color_names = get(paste0(color_var,'_names'))
+        ) %>% 
+        mutate(
+            color = factor(color, ordered=T, levels=unique(.$color))
+        )
+
+    corrs <- corrs %>%
+        filter(map == !!enquo(x_var), G == !!enquo(y_var)) %>% 
+        mutate(p_sig=ifelse(p<0.001, '***',
+                    ifelse(p<0.01, '**',
+                    ifelse(p<0.05, '*','')))) %>%
+        mutate(q_sig=ifelse(q<0.001, '‡',
+                    ifelse(q<0.01, '‡',
+                    ifelse(q<0.05, '†','')))) %>%
+        mutate(r_label=paste('R =', round(r,2), p_sig, q_sig),
+                # '\np = ', round(p,3), p_sig
+                # '\nq = ', round(q,3), q_sig
+                ) %>% 
+        mutate(
+            x = -Inf,
+            y = ifelse(r > 0, Inf, -Inf),
+            vjust = ifelse(r > 0, 1.5, -1)
+            )
+    
+    color_labels <- unique(data$color_names)
+
+    scatter <- data %>%  
+        ggplot() +
+        geom_smooth(aes(x=x, y=y), method='lm', se=F, color='black') +
+        geom_point(aes(x=x, y=y, fill=color), size=3, alpha=.8, color='darkgrey', shape=21) + 
+        scale_fill_identity() +
+        guides(color=F) +
+        # geom_text(data=corrs, aes(label=r_label, x=x, y=y, vjust=vjust), size=10, hjust=0) +
+        annotate(geom='text', label=corrs$r_label, size=8, color='grey7', family='Calibri',
+                 x=corrs$x, y=corrs$y, vjust=corrs$vjust, hjust=-.1) +
+        xlab(x_name) + ylab(y_var) +
+        theme_classic() + 
+        theme(
+            # aspect.ratio=4/5,
+            # plot.margin=margin(l=200, unit='pt'),
+            plot.tag.position = c(0,1),
+            legend.position='bottom',
+            legend.title=element_blank(),
+            panel.grid=element_blank(),
+            axis.text=element_blank(),
+            axis.ticks=element_blank(),
+            axis.title.y=element_text(angle=0, vjust=.5, margin=margin(t=0,r=0,b=0,l=left_margin,'cm')),
+            text=element_text(size=20, color='grey7', family='Calibri')
+        )
+
+    densities <- data %>% 
+        ggplot(aes(x=y, fill=color)) +
+        geom_density(alpha=.3, color='grey', size=.5) +
+        scale_fill_identity(name=NULL, labels=color_labels, 
+            guide=guide_legend(reverse=T)) + 
+        coord_flip() + 
+        theme_void() + 
+        theme(
+            legend.text=element_text(size=20, color='grey7', family='Calibri')
+        ) + plot_layout(tag_level='new')
+
+    scatter + densities + plot_layout(widths=c(3,1))
+}
+
+
+
+
+
+plot_corrmat <- function(df, highlight_color='grey7') {
+    ### Correlation matrix using continuous axes to support rectangle annotation of modules
+    df_plot <- df %>%
+    mutate(
+        x = factor(x, ordered=T, levels=unique(.$x)),
+        y = factor(y, ordered=T, levels=unique(.$y)),
+        x1 = as.integer(x),
+        y1 = as.integer(y)
+    )
+    # Set axes labels
+    labels <- levels(df_plot$x)
+    breaks <- seq_along(labels)
+
+    # Get rectangle boundaries from module annotations of x label
+    df_rectangles <- df_plot %>% 
+    group_by(cluster) %>% 
+    summarise(xmin=min(x1)-0.5, xmax=max(x1)+0.5, ymin=min(x1)-0.5, ymax=max(x1)+0.5)
+
+    # # Get G1-3 for marker lines
+    df_lines <- df_plot %>% 
+    filter(x %in% c('G1','G2','G3')) %>% select(x, x1)
+
+    df_plot %>% ggplot() + 
+    geom_raster(aes(x1,y1, fill=r)) + 
+    # geom_text(aes(x1,y1,label=round(r,2)), size=6) +
+    geom_rect(data=df_rectangles, aes(xmin=xmin, ymin=xmin, xmax=xmax, ymax=xmax),
+              fill=NA, size=1, color=highlight_color) +
+    scale_x_continuous(breaks=breaks, labels=labels, limits=c(0.5,length(labels)+0.5)) +
+    scale_y_continuous(breaks=breaks, labels=labels, limits=c(0.5,length(labels)+0.5)) +
+    coord_cartesian(clip='off') +
+    # scale_fill_gradientn(colors=rev(brewer.rdbu(100)[10:90]), limits=c(-1,1), name='R') +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-1,1), breaks=c(-1,1), name='R') +
+    xlab('') + ylab('') +
+    theme_minimal() + 
+    theme(
+        aspect.ratio=1,
+        panel.grid = element_blank(),
+        text=element_text(size=20, family='Calibri', color='grey7'),
+        axis.text=element_text(size=20, family='Calibri', color='grey7', 
+                    face=ifelse(df_plot$x %in% c('G1','G2','G3'), 'bold', 'plain')),
+        axis.text.x=element_text(angle=90, hjust=1, vjust=.5, margin=margin(t=-20, unit='pt')),
+        axis.text.y=element_text(angle=0, margin=margin(r=-20, unit='pt')),
+        legend.margin=margin(t=-20, unit='pt'),
+        legend.title=element_text(vjust=1),
+        legend.position='right'
+        # legend.position='bottom'
+    )
+}
+
+
+
+
+
+
+
+
+plot_single_scatter <- function(data, x, y, annot, highlight_var=NULL, highlight_names=NULL) {
+    
+    p <- data %>%  
+    ggplot(aes(x=var), y=get(y)) +
+    geom_smooth(method='lm', se=F) +
+    geom_point(size=3, alpha=.5) + 
+    annotate(geom='text', -Inf, Inf, hjust = -0.1, vjust = 1, label=annot, size=10) +
+    xlab(x) + ylab(y) +
+    theme_classic() + 
+    theme(
+        aspect.ratio=1,
+        legend.position='bottom',
+        legend.title=element_blank(),
+        panel.grid=element_blank(),
+        axis.text=element_blank(),
+        axis.ticks=element_blank(),
+        axis.title.y=element_text(angle=0, vjust=0.5),
+        text=element_text(size=22)
+    )
+
+    if (!is.null(highlight_var)) {
+        highlight <- data %>% 
+            mutate(color = get(highlight_var)) %>% 
+            filter(color %in% highlight_names)
+
+        p + geom_point(size=4, alpha=1, data=highlight, aes(color=color))
+    } else {
+        p
+    }
+}
+
+
+
+
+
 plot_maps_dk <- function(maps, title="", ncol=3, facet='w', spacing=0,
-                      colors=rev(brewer.rdbu(100)), colorscale='symmetric', 
-                      name='Z-score', labels='none') {
+                      colors=rev(brewer.rdbu(100)), colorscale=c(-3,3),
+                      name='', labels=c('-3σ','+3σ')) {
+    
+    if ("label" %in% colnames(maps)) {
+        maps <- maps %>% remove_rownames %>% column_to_rownames('label')
+    }
+
     df <- maps %>%
         rownames_to_column %>%
         rename(label = rowname) %>%
@@ -110,23 +289,29 @@ plot_maps_dk <- function(maps, title="", ncol=3, facet='w', spacing=0,
         mutate_at(vars(map), ~ factor(., levels=unique(.))) %>% 
         group_by(map)
     
-    dk$data <- dk$data %>% filter(hemi=='left')
-    
     # set scale limits at 99th percentile
     m_max <- pmax(
         df %>% .$value %>% quantile(.9, na.rm=T)
         # df %>% .$value %>% quantile(.01) %>% abs
     )
-    if (colorscale=='symmetric') {
+
+    if (length(colorscale > 1)) {
+        m_min <- colorscale[1]
+        m_max <- colorscale[2]
+    } else if (colorscale=='symmetric') {
         m_min <- -m_max
     } else if (colorscale=='zero') {
         m_min <- 0
     } else if (colorscale=='absolute') {
-        m_min <- df %>% .$value %>% quantile(.01, na.rm=T)
+        m_min <- df %>% .$value %>% quantile(.01)
+    } else {
+        print("Invalid colorscale")
     }
 
     # set manual axis labels if desired
-    if (labels=='none') {
+    if (length(labels)>1) {
+        labels = labels
+    } else if (labels=='none') {
         labels = c(round(m_min,2),round(m_max,2))
     } else if (labels=='centile') {
         labels = c(round(m_min+0.5,2),round(m_max+0.5,2))
@@ -162,7 +347,7 @@ ggtitle(title) + xlab("") + ylab("")
     } else if (facet=='v') {
         p + facet_grid(map~., switch='y')
     } else if (facet=='w') {
-        p + facet_wrap(~map, ncol=ncol, dir="v")
+        p + facet_wrap(~map, ncol=ncol, dir="h")
     }
 }
 
@@ -187,7 +372,7 @@ plot_map_corrs <- function(null_p, size=6) {
     coord_fixed() +
     theme_minimal() +
     theme(panel.grid=element_blank(),
-          axis.text = element_text(size=22, color='grey7', family='Calibri'),
+          axis.text = element_text(size=20, color='grey7', family='Calibri'),
           legend.title=element_text(vjust=1),
           legend.position='bottom'
          )
@@ -241,7 +426,7 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switc
     mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
     ggplot(aes(x=G_score, y=map_score)) +
     geom_point(alpha=.3, size=pointsize) +
-    geom_smooth(method='lm', color=brewer.rdbu(5)[5], size=2) +
+    geom_smooth(method='lm', color=brewer.rdbu(5)[1], size=2) +
     geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0.5, vjust=0.5,
              face='bold') +
     # geom_text(data=corrs, aes(label=p_label, x=x, y=y), size=6, hjust=0, vjust=1) +

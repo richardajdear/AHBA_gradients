@@ -76,11 +76,11 @@ plot_enrichment_bars <- function(null_p, xlab='Corr', lim='none') {
 }
 
 
-plot_enrichment_bars_z <- function(null_p, xlab='z-score') {
+plot_enrichment_bars_z <- function(null_p, xlab='z-score', facet='.~G') {
     
     lim <- max(abs(null_p$z))
     
-    null_p %>% 
+    p <- null_p %>% 
     mutate(G=factor(G, ordered=T, levels=unique(.$G))) %>%
     mutate(label=factor(label, ordered=T, levels=unique(.$label))) %>%
     mutate(sig = case_when(
@@ -88,7 +88,6 @@ plot_enrichment_bars_z <- function(null_p, xlab='z-score') {
         )) %>%
     mutate(hjust=ifelse(z < 0, 1, 0)) %>%
     ggplot(aes(x=z, y=label)) + 
-    facet_grid(.~G) +
     # geom_vline(xintercept=0) +
     geom_col(aes(fill=z)) +
     geom_text(aes(label=sig, vjust=.7, hjust=hjust), size=8) +
@@ -100,17 +99,29 @@ plot_enrichment_bars_z <- function(null_p, xlab='z-score') {
     # coord_flip() +
     coord_cartesian(clip='off') +
     theme_minimal() +
-    theme(panel.grid.minor=element_blank(),
+    theme(panel.grid=element_blank(),
           plot.title=element_text(size=20),
-          axis.text=element_text(size=20, color='grey7'),
-          strip.text=element_text(size=20, color='grey7'),
-          text=element_text(size=20,color='grey7')
+          axis.text=element_text(size=20, family='Calibri', color='grey7'),
+          strip.text=element_text(size=20, family='Calibri', color='grey7'),
+          strip.text.y.left=element_text(size=20, family='Calibri', color='grey7', angle=0),
+          strip.placement='outside',
+          text=element_text(size=20,family='Calibri', color='grey7')
          )
+    
+    if (facet=='.~G') {
+        p + facet_grid(facet)
+    } else {
+        p + facet_grid(facet, switch='y')
+    }
 }
 
 
-plot_heatmap_simple <- function(stats, size=6) {
-    lim <- max(abs(stats$z))
+plot_heatmap_simple <- function(stats, size=6, limits=NULL) {
+    if (is.null(limits)) {
+        lim <- max(abs(stats$z))
+    } else {
+        lim <- limits
+    }
     
     stats %>%
     mutate(label = factor(label, ordered=T, levels=rev(unique(.$label)))) %>%
@@ -121,14 +132,15 @@ plot_heatmap_simple <- function(stats, size=6) {
     geom_raster(aes(fill=z)) + 
     geom_text(aes(label=p_level), vjust=.5, hjust=.5, size=size, color='white') +
     scale_fill_gradientn(colors=rev(brewer.rdbu(100)), name='Enrichment Z-score', 
-                        limits=c(-lim,lim), breaks=c(-floor(lim*10)/10,floor(lim*10)/10)) +
+                        limits=c(-lim,lim), breaks=c(-floor(lim*10)/10,floor(lim*10)/10)
+                        ) +
     scale_x_discrete(position='top') +
     guides(fill=guide_colorbar(barwidth=5)) +
     xlab('') + ylab('') +
     coord_fixed() +
     theme_minimal() +
     theme(panel.grid=element_blank(),
-          axis.text = element_text(size=22, color='grey7', family='Calibri'),
+          axis.text = element_text(size=20, color='grey7', family='Calibri'),
           legend.title=element_text(vjust=1),
           legend.position='bottom'
          )
@@ -338,15 +350,15 @@ plot_go_enrichments <- function(enrichments, size=4, name='Enrichment FDR') {
                          limits=c(-lim,lim)) +
     theme(
           # axis.text.y=element_blank(),
-          axis.text.y=element_text(size=20, color='grey7'),
-          axis.text.x=element_text(size=20, color='grey7'),
+          axis.text.y=element_text(size=18, color='grey7'),
+          axis.text.x=element_text(size=18, color='grey7'),
           axis.line.y = element_line(arrow = grid::arrow(length = unit(0.3, "cm"), ends = "both")),
           axis.title.y = element_text(angle=0, vjust=0.5, color='grey7'),
           panel.grid.minor=element_blank(),
           panel.grid.major.y=element_blank(),
           panel.spacing=unit(10,'lines'),
           strip.placement='outside',
-        #   strip.text=element_text(size=20, margin=margin(b=-10, unit='pt')),
+          strip.text.x=element_text(size=20, margin=margin(b=-10, unit='pt')),
           legend.position=c(0.1,0.8),
           text=element_text(size=20)
          )
@@ -403,16 +415,17 @@ plot_venn <- function(overlap_deg_gwas, disorder) {
     x <- counts$n
     names(x) <- counts$names
     plot <- plot(euler(x), 
-                fills = list(fill = brewer.rdbu(5)[c(1,5)], alpha = 0.5),
-                labels = list(col = "black", fontsize = 22, font='plain', cex=1, fontfamily='Calibri'),
-                quantities = list(col = "black", fontsize = 22, fontfamily='Calibri')
+                edges = list(col='grey'),
+                fills = list(fill = brewer.puor(5)[c(1,5)], alpha = 0.3),
+                labels = list(col = "grey7", fontsize = 18, font='plain', cex=1, fontfamily='Calibri'),
+                quantities = list(col = "grey7", fontsize = 18, fontfamily='Calibri')
                 ) %>% 
         wrap_elements +
         ggtitle(title) +
         theme( 
             text=element_text(size=20),
             plot.margin = margin(t=0, r=10, b=0, l=10, "pt"),
-            plot.title=element_text(size=22, color='grey7', face='plain', family='Calibri', hjust=.5, vjust=-1)
+            plot.title=element_text(size=20, color='grey7', face='plain', family='Calibri', hjust=.5, vjust=-.8)
         )
     return(plot)
 }
@@ -491,6 +504,7 @@ plot_log2FC <- function(scatter, corr=NULL, x=0, y=1) {
         p
     }
 }
+
 
 plot_gene_distributions <- function(deg, null_p=FALSE, split=FALSE, abs=FALSE) {
     if (null_p) {

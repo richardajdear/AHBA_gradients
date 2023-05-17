@@ -398,10 +398,14 @@ def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include
     return df
 
 
+replace_dict = {'01-Mar':'MARCH1', '02-Mar':'MARCH2', '03-Mar':'MARCH3', '04-Mar':'MARCH4', '05-Mar':'MARCH5', '06-Mar':'MARCH6', '07-Mar':'MARCH7', '08-Mar':'MARCH8', 
+                '09-Mar':'MARCH9', '10-Mar':'MARCH10', '11-Mar':'MARCH11',
+                '01-Sep':'SEPT1', '02-Sep':'SEPT2', '03-Sep':'SEPT3', '04-Sep':'SEPT4', '05-Sep':'SEPT5', '06-Sep':'SEPT6', '07-Sep':'SEPT7', '08-Sep':'SEPT8',
+                '09-Sep':'SEPT9', '10-Sep':'SEPT10', '11-Sep':'SEPT11', '12-Sep':'SEPT12', '13-Sep':'SEPT13', '14-Sep':'SEPT14', '15-Sep':'SEPT15', 
+                '01-Dec':'DECR1', '02-Dec':'DECR2'}
 
 
-
-def get_cell_genes(which='jakob', include=None, subtype=False, combine_layers=False, combine_ex_in=False, add_synapses=False):
+def get_cell_genes(which='jakob', include=None, subtype=False, combine_layers=False, combine_ex_in=False, add_synapses=True):
     """
     Read cell genes table
     """
@@ -456,6 +460,7 @@ def get_cell_genes(which='jakob', include=None, subtype=False, combine_layers=Fa
          .drop_duplicates()
          .loc[lambda x: ~np.isin(x['label'], ['Per'])]
          .sort_values(['label', 'gene'])
+         .replace({'gene':replace_dict})
          # .groupby('Class').apply(lambda x: x.sample(frac=.1))
         )
 
@@ -469,7 +474,9 @@ def get_cell_genes(which='jakob', include=None, subtype=False, combine_layers=Fa
 
 def get_synapse_genes():
     synapse_genes = pd.read_csv("../data/synaptome_all.csv", usecols=['gene_symbol']).dropna().iloc[:1886]
-    synapse_genes = pd.DataFrame({'label':'Synapses', 'gene':synapse_genes['gene_symbol']})
+    synapse_genes = pd.DataFrame({
+            'label':'Synapses', 'gene':synapse_genes['gene_symbol']
+        }).replace({'gene':replace_dict})
     return synapse_genes
 
 def get_cell_genes_weighted(which=None, normalize=True):
@@ -520,6 +527,7 @@ def get_layer_genes(which='maynard', add_hse_genes=False):
                 .loc[lambda x: x['log2FC']>1]
                 .sort_values('label')
                 .drop(['log2FC'],axis=1)
+                .replace({'gene':replace_dict})
                 )
     
     maynard_data = pd.read_csv("../data/maynard_layers.csv")

@@ -63,6 +63,37 @@ def make_var_exp_df(version_dict):
     )
     return df_var_exp
 
+# Single cell data analysis
+def format_single_cell_data_for_plot():
+    """
+    Format Allen Single Cell data for positive vs negative plot
+    NB: must first project gene data to G123
+    """
+    # Get single
+    sc_axes_posneg = pd.read_csv("../data/allen_single_cell_G123_posneg.csv", index_col=0)
+    metadata = (pd.read_csv("../data/allen_single_cell_metadata.csv")
+                .assign(cell_type = lambda x: np.where(x['class_label']=='Non-neuronal', x['subclass_label'], 
+                                 x['class_label'].map({'Glutamatergic':'Neuron-Ex','GABAergic':'Neuron-In'})))
+                .assign(cell_type = lambda x: pd.Categorical(x['cell_type'], ordered=True,
+                                           categories=['Neuron-Ex','Neuron-In','Astrocyte','Endothelial','Microglia','Oligodendrocyte','OPC']))
+                .assign(layer = lambda x: x['cortical_layer_label'].str[:2])
+    )
+                                
+    sc_axes_pos = sc_axes_posneg.iloc[:,:3].set_axis(['G1','G2','G3'],axis=1).stack().rename('negative')
+    sc_axes_neg = sc_axes_posneg.iloc[:,3:].set_axis(['G1','G2','G3'],axis=1).stack().rename('positive')
+    sc_axes_melt = sc_axes_pos.to_frame().join(sc_axes_neg).reset_index(1).rename({'level_1':'G'}, axis=1)
+
+    sc_axes_posneg_plot = (
+        metadata.loc[:,['class_label','subclass_label','region_label','layer','cell_type','outlier_call']]
+        .join(sc_axes_melt)
+        .query("~outlier_call")
+        # .query("cell_type not in ['Pericyte', 'VLMC']")
+        .sort_values("cell_type")
+        .dropna()
+        # .reset_index(drop=True)
+    )
+    return sc_axes_posneg_plot
+
 
 ### Regress out axes
 def regress_out_axes(version, n_axes = 1, norm=False):
@@ -126,7 +157,7 @@ def get_graph_metric(coexp, metric='transitivity', threshold=None, nonnegative=T
 ### Smoothness
 def get_moran_I(scores,
                 pct_include = 25,
-                distmat = '../data/LeftParcelGeodesicDistmat.txt'):
+                distmat = '../data/parcellations/LeftParcelGeodesicDistmat.txt'):
     # Get distmat matching scores
     inds = [i-1 for i in scores.index]
     distmat=np.loadtxt(distmat)[inds,:][:, inds]

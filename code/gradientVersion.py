@@ -30,8 +30,8 @@ class gradientVersion():
 
     
     def __init__(self, approach='dm', n_components=5, sparsity=0, kernel=None,
-                 marker_genes=['NEFL', 'LGALS1', 'SYT6'], 
-                 # marker_genes=['NEFL', 'LGALS1', 'RFTN1'], 
+                #  marker_genes=['NEFL', 'LGALS1', 'SYT6'], 
+                 marker_genes=['NEFL', 'LGALS1', 'RFTN1'], 
                 **kwargs):
         """
         Initialize
@@ -183,7 +183,7 @@ class gradientVersion():
         return scores
 
     
-    def fit_weights(self):
+    def fit_weights(self, sort=False, n_components=3):
         """
         Get gene weights by correlating expression with scores
         """
@@ -197,7 +197,15 @@ class gradientVersion():
         # bound the values to -1 to 1 in the event of precision issues
         result = np.maximum(np.minimum(result, 1.0), -1.0)
 
-        return pd.DataFrame(result, index=self.expression.columns)
+        weights = pd.DataFrame(result, index=self.expression.columns, 
+                               columns=['G'+str(i+1) for i in range(5)]).iloc[:,:n_components]
+
+        # Output sorted lists, or unsorted dataframe
+        if sort:
+            return self.sort_weights(weights)
+        else:
+            return weights
+
 
 
     def fit_weights_PLS(self, other_expression=None, independent=True, normalize=False, sort=False, save_name=None, overwrite=True):

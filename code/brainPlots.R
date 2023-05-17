@@ -224,7 +224,7 @@ ggtitle(title) + xlab("") + ylab("")
 
 
 
-plot_hcp_wide <- function(scores_df, title="", facet='h', spacing=4) {
+plot_hcp_wide <- function(scores_df, title="", facet='h', spacing=0) {
     df <- scores_df %>% 
         # select(-`3`, -`4`) %>%
         # rename('G1'='0', 'G2'='1', 'G3'='2') %>%

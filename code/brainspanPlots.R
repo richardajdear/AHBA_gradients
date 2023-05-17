@@ -3,7 +3,7 @@
 library(pals)
 library(shades)
 # mycolors = brewer.rdylbu(5)[c(1,2,5)]
-mycolors=brewer.set1(4)[c(1,4,2)]
+# mycolors=brewer.set1(4)[c(1,4,2)]
 # mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 # mycolors = saturation(c(brewer.rdylbu(5)[1:2],brewer.rdylbu(6)[4:6]), delta(.2))
 # mycolors2 = c(mycolors[1:2], saturation(mycolors[3], delta(.4)))
@@ -59,6 +59,10 @@ plot_bs_dk_mapping <- function(dk_bs_mapping,title='',xlab='') {
 }
 
 plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', rotate=F) {
+    colors <- c(
+        brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
+    )
+
     g <- bs_scores_corr %>% 
     mutate_at(vars(age), ~ factor(., levels=unique(.))) %>%
     ggplot() + 
@@ -67,7 +71,7 @@ plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', ro
     geom_line(aes(x=age, y=corr, color=G, group=G), size=1, alpha=1) + 
     geom_point(aes(x=age, y=corr, color=G), size=5) + 
     xlab("") + ylab("AHBA-BrainSpan correlation") +
-    scale_color_manual(values=mycolors) +
+    scale_color_manual(values=colors) +
     scale_y_continuous(limits=c(0,1), breaks=seq(0,1,.2)) +
     # scale_color_manual(values=brewer.rdylbu(4)) +
     ggtitle(title) +
@@ -174,21 +178,24 @@ plot_quantile_curves <- function(quantile_curves, facet='', continuous=FALSE, nc
     arrange(desc(label)) %>% 
     mutate(label = factor(label, ordered=T, levels=unique(.$label))) %>% 
     ggplot(aes(x=age_log10, y=10**curve)) +
-    geom_line(aes(color=label, group=label, alpha=label), size=1.5) +
+    geom_line(aes(color=label, group=label, alpha=label), size=1) +
     scale_x_continuous(
         breaks=log10(c(-0.5,0,1,5,14,40)*365+40*7),
         labels=function(x) round((10**x - 40*7)/365,2)) +
     guides(fill=guide_legend(reverse=T), alpha='none') +
     ylab('log10 RPKM') +
     xlab('Age') +
-    theme_minimal() + 
+    theme_classic() + 
     theme(
-        text=element_text(size=22, color='grey7', family='Calibri'),
-        axis.text=element_text(size=22, color='grey7', family='Calibri'), 
-        panel.grid.minor=element_blank(),
-        strip.text.y.left = element_text(angle=0, size=22, color='grey7', family='Calibri'),
-        strip.text.x = element_text(angle=0, size=22, color='grey7', family='Calibri'),
+        text=element_text(size=20, color='grey7', family='Calibri'),
+        axis.text.x=element_text(size=20, color='grey7', family='Calibri'), 
+        axis.text.y=element_blank(),
+        axis.ticks=element_blank(),
+        panel.grid=element_blank(),
+        strip.text.y.left = element_text(angle=0, size=20, color='grey7', family='Calibri'),
+        strip.text.x = element_text(angle=0, size=20, color='grey7', family='Calibri'),
         strip.placement='outside',
+        strip.background = element_blank(),
         plot.title.position='plot'
     )
 
@@ -205,7 +212,7 @@ plot_quantile_curves <- function(quantile_curves, facet='', continuous=FALSE, nc
     if (facet=='') {
         p
     } else (
-        p + facet_wrap(as.formula(facet), scales='free', ncol=ncol)
+        p + facet_wrap(as.formula(facet), scales='fixed', ncol=ncol)
     )
 }
 
