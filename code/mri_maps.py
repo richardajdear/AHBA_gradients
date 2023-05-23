@@ -61,7 +61,7 @@ def get_mesulam_ve_yeo(data_dir="../data/mesulam_ve_yeo.csv"):
     return mesulam_ve_yeo
 
 
-def make_correlation_matrix(maps, gamma=1, seed=1):
+def make_correlation_matrix(maps, gamma=1, seed=1, method='pearson', cluster_reorder_dict={}):
     rename_dict = {
         'T1T2': 'T1/T2',
         'paquola_FC': 'FC',
@@ -69,6 +69,7 @@ def make_correlation_matrix(maps, gamma=1, seed=1):
         'MEG_theta': 'MEGθ',
         'dMT': 'ΔMT',
         'd_intramod60': 'ΔIntraFC',
+        'MIND_CT': 'MIND',
         'hill_evo': 'Evo Exp',
         'hill_dev': 'Dev Exp',
         'externopyramidisation': 'Ext',
@@ -80,7 +81,7 @@ def make_correlation_matrix(maps, gamma=1, seed=1):
         'CBF': 'CBF',
     }
 
-    corrmat = maps.rename(rename_dict, axis=1).corr()
+    corrmat = maps.rename(rename_dict, axis=1).corr(method=method)
     G1_ranks = corrmat.abs()['G1'].rank(ascending=False)
     G2_ranks = corrmat.abs()['G2'].rank(ascending=True)
     G3_ranks = corrmat.abs()['G3'].rank(ascending=True)
@@ -91,7 +92,7 @@ def make_correlation_matrix(maps, gamma=1, seed=1):
     clusters = bct.community_louvain(corrmat.abs().values, gamma=gamma, seed=seed)[0]
     print('n clusters', len(np.unique(clusters)))
 
-    clusters = pd.Series(clusters, index=corrmat.index)
+    clusters = pd.Series(clusters, index=corrmat.index).replace(cluster_reorder_dict)
 
     corrmat = corrmat.iloc[np.argsort(clusters), :].iloc[:, np.argsort(clusters)]
 
@@ -389,13 +390,13 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr',
     Uses numpy masked array to handle missing values
     """
     # Filter maps for regions in gradients
-    # maps = maps.set_axis(range(1, maps.shape[0]+1)).loc[scores.index, :]
+    maps = maps.set_axis(range(1, maps.shape[0]+1)).loc[scores.index, :]
     # Filter nulls for regions in gradients
     # null_grads = null_grads[scores.index-1, :, :]
 
     # # Reindex scores to all regions
-    if reindex:
-        scores = scores.reindex(range(1,181))
+    # if reindex:
+    #     scores = scores.reindex(range(1,181))
     # null_grads = null_grads
 
     n_maps = maps.shape[1]

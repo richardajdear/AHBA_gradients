@@ -16,78 +16,6 @@ mycolorscale = brightness(rev(brewer.rdbu(100)), delta(-.1))
 
 
 
-plot_single_cell_posneg <- function(sc_axes_posneg_plot) {
-    colors <- c(
-        brewer.rdbu(21)[c(2,20)],
-        brewer.piyg(11)[c(2,10)],
-        brewer.brbg(11)[c(2,10)]
-    ) %>% 
-    brightness(scalefac(1.5)) %>% 
-    # saturation(scalefac(1.2)) %>% 
-    c('grey30')
-
-    g1 <- sc_axes_posneg_plot %>% 
-    mutate(cell_type = factor(cell_type, ordered=T, levels=unique(.$cell_type))) %>% 
-    ggplot(aes(positive, negative)) + 
-    facet_wrap(~G, scales='free') + 
-    geom_point(alpha=.2, size=.2, aes(color=cell_type)) +
-    xlab("sc-RNAseq expression of G1/2/3 positive genes") +
-    ylab("sc-RNAseq expression of\nG1/2/3 negative genes") +
-    scale_color_manual(values=colors, name=NULL) +
-    # scale_color_manual(values=cols25(10), name=NULL) +
-    # scale_color_manual(values=viridis(7), name=NULL) +
-    guides(colour = guide_legend(override.aes = list(size=4, alpha=.8))) +
-    theme_classic() + 
-    theme(
-        # aspect.ratio=1,
-        # panel.border=element_rect(fill=NA, size=1),
-        strip.background = element_blank(),
-        panel.grid=element_blank(),
-        # panel.spacing.x=unit(1,'cm'),
-        axis.text=element_blank(),
-        axis.ticks=element_blank(),
-        text=element_text(size=20, family='Calibri', color='gray7'),
-        strip.text=element_text(size=20, family='Calibri', color='gray7')
-    )
-
-    single_inset <- function(G) {
-        data_subset <- sc_axes_posneg_plot %>% 
-        filter(subclass_label=='VIP', layer=='L2') %>% 
-        filter(G==!!enquo(G))
-
-        label <- paste0("R ", round(cor(data_subset$positive, data_subset$negative),2))
-
-        data_subset %>% 
-        ggplot(aes(positive, negative)) +
-        geom_smooth(method='lm', se=F, color='black') + 
-        geom_point(alpha=.2, size=.5, color=colors[2]) +
-        annotate(geom='text', label=label, x=Inf, y=Inf, hjust=1.1, vjust=1.7, size=6) +
-        theme_minimal() + 
-        theme(
-            aspect.ratio=1,
-            panel.border=element_rect(fill=NA, size=1),
-            panel.grid=element_blank(),
-            axis.text=element_blank(),
-            axis.title=element_blank(),
-            plot.title=element_text(hjust=.5, size=16, family='Calibri', color='gray7')
-        ) +
-        ggtitle("Layer 2 VIP\ninterneurons only")
-    }
-
-    inset_plots <- c('G1','G2','G3') %>% map(single_inset)
-    inset_df <- tibble(
-        x=c(1,1,1), 
-        y=c(1,1,1),
-        plot = inset_plots, G=c('G1','G2','G3'))
-
-
-    g1 + geom_plot_npc(data=inset_df, 
-        aes(npcx=x, npcy=y, label=plot), 
-        vp.width=0.5, vp.height=0.5)
-}
-
-
-
 plot_triplets_raster <- function(triplets_raster, n_components=3, highlight = 'options') {
     triplets_raster <- triplets_raster %>% 
     mutate(method=factor(method, ordered=T, levels=c('pca','dm'),
@@ -370,7 +298,6 @@ plot_coexp <- function(df_coexp) {
               legend.direction='horizontal',
               panel.spacing.x = unit(5,'lines')
               )
-
 }
 
 

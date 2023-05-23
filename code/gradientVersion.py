@@ -262,17 +262,18 @@ class gradientVersion():
 
         
         
-    def make_null_scores(self, n=10, atlas='hcp', dist_mat=None, save_name=None):
+    def make_null_scores(self, n=10, atlas='hcp', scores=None, dist_mat=None, save_name=None):
         """
         Generate null maps using brainsmash
         """
-        # Choose distance matric that matches parcellation
+        # Choose distance matrix that matches parcellation
         if atlas == 'hcp' and dist_mat is None:
-            dist_mat=np.loadtxt("../data/LeftParcelGeodesicDistmat.txt")
+            dist_mat=np.loadtxt("../data/parcellations/LeftParcelGeodesicDistmat.txt")
         elif atlas == 'dk':
-            dist_mat=np.loadtxt("../data/LeftParcelGeodesicDistmat_DK.txt")
+            dist_mat=np.loadtxt("../data/parcellations/LeftParcelGeodesicDistmat_DK.txt")
         # Filter distance matrix to non-null regions
-        scores = self.clean_scores()
+        if scores is None:
+            scores = self.clean_scores()
         inds = [i-1 for i in scores.index]
         dist_mat = dist_mat[inds,:][:,inds]
 
@@ -280,7 +281,7 @@ class gradientVersion():
 
         for m in range(3):
             base_map = scores.iloc[:,m].values
-            base = Base(x=base_map, D=dist_mat)
+            base = Base(x=base_map, D=dist_mat, resample=True, pv=25)
             nulls = base(n)
             null_scores[:,m,:] = nulls.swapaxes(0,1)
 

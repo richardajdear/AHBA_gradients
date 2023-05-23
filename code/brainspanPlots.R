@@ -66,8 +66,8 @@ plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', ro
     g <- bs_scores_corr %>% 
     mutate_at(vars(age), ~ factor(., levels=unique(.))) %>%
     ggplot() + 
-    geom_hline(yintercept=0, color='grey') + 
-    geom_vline(xintercept=xint, color='grey') +
+    # geom_hline(yintercept=0, color='grey') + 
+    # geom_vline(xintercept=xint, color='grey') +
     geom_line(aes(x=age, y=corr, color=G, group=G), size=1, alpha=1) + 
     geom_point(aes(x=age, y=corr, color=G), size=5) + 
     xlab("") + ylab("AHBA-BrainSpan correlation") +
@@ -76,7 +76,7 @@ plot_bs_scores_corr <- function(bs_scores_corr, title="", xint='Birth-3 yrs', ro
     # scale_color_manual(values=brewer.rdylbu(4)) +
     ggtitle(title) +
     theme_minimal() + 
-    theme(panel.grid.minor = element_blank(),
+    theme(panel.grid = element_blank(),
           #axis.title.y=element_text(angle=0, vjust=0.5, hjust=1),
           axis.text=element_text(size=16, color='grey7'),
           # legend.position = c(.95, .9),
@@ -128,7 +128,7 @@ plot_ahba_bs_scatter <- function(both_scores, corrs, facet='h', size=4) {
     scale_y_continuous(breaks=0) +
     scale_x_continuous(breaks=0) +
     theme_minimal() + 
-    theme(panel.grid.minor=element_blank(),
+    theme(panel.grid=element_blank(),
           axis.text = element_blank(),
           strip.text.x = element_blank(),
           strip.text.y = element_text(size=20, margin=margin(l=0, r=0)),          

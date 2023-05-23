@@ -309,7 +309,7 @@ def get_target_enrichments(target, background,
 
 ### STRING enrichments
 
-def clean_enrichment(file, direction=None, clean_terms=True, filter_001=True):
+def clean_enrichment(file, direction=None, clean_terms=True, FDR_filter=None):
     """
     Clean STRING enrichment file
     Combine 'Antigen processing' enrichments into one
@@ -336,7 +336,19 @@ def clean_enrichment(file, direction=None, clean_terms=True, filter_001=True):
             'Regulation of dendritic spine development':'Dendritic spine development',
             'Regulation of dendrite development':'Dendrite development',
             'Serotonin receptor signaling pathway':'Serotonin receptor signaling',
-            'SRP-dependent cotranslational protein targeting': 'SRP-dependent protein targeting'
+            'SRP-dependent cotranslational protein targeting': 'SRP-dependent protein targeting',
+            'Cellular response to catecholamine stimulus': 'Response to catecholamine',
+            'Positive regulation of neurotransmitter secretion': 'Regulation of neurotransmitter secretion',
+            'Cellular response to dopamine': 'Response to dopamine',
+            'Cellular response to jasmonic acid stimulus': 'Response to jasmonic acid',
+            'Negative regulation of chromatin silencing': 'Regulation of chromatin silencing',
+            'Regulation of mrna splicing, via spliceosome': 'Regulation of mRNA splicing',
+            'Negative regulation of mitochondrial fusion': 'Regulation of mitochondrial fusion',
+            'Generation of precursor metabolites and energy': 'Generation of metabolites and energy',
+            'Regulation of short-term neuronal synaptic plasticity': 'Regulation of short-term plasticity',
+            'Regulation of macrophage migration.*': 'Regulation of macrophage migration',
+            'Regulation of gene expression, epigenetic': 'Regulation of epigenetic expression'
+
         }
         enrichment.replace(replacements, inplace=True, regex=True)
         
@@ -347,23 +359,23 @@ def clean_enrichment(file, direction=None, clean_terms=True, filter_001=True):
     else:
         enrichment = enrichment.loc[lambda x: x['direction'] != 'both ends']
     
-    if filter_001:
-        enrichment = enrichment.loc[lambda x: x['false discovery rate'] <= 0.01]
+    if FDR_filter is not None:
+        enrichment = enrichment.loc[lambda x: x['false discovery rate'] <= FDR_filter]
     
     enrichment = (enrichment
-                  .assign(neglogFDR = lambda x: -np.log10(x['false discovery rate']))
-                  .assign(rank = lambda x: x.groupby('direction')['neglogFDR'].rank(method='first'))
                   .assign(FDR = lambda x: x['false discovery rate'],
+                          neglogFDR = lambda x: -np.log10(x['false discovery rate']),
                           enrichment = lambda x: x['enrichment score'],
                           n_genes = lambda x: x['genes mapped'],
                           description = lambda x: x['term description']
                          )
-                  .loc[:, ['description', 'n_genes', 'direction', 'enrichment', 'FDR', 'neglogFDR', 'rank']]
+                  .loc[:, ['description', 'n_genes', 'direction', 'enrichment', 'FDR', 'neglogFDR']]
                  )
     return enrichment
 
 
-def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include_g1=False, directed=False, top_n=None, **kwargs):
+def combine_enrichments(version_, type_, dir_="../outputs/string_data/", 
+                        include_g1=False, directed=False, top_n=None, **kwargs):
     """
     Combine enrichments from STRING
     """
@@ -383,6 +395,8 @@ def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include
     
     df = (pd.concat(d)
           .reset_index(0).rename({'level_0':'G'}, axis=1)
+          .assign(FDR_rank = lambda x: x.groupby(['G','direction'])['neglogFDR'].rank(method='first', ascending=False))
+          .assign(enrichment_rank = lambda x: x.groupby(['G','direction'])['enrichment'].rank(method='first', ascending=False))
          )
     
     if directed:
@@ -390,9 +404,14 @@ def combine_enrichments(version_, type_, dir_="../outputs/string_data/", include
     
     if top_n is not None:
         df = (df
-               .assign(rank = lambda x: x.groupby(['G','direction'])['neglogFDR'].rank(method='first',ascending=False))
-             .loc[lambda x: x['rank']<=top_n]
-             .assign(rank = lambda x: top_n+1-x['rank'])
+              .assign(rank = lambda x: x.groupby(['G','direction'])['neglogFDR']
+                                        .rank(method='first', ascending=False))
+              .loc[lambda x: x['rank'] <= top_n]
+              .set_index(['G','direction'])
+              .assign(maxrank = lambda x: x.groupby(['G','direction'])['rank'].max())
+              .assign(rank = lambda x: x['maxrank']-x['rank'] + 1)
+              .reset_index()
+            #   .assign(rank = lambda x: top_n+1-x['rank'])
             )
     
     return df
