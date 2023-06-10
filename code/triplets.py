@@ -3,7 +3,6 @@
 from abagen import fetch_microarray
 from itertools import combinations
 from processing_helpers import *
-from pcaVersion import *
 from gradientVersion import *
 
 
@@ -29,40 +28,32 @@ def get_triplets(**kwargs):
     
     triplets = {}
     for name, donors in triplets_dict_donors.items():
-        expression, gene_stability, region_stability = get_expression_abagen(
-            donors=donors, 
-            **kwargs, 
-            return_stability=True
+        expression, gene_stability = get_expression_abagen(
+            donors = donors, 
+            return_stability = True,
+            verbose = 0,
+            **kwargs
             )
-        # don't scale so that we can use gradientVersion    
-        triplets[name] = gradientVersion(expression)
-        triplets[name].expression = expression
+        triplets[name] = gradientVersion().fit(expression)
         triplets[name].gene_stability = gene_stability
-        triplets[name].region_stability = region_stability
         print(f'Done triplet {name}')
     
     return triplets
 
 
-def filter_triplet_stability(triplets, stability_threshold=0, which='genes', **kwargs):
-
+def filter_triplet_stability(triplets, stability_threshold=0, **kwargs):
     # Iterate through each triplet
     triplets_filtered = {}
 
     for name, triplet in triplets.items():
         # Filter gene stability for the triplet
-        if which == 'genes':
-            gene_mask = triplet.gene_stability.rank(pct=True) > stability_threshold
-            triplet_expression_filtered = triplet.expression.loc[:, gene_mask]
-        elif which == 'regions':
-            region_mask = triplet.region_stability.rank(pct=True) > stability_threshold
-            triplet_expression_filtered = triplet.expression.loc[region_mask, :]
+        gene_mask = triplet.gene_stability.rank(pct=True) > stability_threshold
+        triplet_expression_filtered = triplet.expression.loc[:, gene_mask]
         
         # Don't use marker genes in case they are not retained in triplet
         triplets_filtered[name] = (gradientVersion(marker_genes=[], **kwargs)
                                 .fit(triplet_expression_filtered, message=False))
         triplets_filtered[name].gene_stability = triplet.gene_stability
-        triplets_filtered[name].region_stability = triplet.region_stability
             
     return triplets_filtered
 

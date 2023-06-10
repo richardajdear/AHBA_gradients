@@ -20,8 +20,9 @@ mycolors = c(brewer.rdylbu(6)[1:3],brewer.rdylbu(5)[4:5])
 plot_maps <- function(maps, title="", ncol=3, facet='w', 
                       spacing_x=0.5, spacing_y=0.5,
                     #   position="stacked",
-                      colors=rev(brewer.rdbu(100)), colorscale=c(-3,3),
-                      name='', labels=c('-3σ','+3σ')) {
+                      colors=rev(brewer.rdbu(100)), 
+                      colorscale='fixed', limits=c(-3,3),
+                      labels=c('-3σ','+3σ'), name='') {
     
     if ("label" %in% colnames(maps)) {
         maps <- maps %>% remove_rownames %>% column_to_rownames('label')
@@ -41,9 +42,9 @@ plot_maps <- function(maps, title="", ncol=3, facet='w',
         df %>% .$value %>% quantile(.01, na.rm=T) %>% abs
     )
 
-    if (length(colorscale > 1)) {
-        m_min <- colorscale[1]
-        m_max <- colorscale[2]
+    if (colorscale == 'fixed') {
+        m_min <- limits[1]
+        m_max <- limits[2]
     } else if (colorscale=='symmetric') {
         m_min <- -m_max
     } else if (colorscale=='zero') {
@@ -107,7 +108,7 @@ plot_maps <- function(maps, title="", ncol=3, facet='w',
 }
 
 
-plot_scatter_with_colors <- function(data, corrs, x_name, x_var, y_var, color_var=NULL, left_margin=0) {
+plot_scatter_with_colors <- function(data, corrs, x_name, x_var, y_var, color_var=NULL, highlight_groups=c(), left_margin=0) {
     
     data <- data %>% 
         filter(!is.na(get(x_var)), !is.na(get(y_var))) %>% 
@@ -166,10 +167,13 @@ plot_scatter_with_colors <- function(data, corrs, x_name, x_var, y_var, color_va
         )
 
     densities <- data %>% 
+        # mutate(alpha = ifelse(color_names %in% highlight_groups, .3, 0)) %>% 
         ggplot(aes(x=y, fill=color)) +
-        geom_density(alpha=.3, color='grey', size=.5) +
+        geom_density(size=.5, alpha=.3, color='grey') +
         scale_fill_identity(name=NULL, labels=color_labels, 
             guide=guide_legend(reverse=T)) + 
+        # scale_color_identity(guide='none') + 
+        # scale_alpha_identity(guide='none') +
         coord_flip() + 
         theme_void() + 
         theme(
@@ -227,8 +231,8 @@ plot_corrmat <- function(df, highlight_color='grey7') {
         axis.text.y=element_text(angle=0, margin=margin(r=-20, unit='pt')),
         legend.margin=margin(t=-20, unit='pt'),
         legend.title=element_text(vjust=1),
-        legend.position='right'
-        # legend.position='bottom'
+        # legend.position='right'
+        legend.position='bottom'
     )
 }
 

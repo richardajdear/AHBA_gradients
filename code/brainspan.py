@@ -7,12 +7,17 @@ from statsmodels.gam.api import GLMGam, BSplines
 import statsmodels.formula.api as smf
 
 
-def get_brainspan_curves_by_gene(genes, return_points=False, alpha=0.5):
+def get_brainspan_curves_by_gene(genes, return_points=False, alpha=0.5,
+                                 load=True,
+                                 save_path='../outputs/brainspan_curves.csv'):
     """
     1. Get BrainSpan data and match regions to HCP parcellation
     2. Convert age to continuous variable
     3. Fit and predict GAM curves for selected genes
     """
+    if save_path is not None and load:
+        return pd.read_csv(save_path)
+    
     # 1
     bs_exp, bs_col, bs_row = get_brainspan()
     hcp_bs_mapping = get_hcp_bs_mapping_v2()
@@ -24,10 +29,34 @@ def get_brainspan_curves_by_gene(genes, return_points=False, alpha=0.5):
     models = fit_gam_models(bs_continuous, genes_to_fit, alpha=alpha)
     curves, points = predict_gam_curves(models, bs_continuous, genes_to_fit)
     
+    if save_path is not None:
+        curves.to_csv(save_path)
+        print(f"BrainSpan curves saved to {save_path}")
+
     if return_points:
         return curves, points
     else:
         return curves
+
+
+def get_weight_quantiles(weights, q=10):
+    quantiles = (weights
+                 .melt(ignore_index=False, var_name='C',value_name='C_score')
+                 .assign(C_quantile = lambda x: x.groupby('C')['C_score'].apply(lambda y: pd.qcut(y, q=q, labels=range(q))))
+                 .rename_axis('gene').reset_index()
+    )
+    return quantiles
+
+def get_quantile_curves(weights, curves, q=10):
+    quantiles = get_weight_quantiles(weights)
+
+    quantile_curves = (quantiles
+     .join(curves.set_index('gene'), on='gene').dropna()
+     .groupby(['C','C_quantile','age_log10'])
+     .agg({'pred':'mean'})
+     .reset_index()
+    )
+    return quantile_curves
 
 
 def get_brainspan(bs_dir = "../data/brainspan-data/gene_matrix_rnaseq/"):
@@ -304,7 +333,7 @@ def compute_brainspan_scores(bs_agg, version, normalize=True):
     gene_mask = version.weights.index.intersection(bs_agg.columns)
     
     # Score PCs
-    bs_scores = (bs_agg.loc[:, gene_mask] @ version.weights.loc[gene_mask, :]).iloc[:, :3].set_axis(['G1','G2','G3'], axis=1)
+    bs_scores = (bs_agg.loc[:, gene_mask] @ version.weights.loc[gene_mask, :]).iloc[:, :3]
     
     # Add missing regions to each age as NA
     bs_regions_index = pd.CategoricalIndex(
@@ -358,7 +387,7 @@ def correlate_brainspan_scores(bs_scores, ahba_scores, age_groups=None, rolling=
     # Clean up for plotting
     if plot:
         bs_scores_corr = (bs_scores_corr
-                       .melt(var_name='G', value_name='corr', ignore_index=False)
+                       .melt(var_name='C', value_name='corr', ignore_index=False)
                        .reset_index())
     return bs_scores_corr
 
@@ -370,14 +399,14 @@ def combine_scores(bs_scores, ahba_scores_mapped, age_groups):
     bs_scores_adult = bs_scores.loc['18 yrs':,:].groupby('structure_name').mean()
 
     both_scores = (pd.concat({'Brainspan': bs_scores_adult, 'AHBA': ahba_scores_mapped})
-     .melt(ignore_index=False, var_name='G', value_name='score')
-     .set_index('G', append=True)
+     .melt(ignore_index=False, var_name='C', value_name='score')
+     .set_index('C', append=True)
      .unstack(0).droplevel(0, axis=1)
      .reset_index()
     )
 
     corrs = (both_scores
-             .groupby('G').corr()
+             .groupby('C').corr()
              .loc[(slice(None), 'AHBA'), 'Brainspan']
              .droplevel(1)
             )
@@ -389,7 +418,7 @@ def make_brain_plots(version, version_to_bs_mapping, bs_scores):
     Prepare brain scores for plotting comparison maps
     """
     ahba_scores_plot = (get_mapped_scores(version, version_to_bs_mapping, mean=False)
-                        .loc[:,['G1','G2','G3']].reset_index()
+                        .loc[:,['C1','C2','C3']].reset_index()
                   )
 
     bs_scores_plot = (bs_scores
