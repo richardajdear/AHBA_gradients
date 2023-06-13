@@ -5,8 +5,8 @@ theme_update(
     axis.line = element_line(size=.2),
     axis.ticks = element_blank(),
     legend.key.size = unit(1, "mm"),
-    plot.tag.position = c(0,1),
-    plot.tag = element_text(size=7, face='bold', family='Calibri', hjust=0)
+    plot.tag.position = c(0, 0.95),
+    plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0)
 )
 theme_colorbar <- guide_colorbar(barwidth=2, barheight=.5, ticks=FALSE)
 
@@ -78,7 +78,9 @@ plot_brain_maps <- function(maps, ncol=1,
         strip.text = element_text(size=7, family='Calibri', color='grey7'),
         strip.clip = 'off',
         legend.position = 'bottom',
-        legend.text = element_text(size=6, family='Calibri', color='grey7')
+        legend.text = element_text(size=6, family='Calibri', color='grey7'),
+        plot.tag.position = c(0, 0.95),
+        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0)
         # panel.spacing.x=unit(spacing_x,'lines'),
         # panel.spacing.y=unit(spacing_y,'lines'),
     )
@@ -100,14 +102,14 @@ plot_scatter_with_colors <- function(data, corrs, x_name, x_var, y_var, color_va
         )
 
     corrs <- corrs %>%
-        filter(map == !!enquo(x_var), G == !!enquo(y_var)) %>% 
+        filter(map == !!enquo(x_var), C == !!enquo(y_var)) %>% 
         mutate(p_sig=ifelse(p<0.001, '***',
                     ifelse(p<0.01, '**',
                     ifelse(p<0.05, '*','')))) %>%
         mutate(q_sig=ifelse(q<0.001, '†',
                     ifelse(q<0.01, '†',
                     ifelse(q<0.05, '†','')))) %>%
-        mutate(r_label=paste('R =', round(r,2), p_sig, q_sig),
+        mutate(r_label=paste('r =', round(r,2), p_sig, q_sig),
                 # '\np = ', round(p,3), p_sig
                 # '\nq = ', round(q,3), q_sig
                 ) %>% 
@@ -172,7 +174,7 @@ plot_corrmat <- function(df, highlight_color='grey7') {
 
     # # Get G1-3 for marker lines
     df_lines <- df_plot %>% 
-    filter(x %in% c('G1','G2','G3')) %>% select(x, x1)
+    filter(x %in% c('C1','C2','C3')) %>% select(x, x1)
 
     df_plot %>% ggplot() + 
     geom_raster(aes(x1,y1, fill=r)) + 
@@ -187,7 +189,7 @@ plot_corrmat <- function(df, highlight_color='grey7') {
     theme(
         aspect.ratio = 1,
         axis.line = element_blank(),
-        axis.text = element_text(face = ifelse(df_plot$x %in% c('G1','G2','G3'), 'bold', 'plain')),
+        axis.text = element_text(face = ifelse(df_plot$x %in% c('C1','C2','C3'), 'bold', 'plain')),
         axis.text.x = element_text(angle=90, hjust=1, vjust=.5, margin=margin(t=-10, unit='pt')),
         axis.text.y = element_text(angle=0, margin=margin(r=-10, unit='pt')),
         legend.margin = margin(t=-20, unit='pt'),

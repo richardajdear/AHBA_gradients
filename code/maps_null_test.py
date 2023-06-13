@@ -3,6 +3,7 @@ import numpy as np, pandas as pd
 from neuromaps.stats import compare_images
 from neuromaps.datasets import fetch_atlas
 from neuromaps.nulls.spins import get_parcel_centroids, gen_spinsamples
+from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
 from neuromaps.nulls import cornblath
 from neuromaps.transforms import fsaverage_to_fsaverage
 from neuromaps.images import annot_to_gifti
@@ -58,7 +59,7 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr',
     # Output clean dataframe
     output_adjusted = (pd.DataFrame(output_frame, index=output_index) 
                         .set_axis(['r','p'], axis=1)
-                        .rename_axis(['G','map']).reset_index()
+                        .rename_axis(['C','map']).reset_index()
     )
     
     # Multiple comparisons
@@ -66,7 +67,7 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr',
         # Adjust across axes only (not by label)?
         if adjust_by_label:
             output_adjusted = (output_adjusted
-                .assign(q = lambda x: x.groupby('G')
+                .assign(q = lambda x: x.groupby('C')
                                        .apply(lambda y: pd.Series(multipletests(y['p'], method=adjust)[1], index=y.index))
                                        .reset_index(0, drop=True) # make index match
                                        )
@@ -97,7 +98,7 @@ def generate_shuffles(maps, n=1000, outfile='../outputs/shuffle_maps_1000.npy'):
 
 
 
-def generate_spins(n=1000, blocks=1, density='41k'):
+def generate_spins(n=1000, blocks=1, density='41k', save_name=None):
     """
     Generate spins. Do this once so it's not repeated for each component
     Optionally generate in blocks of 1000 to prevent crashes
@@ -107,22 +108,26 @@ def generate_spins(n=1000, blocks=1, density='41k'):
     # Create hemisphere ids needed to make spins
     # (This function is named 'get_parcel_centroids' but for cornblath spin method we use vertices)
     coords, hemiid = get_parcel_centroids(surfaces, method='surface')
-    # Actually generate the spins
+
+    if save_name is None:
+        save_name = f"spins_{density}_{n}"
+
+    # Generate the spins
     for i in range(blocks):
         spins = gen_spinsamples(coords, hemiid, n_rotate=n, verbose=1)
         if blocks==1:
-            save_path = f"../outputs/permutations/spins_{density}_{n}.npy"
+            save_path = f"../outputs/permutations/{save_name}.npy"
             np.save(save_path, spins)
             print(f"\nSaved spins to {save_path}")
         else:
-            save_path = f"../outputs/permutations/spins_{density}_{n}_{i}.npy"
+            save_path = f"../outputs/permutations/{save_name}_{i}.npy"
             np.save(save_path, spins)
             print(f"\nSaved block {i} of spins to {save_path}")
     print(f"\nGenerated {blocks} blocks of {n} spins at density {density}")
     
 
 
-def generate_nulls_from_components(scores, spins, hcp_img=None, density='41k', 
+def generate_nulls_from_components(scores, spins, atlas='hcp', parcellation_img=None, density='41k', 
                                   n=10, n_components=3, only_left=True,
                                   save_dir = '../outputs/permutations/',
                                   save_name = 'spin_10'):
@@ -131,35 +136,46 @@ def generate_nulls_from_components(scores, spins, hcp_img=None, density='41k',
     Use fsaverage 41k (10k has an error)
     """
     ## Next, get parcellation files in the same surface space as the spins (fsaverage)
-    if hcp_img is None:
-        hcp_img_files = ('../data/parcellations/lh.HCPMMP1.annot',
-                         '../data/parcellations/rh.HCPMMP1.annot')
-        hcp_img = annot_to_gifti(hcp_img_files)
-        hcp_img = fsaverage_to_fsaverage(hcp_img, target_density=density, method='nearest')
+    if parcellation_img is None and atlas=='hcp':
+        parcellation_img_files = ('../data/parcellations/lh.HCPMMP1.annot',
+                                  '../data/parcellations/rh.HCPMMP1.annot')
+        parcellation_img = annot_to_gifti(parcellation_img_files)
+        parcellation_img = fsaverage_to_fsaverage(parcellation_img, target_density=density, method='nearest')
+    elif parcellation_img is None and atlas=='dk':
+        parcellation_img_files = ("../data/parcellations/lh.aparc.annot", 
+                                  "../data/parcellations/rh.aparc.annot")
+        parcellation_img = annot_to_gifti(parcellation_img_files)
+        parcellation_img = fsaverage_to_fsaverage(parcellation_img, target_density=density, method='nearest')
 
     ## Reindex scores to have NA where parcels are missing (including all right hemi)
-    scores_reindex = scores.reindex(range(1,361)).iloc[:,:n_components].values
-    ### Drop parcels where data are missing in the 10k fsaverage HCPMMP parcellation template
-    if density=='10k':
-        scores_reindex = np.delete(scores_reindex, [120,300], axis=0)
+    if atlas=='hcp':
+        scores_reindex = scores.reindex(range(1,361)).iloc[:,:n_components].values
+            ### Drop parcels where data are missing in the 10k fsaverage HCPMMP parcellation template
+        if density=='10k':
+            scores_reindex = np.delete(scores_reindex, [120,300], axis=0)
+    elif atlas=='dk':
+        scores_reindex = scores.reindex(range(1,69)).iloc[:,:n_components].values
+
 
     ## Finally, for each gradient, compute nulls by projecting up to vertices and reaveraging
-    null_scores = np.zeros([360, scores_reindex.shape[1], n])
+    null_scores = np.zeros([scores_reindex.shape[0], n_components, n])
     for i in range(n_components):
         _scores = scores_reindex[:,i]
         null_scores[:,i,:] = cornblath(
                 data=_scores,
                 atlas='fsaverage', 
                 density=density, 
-                parcellation=hcp_img, 
+                parcellation=parcellation_img, 
                 n_perm=n, 
                 spins=spins
                 )
         print(f"\nGenerated {n} null spins of component {i}")
     
     # Drop right hemi
-    if only_left:
+    if only_left and atlas=='hcp':
         null_scores = null_scores[:180,:,:]
+    elif only_left and atlas=='dk':
+        null_scores = null_scores[:34,:,:]
 
     save_path = f"{save_dir}{save_name}.npy"
     np.save(save_path, null_scores)

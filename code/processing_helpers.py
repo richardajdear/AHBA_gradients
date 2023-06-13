@@ -337,6 +337,7 @@ def fetch_dx():
 
     return atlas_dx
 
+
 def get_labels_dx():
     labels_dx = (
         pd.read_csv("../data/parcellations/desterieux_ggseg_labels.csv")

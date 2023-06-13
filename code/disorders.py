@@ -2,6 +2,9 @@
 
 import numpy as np, pandas as pd
 import mygene
+import nibabel as nib
+from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
+from processing_helpers import *
 
 
 replace_dict = {'01-Mar':'MARCH1', '02-Mar':'MARCH2', '03-Mar':'MARCH3', '04-Mar':'MARCH4', '05-Mar':'MARCH5', '06-Mar':'MARCH6', '07-Mar':'MARCH7', '08-Mar':'MARCH8', 
@@ -74,7 +77,7 @@ def get_gwas_combined():
 
 
 
-def get_deg_combined(scz_only=False):
+def get_deg_combined(scz_only=False, updown=False):
     deg_dict = {
         'ASD--Gandal 2022': pd.read_csv("../data/deg/gandal2022_tableS3.csv").loc[lambda x: x['WholeCortex_ASD_FDR']<=0.05, ['external_gene_name', 'WholeCortex_ASD_logFC']],
         # 'ASD--Ramaswami 2020': pd.read_csv("../data/deg/ramaswami2020_tableS2.csv", header=1).loc[lambda x: x['p.condition.fdr']<=0.05, 'Gene'].pipe(ensembl_id_to_gene_symbol),
@@ -91,8 +94,13 @@ def get_deg_combined(scz_only=False):
     deg_genes = (pd.concat(deg_dict)
                  .reset_index(0).rename({'level_0':'label'}, axis=1)
                  .replace({'gene': replace_dict})
+    )
+
+    if updown:
+        deg_genes = deg_genes.assign(updown = lambda x: np.where(x['log2FC']>0,'up','down'))
+
+    deg_genes = (deg_genes
                  .drop('log2FC', axis=1) # drop logFC to cleanly remove duplicates
-                #  .assign(upreg = lambda x: x['log2FC']>0)
                  .drop_duplicates()
                  .dropna()
     )
@@ -108,8 +116,14 @@ def get_deg_combined(scz_only=False):
     return deg_genes
 
 
-def get_deg_consensus():
-    deg_all = get_deg_combined()
+def get_deg_consensus(updown=False):
+    deg_all = get_deg_combined(updown=updown)
+
+    # Optionally take only consensus with directional agreement
+    if updown:
+        grouping = ['label','gene','updown']
+    else:
+        grouping = ['label','gene']
 
     deg_consensus = (deg_all
                     .assign(
@@ -119,7 +133,7 @@ def get_deg_consensus():
                     #  .assign(
                     #     n_studies = lambda x: x.groupby(['label','gene'], as_index=False)['study'].transform('nunique')
                     #  )
-                    .groupby(['label','gene'], as_index=False)['study'].nunique()
+                    .groupby(grouping, as_index=False)['study'].nunique()
                     .loc[lambda x: (x['study'] >= 2) | (x['label']=='MDD')] # either 2+ studies, or MDD
                     )
     
@@ -127,7 +141,90 @@ def get_deg_consensus():
 
 
 
+def get_scz_gyral_sulcal(
+            data_path = '../data/lh.GyralSulcalDifferences.mgh', 
+            hcp_img = '../data/parcellations/lh.HCPMMP1.annot',
+            name = 'SCZ L2-Specific Thinning'
+        ):
+    scz_diff_img = nib.load(data_path)
+    hcp_img = annot_to_gifti(hcp_img)
+    
+    scz_diff_hcp = vertices_to_parcels(scz_diff_img.get_fdata(), hcp_img)
 
+    scz_diff = pd.Series(scz_diff_hcp,
+                         index = get_labels_hcp()[:180],
+                         name = name
+                         )
+
+    scz_diff = (scz_diff
+                .to_frame()
+                .apply(lambda x: (x-np.mean(x))/np.std(x))
+                .apply(lambda x: -x) # invert to focus on thinning
+                )
+
+    return scz_diff
+
+
+def make_label_quantiles_by_axis(weights, labels, q=10):
+    """
+    Split labels into quantiles by axis weights
+    """
+    label_percentiles = (labels.loc[:, ['label','gene']]
+        .join(weights.melt(ignore_index=False, var_name='C',value_name='C_score'), on='gene')
+        .dropna()
+        .reset_index(drop=True)
+        .assign(C_quantile = lambda x: x.groupby(['C','label'])['C_score'].apply(lambda y: pd.qcut(y, q=q, labels=range(1,q+1
+        ))))
+    )
+    return label_percentiles
+
+def aggregate_disorder_gene_quantiles_over_development(quantiles, curves):
+    quantile_curves_disorders = (quantiles
+     .join(curves.set_index('gene'), on='gene').dropna()
+     .groupby(['label','C','C_quantile','age_log10'])
+     .agg({'pred':'mean'})
+     .reset_index()
+     .loc[lambda x: x['C']=='C3']
+     .replace({'label':{'DEG':'SCZ RNAseq', 'GWAS':'SCZ GWAS'}})
+    )
+    return quantile_curves_disorders
+
+def aggregate_disorder_gene_quantiles_over_layers(quantiles, layers):
+    quantile_layers = (quantiles
+        .join(layers.set_index('gene')['label'].rename('layer'), on='gene')
+        .fillna({'layer':'no_layer'})
+        .groupby(['label','C','C_quantile','layer']).count()
+        .assign(pct = lambda x: x['gene']/x.groupby(['label','C','C_quantile'])['gene'].sum())
+        .reset_index()
+        .loc[lambda x: x['C']=='C3']
+        .loc[lambda x: x['layer']!='no_layer']
+        .replace({'label':{'DEG':'SCZ RNAseq', 'GWAS':'SCZ GWAS'}})
+        )
+    return quantile_layers
+
+
+# def make_axis_quantiles(weights, q=10, labels=None, levels=None, na_value=np.NaN):
+#     """
+#     Split weights by axis quantiles, then match to labels
+#     """
+#     weights_with_quantiles = (weights
+#             .melt(ignore_index=False, var_name='C', value_name='C_score')
+#             .reset_index().rename({'index':'gene'}, axis=1)
+#             .assign(C_quantile = lambda x: x.groupby('C').apply(lambda y: pd.qcut(y['C_score'], q=q, labels=range(q))).reset_index(0, drop=True))
+#     )
+#     if labels is None:
+#         return weights_with_quantiles
+#     else:
+#         if levels is None:
+#             levels = labels['label'].unique()
+#         return (weights_with_quantiles
+#                 .join(labels.set_index('gene'), on='gene')
+#                 .fillna({'label': na_value})
+#                 .assign(label = lambda x: pd.Categorical(x['label'], ordered=True, categories=levels))
+#                 .sort_values(['label','C_score'], ascending=False)
+#                 .assign(rank_in_quantile = lambda x: x.groupby(['C','C_quantile']).cumcount()+1)
+#                 .sort_values(['C_quantile','rank_in_quantile'])
+#             )
 
 
 

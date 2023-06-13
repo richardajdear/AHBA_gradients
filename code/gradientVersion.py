@@ -106,7 +106,7 @@ class gradientVersion():
         elif scores.shape[0]<=34:
             labels = get_labels_dk()
         else:
-            labels = get_labels_dx()
+            labels = get_labels_dx().drop_duplicates()
         
         scores = (scores
                   .iloc[:,:n_components]
