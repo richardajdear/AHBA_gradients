@@ -29,34 +29,55 @@ def get_meg_maps(data_dir="../data/meg_HCPS1200.csv"):
               )
     return meg_maps
 
+def get_yeo_mesulam(scores=None):
+    lobe_colors = {'Occ':'#E41A1C', 'Fr':'#4A72A6', 'Par':'#48A462', 'Temp':'#7E6E85', 'Ins':'#D16948'}
+    lobe_names = {'Occ':'Occipital', 'Fr':'Frontal', 'Par':'Parietal', 'Temp':'Temporal', 'Ins':'Insula'}
 
-def get_mesulam_ve_yeo(data_dir="../data/mesulam_ve_yeo.csv"):
-    short_names_dict = {
-        'Mesulam_names': {
-            'Heteromodal':'Het.',
-            'Unimodal':'Uni.',
-            'Paralimbic':'Par.',
-            'Idiotypic':'Idi.'
-        },
-        'Yeo_names': {
-            'Visual':'VIS',
-            'Somatomotor':'SMN',
-            'Dorsal attention':'DAN',
-            'Central attention':'CAN',
-            'Default mode':'DMN',
-            'Frontoparietal':'FPN',
-            'Limbic':'LIM'
-        },
-    }
+    hcp_yeo_mesulam = (pd.read_csv('../data/parcellations/HCP-MMP1_UniqueRegionList.txt')
+     .assign(id=lambda x: [id-20 if id>180 else id for id in x['regionID']])
+     .set_index('id')
+     .loc[:180, ['region', 'Lobe']]
+     .assign(Lobe_colors = lambda x: x['Lobe'].map(lobe_colors))
+     .assign(Lobe_names = lambda x: x['Lobe'].map(lobe_names))
+     .join(pd.read_csv("../data/yeo_asymmetric.csv").set_index('id').drop('label', axis=1))
+     .join(pd.read_csv("../data/mesulam_hcp.csv").set_index('id').drop('label', axis=1))
+    )
 
-    mesulam_ve_yeo = (pd.read_csv(data_dir, index_col=0)
-                      .drop(['x','y','z'], axis=1)
-                      .replace({'label':{'7PL':'7Pl'}})
-                      .replace({'Mesulam':{4:1,2:4,3:2}})
-                    #   .replace({'Yeo_names':{'Central attention':'Central atten.','Dorsal attention':'Dorsal atten.'}})
-                      .replace(short_names_dict)
-                      .set_index('label'))
-    return mesulam_ve_yeo
+    if scores is not None:
+        hcp_yeo_mesulam = hcp_yeo_mesulam.join(scores)
+    
+    return hcp_yeo_mesulam
+
+    # hcp_yeo_mesulam.to_csv("../data/hcp_yeo_mesulam.csv")
+
+
+# def get_mesulam_ve_yeo(data_dir="../data/mesulam_ve_yeo.csv"):
+#     short_names_dict = {
+#         'Mesulam_names': {
+#             'Heteromodal':'Het.',
+#             'Unimodal':'Uni.',
+#             'Paralimbic':'Par.',
+#             'Idiotypic':'Idi.'
+#         },
+#         'Yeo_names': {
+#             'Visual':'VIS',
+#             'Somatomotor':'SMN',
+#             'Dorsal attention':'DAN',
+#             'Central attention':'CAN',
+#             'Default mode':'DMN',
+#             'Frontoparietal':'FPN',
+#             'Limbic':'LIM'
+#         },
+#     }
+
+#     mesulam_ve_yeo = (pd.read_csv(data_dir, index_col=0)
+#                       .drop(['x','y','z'], axis=1)
+#                       .replace({'label':{'7PL':'7Pl'}})
+#                       .replace({'Mesulam':{4:1,2:4,3:2}})
+#                     #   .replace({'Yeo_names':{'Central attention':'Central atten.','Dorsal attention':'Dorsal atten.'}})
+#                       .replace(short_names_dict)
+#                       .set_index('label'))
+#     return mesulam_ve_yeo
 
 
 ### LEGACY

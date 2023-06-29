@@ -5,8 +5,8 @@ theme_update(
     axis.line = element_line(size=.2),
     axis.ticks = element_blank(),
     legend.key.size = unit(1, "mm"),
-    plot.tag.position = c(0, 0.95),
-    plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0)
+    plot.tag.position = c(0, 1),
+    plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
 )
 theme_colorbar <- guide_colorbar(barwidth=2, barheight=.5, ticks=FALSE)
 
@@ -57,7 +57,7 @@ plot_brain_maps <- function(maps, ncol=1,
         labels = c(round(m_min+0.5,2),round(m_max+0.5,2))
     }
 
-    p <- df %>% ggseg(
+    df %>% ggseg(
         atlas=glasser,
         hemi='left',
         mapping=aes(fill=value),
@@ -80,76 +80,10 @@ plot_brain_maps <- function(maps, ncol=1,
         legend.position = 'bottom',
         legend.text = element_text(size=6, family='Calibri', color='grey7'),
         plot.tag.position = c(0, 0.95),
-        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0)
+        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
         # panel.spacing.x=unit(spacing_x,'lines'),
         # panel.spacing.y=unit(spacing_y,'lines'),
     )
-}
-
-
-plot_scatter_with_colors <- function(data, corrs, x_name, x_var, y_var, color_var=NULL, left_margin=0) {
-    
-    data <- data %>% 
-        filter(!is.na(get(x_var)), !is.na(get(y_var))) %>% 
-        arrange(get(color_var)) %>% 
-        mutate(
-            x=get(x_var), y=get(y_var),
-            color = get(paste0(color_var,'_colors')),
-            color_names = get(paste0(color_var,'_names'))
-        ) %>% 
-        mutate(
-            color = factor(color, ordered=T, levels=unique(.$color))
-        )
-
-    corrs <- corrs %>%
-        filter(map == !!enquo(x_var), C == !!enquo(y_var)) %>% 
-        mutate(p_sig=ifelse(p<0.001, '***',
-                    ifelse(p<0.01, '**',
-                    ifelse(p<0.05, '*','')))) %>%
-        mutate(q_sig=ifelse(q<0.001, '†',
-                    ifelse(q<0.01, '†',
-                    ifelse(q<0.05, '†','')))) %>%
-        mutate(r_label=paste('r =', round(r,2), p_sig, q_sig),
-                # '\np = ', round(p,3), p_sig
-                # '\nq = ', round(q,3), q_sig
-                ) %>% 
-        mutate(
-            x = -Inf,
-            y = ifelse(r > 0, Inf, -Inf),
-            vjust = ifelse(r > 0, 1.5, -1)
-            )
-    
-    color_labels <- unique(data$color_names)
-
-    scatter <- data %>%  
-        ggplot() +
-        geom_smooth(aes(x=x, y=y), method='lm', se=F, color='black', size=.3) +
-        geom_point(aes(x=x, y=y, fill=color), size=1.2, stroke=.3, alpha=.8, color='darkgrey', shape=21) + 
-        scale_fill_identity() +
-        guides(color=F) +
-        annotate(geom='text', label=corrs$r_label, size=2.6, color='grey7', family='Calibri',
-                 x=corrs$x, y=corrs$y, vjust=corrs$vjust, hjust=-.1) +
-        xlab(x_name) + ylab(y_var) +
-        theme(
-            axis.text=element_blank(),
-            axis.ticks=element_blank(),
-            axis.title.y=element_text(angle=0, vjust=.5, margin=margin(t=0,r=0,b=0,l=left_margin,'cm')),
-        )
-
-    densities <- data %>% 
-        ggplot(aes(x=y, fill=color)) +
-        geom_density(alpha=.3, color='grey', size=.2) +
-        scale_fill_identity(name=NULL, labels=color_labels, 
-            guide=guide_legend(reverse=T)) + 
-        coord_flip() + 
-        theme_void() + 
-        theme(
-            legend.text=element_text(size=7, color='grey7', family='Calibri'),
-            legend.key.height = unit(3, "mm"),
-            legend.key.width = unit(3, "mm"),
-        ) + plot_layout(tag_level='new')
-
-    scatter + densities + plot_layout(widths=c(3,1))
 }
 
 
@@ -197,3 +131,200 @@ plot_corrmat <- function(df, highlight_color='grey7') {
         legend.position = 'bottom'
     )
 }
+
+plot_brain_classes <- function(brain_classes, colors, names) {
+    
+    brain_classes <- brain_classes %>% 
+    mutate(region = recode(region,'7Pl'='7PL')) %>% 
+    select(
+        colors = {{ colors }}, 
+        names = {{ names }},
+        region
+    ) %>% 
+    filter(!is.na(names))
+
+    brain_classes %>% 
+    ggseg(
+        atlas = glasser,
+        hemi = 'left',
+        mapping = aes(fill = colors),
+        colour = 'grey', 
+        alpha = 0.8,
+        size = .05,
+        show.legend = T
+        ) + 
+    scale_fill_identity(
+        breaks = brain_classes$colors %>% unique,
+        labels = brain_classes$names %>% unique,
+        na.translate = F, na.value='grey',
+        name=NULL,
+        guide = guide_legend(ncol=2)
+    ) +
+    theme_void() + 
+    theme(
+        text = element_text(size=7, family='Calibri', color='grey7'),
+        strip.text = element_text(size=7, family='Calibri', color='grey7'),
+        strip.clip = 'off',
+        legend.position = 'bottom',
+        legend.text = element_text(size=7, family='Calibri', color='grey7'),
+        legend.key.size = unit(2, "mm"),
+        plot.title = element_text(size=7, family = 'Calibri', color = 'grey7', face='bold',
+                                  hjust=0.5, margin = margin(-0.5,0,1,0,'mm')),
+        plot.tag.position = c(0, 1),
+        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
+    )
+}
+
+
+
+plot_scatter_with_colors <- function(data, corrs, x_var, y_var, y_name, color_var=NULL, ylab_adjust=0) {
+    
+    data <- data %>% 
+        filter(!is.na(get(x_var)), !is.na(get(y_var))) %>% 
+        arrange(get(color_var)) %>% 
+        mutate(
+            x=get(x_var), y=get(y_var),
+            color = get(paste0(color_var,'_colors')),
+            color_names = get(paste0(color_var,'_names'))
+        ) %>% 
+        mutate(
+            color = factor(color, ordered=T, levels=unique(.$color))
+        )
+
+    corrs <- corrs %>%
+        filter(C == !!enquo(x_var), map == !!enquo(y_var)) %>% 
+        mutate(p_sig=ifelse(p<0.001, '***',
+                    ifelse(p<0.01, '**',
+                    ifelse(p<0.05, '*','')))) %>%
+        mutate(q_sig=ifelse(q<0.001, '†',
+                    ifelse(q<0.01, '†',
+                    ifelse(q<0.05, '†','')))) %>%
+        mutate(r_label=paste('r =', round(r,2), p_sig, q_sig)
+                # '\np = ', round(p,3), p_sig
+                # '\nq = ', round(q,3), q_sig
+                )
+    
+    color_labels <- unique(data$color_names)
+
+    scatter <- data %>%  
+        ggplot() +
+        geom_smooth(aes(x=x, y=y), method='lm', se=F, color='darkgrey', size=.3) +
+        geom_point(aes(x=x, y=y, fill=color), size=1.2, stroke=.3, alpha=.8, color='darkgrey', shape=21) + 
+        scale_fill_identity() +
+        guides(color=F) +
+        annotate(geom='text', label=corrs$r_label, 
+                 size=2.6, color='grey7', family='Calibri',
+                 x=Inf, y=-Inf, vjust=-1.5, hjust=1.1) +
+        xlab(x_var) + ylab(y_name) +
+        coord_cartesian(clip='off') +
+        theme(
+            axis.text=element_blank(),
+            axis.ticks=element_blank(),
+            axis.title.y=element_text(angle=0, vjust=.5, margin=margin(t=0,r=ylab_adjust,b=0,l=0,'mm')),
+        )
+
+    densities <- data %>% 
+        ggplot(aes(x=x, fill=color)) +
+        geom_density(alpha=.3, color='grey', size=.2) +
+        scale_fill_identity(
+            breaks = data$color %>% unique,
+            labels = data$names %>% unique,
+            guide = 'none'
+        ) +
+        theme_void()
+
+    densities / scatter + plot_layout(heights=c(1,3))
+}
+
+
+
+plot_class_densities <- function(classes_with_scores, C, colors, names) {
+    classes_with_scores <- classes_with_scores %>% 
+    mutate(
+        C = {{ C }},
+        colors = {{ colors }}, 
+        names = {{ names }}
+    ) %>% 
+    filter(!is.na(names))
+
+    classes_with_scores %>% 
+    ggplot(aes(x=C, fill=colors)) +
+    geom_density(alpha=.3, color='grey', size=.2) +
+    scale_fill_identity(
+        breaks = classes_with_scores$colors %>% unique,
+        labels = classes_with_scores$names %>% unique,
+        na.translate = F, na.value='grey',
+        guide = 'none'
+    ) +
+    theme_void() + 
+    theme(
+        legend.text=element_text(size=7, color='grey7', family='Calibri'),
+        legend.key.height = unit(3, "mm"),
+        legend.key.width = unit(3, "mm"),
+    ) + plot_layout(tag_level='new')
+}
+
+# plot_scatter_with_colors <- function(data, corrs, x_name, x_var, y_var, color_var=NULL, left_margin=0) {
+    
+#     data <- data %>% 
+#         filter(!is.na(get(x_var)), !is.na(get(y_var))) %>% 
+#         arrange(get(color_var)) %>% 
+#         mutate(
+#             x=get(x_var), y=get(y_var),
+#             color = get(paste0(color_var,'_colors')),
+#             color_names = get(paste0(color_var,'_names'))
+#         ) %>% 
+#         mutate(
+#             color = factor(color, ordered=T, levels=unique(.$color))
+#         )
+
+#     corrs <- corrs %>%
+#         filter(map == !!enquo(x_var), C == !!enquo(y_var)) %>% 
+#         mutate(p_sig=ifelse(p<0.001, '***',
+#                     ifelse(p<0.01, '**',
+#                     ifelse(p<0.05, '*','')))) %>%
+#         mutate(q_sig=ifelse(q<0.001, '†',
+#                     ifelse(q<0.01, '†',
+#                     ifelse(q<0.05, '†','')))) %>%
+#         mutate(r_label=paste('r =', round(r,2), p_sig, q_sig),
+#                 # '\np = ', round(p,3), p_sig
+#                 # '\nq = ', round(q,3), q_sig
+#                 ) %>% 
+#         mutate(
+#             x = -Inf,
+#             y = ifelse(r > 0, Inf, -Inf),
+#             vjust = ifelse(r > 0, 1.5, -1)
+#             )
+    
+#     color_labels <- unique(data$color_names)
+
+#     scatter <- data %>%  
+#         ggplot() +
+#         geom_smooth(aes(x=x, y=y), method='lm', se=F, color='black', size=.3) +
+#         geom_point(aes(x=x, y=y, fill=color), size=1.2, stroke=.3, alpha=.8, color='darkgrey', shape=21) + 
+#         scale_fill_identity() +
+#         guides(color=F) +
+#         annotate(geom='text', label=corrs$r_label, size=2.6, color='grey7', family='Calibri',
+#                  x=corrs$x, y=corrs$y, vjust=corrs$vjust, hjust=-.1) +
+#         xlab(x_name) + ylab(y_var) +
+#         theme(
+#             axis.text=element_blank(),
+#             axis.ticks=element_blank(),
+#             axis.title.y=element_text(angle=0, vjust=.5, margin=margin(t=0,r=0,b=0,l=left_margin,'cm')),
+#         )
+
+#     densities <- data %>% 
+#         ggplot(aes(x=y, fill=color)) +
+#         geom_density(alpha=.3, color='grey', size=.2) +
+#         scale_fill_identity(name=NULL, labels=color_labels, 
+#             guide=guide_legend(reverse=T)) + 
+#         coord_flip() + 
+#         theme_void() + 
+#         theme(
+#             legend.text=element_text(size=7, color='grey7', family='Calibri'),
+#             legend.key.height = unit(3, "mm"),
+#             legend.key.width = unit(3, "mm"),
+#         ) + plot_layout(tag_level='new')
+
+#     scatter + densities + plot_layout(widths=c(3,1))
+# }

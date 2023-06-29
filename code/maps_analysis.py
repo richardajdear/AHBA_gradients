@@ -124,243 +124,6 @@ def dk_to_hcp(maps,
 
 
 
-def generate_shuffles(maps, n=1000,
-                      outfile='../outputs/shuffle_maps_1000.npy'):
-    
-    if 'label' in maps.columns:
-        maps = maps.drop('label', axis=1)
-    
-    shuffle_maps = np.repeat(maps.values[:,:,np.newaxis], 1000, axis=2)
-    for i in range(shuffle_maps.shape[2]):
-        np.random.shuffle(shuffle_maps[:,:,i])
-
-    np.save(outfile, shuffle_maps)
-
-
-# def generate_spins(maps, n=10, 
-#                    outfile='../outputs/spin_maps_1000.npy',
-#                    atlas='hcp'):
-#     """
-#     Generate spins from a set of maps and save to file
-#     """
-    
-#     if atlas == 'dk':
-#         atlas = 'aparc'
-#         _,_,rh_names = read_annot(f"../data/parcellations/rh.{atlas}.annot")
-#         drop = rh_names + ['lh_corpuscallosum', 'lh_unknown']
-#     else: 
-#         atlas = 'HCPMMP1'
-#         _,_,rh_names = read_annot(f"../data/parcellations/rh.{atlas}.annot")
-#         drop = rh_names    
-    
-#     spin_maps = nnsurf.spin_data(
-#         data = np.array(maps),
-#         drop = drop,
-#         version = "fsaverage",
-#         lhannot = f"../data/parcellations/lh.{atlas}.annot",
-#         rhannot = f"../data/parcellations/rh.{atlas}.annot",
-#         n_rotate = n
-#     )
-#     np.save(outfile, spin_maps)
-
-
-
-from neuromaps.datasets import fetch_atlas
-from neuromaps.nulls.spins import get_parcel_centroids, gen_spinsamples
-def generate_spins(n=1000, blocks=1, density='10k'):
-    """
-    First generate spins. Do this once so it's not repeated for each gradient
-    Generate in blocks of 1000 to prevent crashes
-    """
-    # Get sphere from which to generate spins (surface, not volume)
-    surfaces = fetch_atlas('fsaverage', density)['sphere']
-    # Create hemisphere ids needed to make spins
-    # (This function is named 'get_parcel_centroids' but for cornblath spin method we use vertices)
-    coords, hemiid = get_parcel_centroids(surfaces, method='surface')
-    # Actually generate the spins
-    for i in range(blocks):
-        spins = gen_spinsamples(coords, hemiid, n_rotate=n, verbose=1)
-        if blocks==1:
-            save_path = f"../outputs/permutations/spins_{density}_{n}.npy"
-            np.save(save_path, spins)
-            print(f"\nSaved spins to {save_path}")
-        else:
-            save_path = f"../outputs/permutations/spins_{density}_{n}_{i}.npy"
-            np.save(save_path, spins)
-            print(f"\nSaved block {i} of spins to {save_path}")
-    print(f"\nGenerated {blocks} blocks of {n} spins at density {density}")
-    
-
-from neuromaps.nulls import cornblath
-from neuromaps.transforms import fsaverage_to_fsaverage
-def generate_nulls_from_components(scores, spins, hcp_img=None, density='41k', 
-                                  n=10, n_components=3, only_left=True,
-                                  save_dir = '../outputs/permutations/',
-                                  save_name = 'spin_10'):
-    ## Next, get parcellation files in the same surface space as the spins (fsaverage)
-    if hcp_img is None:
-        hcp_img_files = ('../data/parcellations/lh.HCPMMP1.annot',
-                         '../data/parcellations/rh.HCPMMP1.annot')
-        hcp_img = annot_to_gifti(hcp_img_files)
-        hcp_img = fsaverage_to_fsaverage(hcp_img, target_density=density, method='nearest')
-
-    ## Reindex scores to have NA where parcels are missing (including all right hemi)
-    scores_reindex = scores.reindex(range(1,361)).iloc[:,:n_components].values
-    ### Drop parcels where data are missing in the 10k fsaverage HCPMMP parcellation template
-    if density=='10k':
-        scores_reindex = np.delete(scores_reindex, [120,300], axis=0)
-
-    ## Finally, for each gradient, compute nulls by projecting up to vertices and reaveraging
-    null_scores = np.zeros([360, scores_reindex.shape[1], n])
-    for i in range(n_components):
-        _scores = scores_reindex[:,i]
-        null_scores[:,i,:] = cornblath(
-                data=_scores,
-                atlas='fsaverage', 
-                density=density, 
-                parcellation=hcp_img, 
-                n_perm=n, 
-                spins=spins
-                )
-        print(f"\nGenerated {n} null spins of component {i}")
-    
-    # Drop right hemi
-    if only_left:
-        null_scores = null_scores[:180,:,:]
-
-    save_path = f"{save_dir}{save_name}.npy"
-    np.save(save_path, null_scores)
-    print(f"Saved null spins to {save_path}")
-
-
-# LEGACY VERSION
-# def generate_spins_from_gradients(scores, n=10,
-#                            outfile='../outputs/permutations/spin_gradients_1000.npy',
-#                            atlas='hcp'):
-    
-#     if atlas == 'dk':
-#         atlas = 'aparc'
-#         _,_,rh_names = read_annot(f"../data/parcellations/rh.{atlas}.annot")
-#         drop = rh_names + ['lh_corpuscallosum', 'lh_unknown']
-#     else: 
-#         atlas = 'HCPMMP1'
-#         _,_,rh_names = read_annot("../data/parcellations/rh.HCPMMP1.annot")
-#         # Find regions missing in scores
-#         missing_rois = list(set(get_labels_hcp()[:180]).difference(scores['label']))
-#         # Fix 7Pl to match HCP codes
-#         missing_rois = ['7PL' if x=='7Pl' else x for x in missing_rois]
-#         # Drop missing regions
-#         rh_names = rh_names + [np.bytes_('L_' + roi + '_ROI') for roi in missing_rois]
-#         drop = rh_names
-    
-#     spin_pcs = nnsurf.spin_data(
-#         data = np.array(scores.set_index('label')),
-#         drop = drop,
-#         version = "fsaverage",
-#         lhannot = f"../data/parcellations/lh.{atlas}.annot",
-#         rhannot = f"../data/parcellations/rh.{atlas}.annot",
-#         n_rotate = n,
-#     )
-#     np.save(outfile, spin_pcs)
-
-    
-def generate_simulations(maps, n=10,
-                         atlas = 'hcp',
-                         dist_mat = None,
-                         outfile='../outputs/sim_maps_1000.npy'):
-    """
-    Generate null maps using brainsmash
-    """
-    
-    if 'label' in maps.columns:
-        maps=maps.drop('label', axis=1)
-    
-    if atlas == 'hcp' and dist_mat is None:
-        dist_mat="../data/parcellations/LeftParcelGeodesicDistmat.txt"
-    elif atlas == 'dk':
-        dist_mat="../data/parcellations/LeftParcelGeodesicDistmat_DK.txt"
-    
-    null_maps = np.zeros([maps.shape[0], maps.shape[1], n])
-    
-    for m in range(maps.shape[1]):
-        base_map = maps.iloc[:,m].values
-        base = Base(x=base_map, D=dist_mat)
-        nulls = base(n)
-        null_maps[:,m,:] = nulls.swapaxes(0,1)
-        
-    np.save(outfile, null_maps)
-
-
-def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr', 
-                          reindex=True, pool=False, pool_frac=.3, 
-                          adjust='fdr_bh', adjust_by_label=False,
-                          n_components=3):
-    """
-    Get correlations with maps from gradient score nulls
-    Uses numpy masked array to handle missing values
-    """
-    # Filter maps for regions in gradients
-    maps = maps.set_axis(range(1, maps.shape[0]+1)).loc[scores.index, :]
-    # Filter nulls for regions in gradients
-    # null_grads = null_grads[scores.index-1, :, :]
-
-    # # Reindex scores to all regions
-    # if reindex:
-    #     scores = scores.reindex(range(1,181))
-    # null_grads = null_grads
-
-    n_maps = maps.shape[1]
-    output_frame = np.zeros((n_components*n_maps, 2))
-    output_index = pd.MultiIndex.from_product([scores.iloc[:,:n_components].columns, maps.columns])
-
-    # For each gradient
-    for g in range(null_grads.shape[1]):
-        _scores = scores.iloc[:,g].values
-        _scores = _scores.astype(np.longdouble) # force ValueError in compare_images
-        # Optionally pool maps together
-        if pool:
-            # Set dimensions for reshaping
-            # Downsample nulls because of pooling
-            m = null_grads.shape[1]
-            n = int(null_grads.shape[2] * pool_frac)
-            null_grads_downsample = null_grads[:,:,:n]
-            _nulls = null_grads_downsample.reshape(-1, g*n)
-        else:
-            _nulls = null_grads[:,g,:]
-        
-        # For each map
-        for m in range(maps.shape[1]):
-            _map = maps.iloc[:,m].values
-            _map = _map.astype(np.longdouble) # force compare_images to work
-            _r, _p = compare_images(_scores, _map, nulls=_nulls, metric=method, ignore_zero=False)
-            output_frame[m+g*n_maps,:] = [_r, _p]
-
-    # Output clean dataframe
-    output_adjusted = (pd.DataFrame(output_frame, index=output_index) 
-                        .set_axis(['r','p'], axis=1)
-                        .rename_axis(['G','map']).reset_index()
-    )
-    
-    # Multiple comparisons
-    if adjust is not None:
-        # Adjust across axes only (not by label)?
-        if adjust_by_label:
-            output_adjusted = (output_adjusted
-                .assign(q = lambda x: x.groupby('G')
-                                       .apply(lambda y: pd.Series(multipletests(y['p'], method=adjust)[1], index=y.index))
-                                       .reset_index(0, drop=True) # make index match
-                                       )
-                )
-        else:
-            output_adjusted = (output_adjusted
-                .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
-                )
-    else:       
-        output_adjusted = output_adjusted.assign(q = lambda x: x['p'])
-
-    return output_adjusted
-
-
 def maps_pca(maps, short_names=None, n_components=3):
     """
     Run PCA on maps
@@ -393,17 +156,17 @@ def maps_pca_boot(version, maps, n_boot=10, n_sample=5, n_components=5, replace=
     for i in range(n_boot):
         maps_boot = maps.sample(n=n_sample, replace=replace, axis=1)
         pca_scores, pca_var, pca_weights = maps_pca(maps_boot, n_components=n_components)
-        version_scores = version.clean_scores(n_components=n_components)
-        corrs = get_corrs(version_scores, pca_scores, n_components=n_components).abs()
+        version_scores = version.clean_scores(n_components=n_components).set_index('label')
+        corrs = pca_scores.join(scores).corr().iloc[:n_components,n_components:].abs()
         matches = version.match_components(corrs, n_components=n_components)
         index_ = [f'MRI PC{i+1}' for i in range(n_components)]
         var = pd.Series(pca_var, index=index_, name='var')
 
         MRI_PC = [ix[0] for ix in matches[0]]
-        G = [ix[1] for ix in matches[0]]
+        C = [ix[1] for ix in matches[0]]
         pca_corrs_boot[i] = (pd.DataFrame({
                                 'MRI_PC':MRI_PC, 
-                                'G':G, 
+                                'C':C, 
                                 'boot':i,
                                 'r':matches[1]
                                 })
@@ -416,7 +179,10 @@ def maps_pca_boot(version, maps, n_boot=10, n_sample=5, n_components=5, replace=
 
 
 # Atlas regions enrichment
-def compute_region_means(scores, null_scores, regions_series, method='median'):
+def compute_region_means(scores, null_scores, regions_series, method='median', reindex=True):
+    if reindex:
+        scores = scores.reindex(range(1,181))
+
     masks = {}
     # regions_series = regions.drop('label',axis=1).squeeze().dropna()
     for region in regions_series.dropna().unique():
@@ -436,14 +202,46 @@ def compute_region_means(scores, null_scores, regions_series, method='median'):
             true[region] = pd.Series(np.nanmedian(scores_array[mask, :], axis=0))
             null[region] = pd.DataFrame(np.nanmedian(null_scores[mask, :, :], axis=0)).T                
     
-    true = pd.concat(true).unstack(1).set_axis(['G1','G2','G3'], axis=1)
-    null = pd.concat(null).set_axis(['G1','G2','G3'], axis=1) \
+    true = pd.concat(true).unstack(1).set_axis(['C1','C2','C3'], axis=1)
+    null = pd.concat(null).set_axis(['C1','C2','C3'], axis=1) \
                  .reset_index(level=0).rename({'level_0':'label'}, axis=1)
 
     return true, null
 
 
 
+
+
+
+# LEGACY
+# def generate_spins_from_gradients(scores, n=10,
+#                            outfile='../outputs/permutations/spin_gradients_1000.npy',
+#                            atlas='hcp'):
+    
+#     if atlas == 'dk':
+#         atlas = 'aparc'
+#         _,_,rh_names = read_annot(f"../data/parcellations/rh.{atlas}.annot")
+#         drop = rh_names + ['lh_corpuscallosum', 'lh_unknown']
+#     else: 
+#         atlas = 'HCPMMP1'
+#         _,_,rh_names = read_annot("../data/parcellations/rh.HCPMMP1.annot")
+#         # Find regions missing in scores
+#         missing_rois = list(set(get_labels_hcp()[:180]).difference(scores['label']))
+#         # Fix 7Pl to match HCP codes
+#         missing_rois = ['7PL' if x=='7Pl' else x for x in missing_rois]
+#         # Drop missing regions
+#         rh_names = rh_names + [np.bytes_('L_' + roi + '_ROI') for roi in missing_rois]
+#         drop = rh_names
+    
+#     spin_pcs = nnsurf.spin_data(
+#         data = np.array(scores.set_index('label')),
+#         drop = drop,
+#         version = "fsaverage",
+#         lhannot = f"../data/parcellations/lh.{atlas}.annot",
+#         rhannot = f"../data/parcellations/rh.{atlas}.annot",
+#         n_rotate = n,
+#     )
+#     np.save(outfile, spin_pcs)
 
 ###
 # def get_corrs(scores, maps, method='pearson', atlas='hcp', n_components=3):

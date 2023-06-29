@@ -2,6 +2,7 @@
 
 import numpy as np, pandas as pd
 from scipy.stats import percentileofscore
+from scipy.stats import fisher_exact, f_oneway
 from statsmodels.stats.multitest import multipletests
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
@@ -92,7 +93,52 @@ def compute_enrichments(weights, null_weights, gene_labels,
     null_enrichments = pd.concat(null_enrichments).set_axis(axis_names, axis=1).reset_index(level=0).rename({'level_0':'label'}, axis=1)
 
     return true_enrichments, null_enrichments, gene_counts
-    
+
+
+def compute_region_fscores(labels, scores, null_scores, name='',
+                           n_components=3, axis_names=['C1','C2','C3']):
+    # Get list of indices for each label
+    unique_labels = np.unique(labels)
+    # Don't use label 0 for Yeo/Mesulam
+    unique_labels = unique_labels[unique_labels != 0]
+    # Get region indices for each label
+    indices = {label:np.where(labels==label) for label in unique_labels}
+
+    scores_reindex = scores.reindex(range(1,181)).values
+
+    true = {}
+    null = {}
+    nulls_to_drop = {}
+    for c in range(n_components):
+        true_label_scores = {}
+        null_label_scores = {}
+        for label in unique_labels:
+            label_indices = indices[label]
+            # Get scores for this label and component
+            true_ = scores_reindex[label_indices, c].squeeze(0)
+            null_ = null_scores[label_indices, c, :].squeeze(0)
+
+            # Check for null spins where scores are missing in all regions
+            nulls_to_drop[label] = np.isnan(null_).all(axis=0)
+
+            # Fill na with mean for this label
+            true_label_scores[label] = np.where(np.isnan(true_), np.nanmean(true_), true_)
+            null_label_scores[label] = np.where(np.isnan(null_), np.nanmean(null_, axis=0), null_)
+        # true[c] = true_label_scores
+        # null[c] = null_label_scores
+
+        # Compute f-stat across all labels for true and nulls
+        true[c] = f_oneway(*true_label_scores.values())[0]
+        null[c] = f_oneway(*null_label_scores.values())[0]
+
+    true = pd.Series(true, name=name).to_frame().T.set_axis(axis_names, axis=1)
+    null = pd.DataFrame(null).set_axis(axis_names, axis=1).assign(label=name)
+
+    # Drop nulls that ahve any label with scores all missing
+    nulls_to_keep = ~pd.DataFrame(nulls_to_drop).max(axis=1)
+    null = null.loc[nulls_to_keep, :]
+    return true, null
+
     
 def compute_null_p(true_enrichments, null_enrichments, 
                    gene_counts=None, adjust='fdr_bh', adjust_by_label=False,
@@ -169,7 +215,6 @@ def compute_null_p(true_enrichments, null_enrichments,
          )
 
     return null_p
-
 
 
 

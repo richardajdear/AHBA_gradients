@@ -83,7 +83,7 @@ plot_triplets_raster <- function(triplets_raster, n_components=3, highlight = 'o
     }
 }
 
-
+e
 plot_dist_donors_hcp <- function(df_donors) {
     df_donors %>%
     ggplot() + 

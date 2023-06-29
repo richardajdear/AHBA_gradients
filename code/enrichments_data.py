@@ -307,3 +307,45 @@ def get_layer_genes(which='maynard', add_hse_genes=False):
         layer_genes = pd.concat([hse_genes, layer_genes])
 
     return layer_genes
+
+
+def get_intelligence_gwas_genes():
+    lee2018 = (pd.read_csv("../data/gwas/lee2018_tableS7.csv", header=1, usecols=['Gene symbol'])
+               .dropna().rename({'Gene symbol':'gene'}, axis=1).assign(label='lee2018'))
+    # jansen2020 = (pd.read_csv("../data/gwas/jansen2020_tableS13.csv", header=2, usecols=['HUGO Symbol'])
+    #               .dropna().rename({'HUGO Symbol':'gene'}, axis=1).assign(label='jansen2020'))
+    ## UPDATE THIS
+    gwas_intelligence = (pd.read_csv("../data/gwas/intelligence.csv", header=0)
+        .drop('sniekers2017', axis=1)
+        .melt(var_name='label',value_name='gene').dropna()
+    )
+
+    rename_dict = {
+        # 'lee2018':'Lee 2018',
+        # 'sniekers2017':'Sniekers 2017',
+        'davies2018':'Davies 2018',
+        'savage2018':'Savage 2018',
+        'hill2019':'Hill 2019',
+        'hatoum2022':'Hatoum 2022',
+        # 'jansen2020':'Jansen 2022',
+    }
+
+    gwas_intelligence = (
+        # pd.concat([gwas_intelligence, lee2018])
+        gwas_intelligence
+        .replace({'label': rename_dict})
+        .assign(label = lambda x: pd.Categorical(x['label'], ordered=True, categories=rename_dict.values()))
+    )
+    return gwas_intelligence
+
+# def get_structure_gwas_genes():
+    # gwas_thickness = (pd.read_csv("../data/gwas/warrier2022_tableS23.csv", index_col=0, header=1).reset_index()
+    #              .rename({'Phenotype':'label', 'Gene Symbol':'gene'}, axis=1)
+    #              .loc[lambda x: x['label']=='Cortical thickness', ['label','gene']]
+    #              )
+
+    # gwas_wm = (pd.read_csv("../data/gwas/sha2023_tableS18.csv", header=1)
+    #  .dropna()['Gene name'].rename('gene').to_frame()
+    #  .assign(label='WM connectivity')
+    # )
+    # return pd.concat([gwas_thickness, gwas_wm])

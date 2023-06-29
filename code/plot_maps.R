@@ -613,37 +613,36 @@ plot_ahba_mri_brains <- function(scores_df, colors=rev(brewer.rdbu(100)), ncol=2
 }
 
 
-plot_maps_pca_boot <- function(pca_corrs_all, pca_corrs_boot
-                              ) {
+plot_maps_pca_boot <- function(pca_corrs_all, pca_corrs_boot) {
 
     row1_title = 'Correlation\n with matched\nneuroimaging PC'
     row2_title = 'Neuroimaging PC\nVariance Explained'
 
     medians = pca_corrs_boot %>% 
-        filter(G %in% c('G1','G2','G3')) %>%
+        filter(C %in% c('C1','C2','C3')) %>%
         rename(!!row1_title := r, !!row2_title := var) %>%
-        group_by(G) %>% summarize_all(median) %>%     
-        gather(metric, value, -G, -MRI_PC, -boot) %>%
+        group_by(C) %>% summarize_all(median) %>%     
+        gather(metric, value, -C, -MRI_PC, -boot) %>%
         mutate(label=paste('Median:', round(value,2)))
 
     all_maps = pca_corrs_all %>% 
-        filter(G %in% c('G1','G2','G3')) %>%
+        filter(C %in% c('C1','C2','C3')) %>%
         rename(!!row1_title := r, !!row2_title := var) %>%
-        gather(metric, value, -G, -MRI_PC) %>% 
+        gather(metric, value, -C, -MRI_PC) %>% 
         mutate(label=paste('Original:', round(value,2)))
 
     pca_corrs_boot %>%
-    filter(G %in% c('G1','G2','G3')) %>%
-rename(!!row1_title := r, !!row2_title := var) %>%
-    gather(metric, value, -G, -MRI_PC, -boot) %>%
+    filter(C %in% c('C1','C2','C3')) %>%
+    rename(!!row1_title := r, !!row2_title := var) %>%
+    gather(metric, value, -C, -MRI_PC, -boot) %>%
     ggplot() +
-    facet_rep_grid(metric~G, switch='y', repeat.tick.labels='x') +
+    facet_rep_grid(metric~C, switch='y', repeat.tick.labels='x') +
     geom_histogram(aes(value, fill=metric), alpha=.7) + 
     geom_vline(data=all_maps, aes(xintercept=value), linetype=2, size=1) +
-    geom_text(data=all_maps, aes(label=label, x=value, y=1400), hjust=-0.05, size=8, 
+    geom_text(data=all_maps, aes(label=label, x=value, y=0), hjust=-0.05, size=8, 
                 family='Calibri', color='grey7') +
     geom_vline(data=medians, aes(xintercept=value), linetype=3, size=1) +
-    geom_text(data=medians, aes(label=label, x=value, y=1200), hjust=-0.05, size=8,
+    geom_text(data=medians, aes(label=label, x=value, y=2), hjust=-0.05, size=8,
                 family='Calibri', color='grey7') +
     scale_fill_manual(values=brewer.rdbu(10)[c(3,8)]) +
     scale_x_continuous(limits=c(0,1), breaks=c(0,.5,1), minor_breaks=c(.25,.75)) +

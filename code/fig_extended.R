@@ -14,7 +14,7 @@ theme_update(
     plot.title = element_text(size=7, family = 'Calibri', color = 'grey7', face='bold',
                     margin = margin(0,0,0,0,'mm')),
     plot.tag.position = c(0, 1),
-    plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0)
+    plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
 )
 colorbar_h <- guide_colorbar(barwidth=2, barheight=.5, ticks=FALSE, title.vjust=1)
 colorbar_v <- guide_colorbar(barwidth=.5, barheight=2, ticks=FALSE)
@@ -198,7 +198,7 @@ plot_brains <- function(maps, atlas='hcp',
         plot.title = element_text(size=7, family = 'Calibri', color = 'grey7', face='bold',
                                   hjust=.5, margin = margin(0,0,1,0,'mm')),
         plot.tag.position = c(0, 0.95),
-        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0)
+        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
     )
 
     if (facet=='h') {
@@ -331,4 +331,49 @@ plot_weight_heatmaps <- function(weight_corrs, spacing=1, ylab='') {
     coord_fixed() + 
     xlab('') +
     ylab('')
+}
+
+
+plot_enrichment_bars_z <- function(stats, xlab='Enrichment z-score', facet='.~C') {
+    
+    lim <- max(abs(stats$z))*1.1
+    
+    stats %>% 
+    mutate(C = factor(C, ordered = T, levels = unique(.$C))) %>%
+    mutate(label = factor(label, ordered = T, levels = unique(.$label))) %>%
+    mutate(sig  =  case_when(
+        q < .001 ~ '***',q < .01 ~ '**',q < .05 ~ '*', TRUE ~ ''
+        )) %>%
+    mutate(hjust = ifelse(z < 0, 1, 0)) %>%
+    ggplot(aes(x = z, y = label)) + 
+    facet_grid(facet) +
+    geom_col(aes(fill = z)) +
+    geom_text(aes(label = sig, vjust = .7, hjust = hjust), size = 2.5) +
+    scale_y_discrete(limits = rev, name = NULL) +
+    scale_x_continuous(limits = c(-lim,lim), 
+                       breaks = round(0.5*c(-lim,lim)), name = xlab) +
+    scale_fill_gradientn(colors = rev(brewer.rdbu(100)), guide = 'none', limits = c(-lim,lim)) +
+    coord_cartesian(clip = 'off')
+}
+
+
+plot_single_scatter <- function(maps, x, y, label='r =', xlabel=-1, ylabel=1) {
+    maps %>% 
+    mutate(x=get(x), y=get(y)) %>% 
+    ggplot(aes(x=x, y=y)) +
+    geom_point(aes(fill=x), size=1.2, shape=21, stroke=.3, color='darkgrey') +
+    geom_smooth(method='lm', color='darkgrey', size= .3, se=F) +
+    annotate(geom='text', label=label, x=-Inf, y=Inf, size=2.6, hjust=-0.5, vjust=5) +
+    scale_fill_gradientn(colors=brewer.rdbu(100) %>% rev, name=NULL, guide='none',
+                         limits=c(-3,3), oob=squish, breaks=c(-3,3), labels=c('-3σ','+3σ')) +
+    xlab(x) + ylab(y) +
+    coord_cartesian(clip='off') +
+    theme(
+        axis.text = element_blank(), 
+        axis.title.y = element_text(angle=0, vjust=.5),
+        panel.border=element_rect(fill='transparent', color='grey', size=.3),
+        legend.position='right',
+        aspect.ratio=1,
+        panel.margin=margin(l=2,r=2,b=2,t=2,'mm')
+    )
 }

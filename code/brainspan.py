@@ -7,16 +7,15 @@ from statsmodels.gam.api import GLMGam, BSplines
 import statsmodels.formula.api as smf
 
 
-def get_brainspan_curves_by_gene(genes, return_points=False, alpha=0.5,
-                                 load=True,
+def get_brainspan_curves_by_gene(genes=None, return_points=False, alpha=0.5,
                                  save_path='../outputs/brainspan_curves.csv'):
     """
     1. Get BrainSpan data and match regions to HCP parcellation
     2. Convert age to continuous variable
     3. Fit and predict GAM curves for selected genes
     """
-    if save_path is not None and load:
-        return pd.read_csv(save_path)
+    if save_path is not None and genes is None:
+        return pd.read_csv(save_path, index_col=0)
     
     # 1
     bs_exp, bs_col, bs_row = get_brainspan()

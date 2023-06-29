@@ -13,7 +13,7 @@ theme_update(
     plot.title = element_text(size=7, family = 'Calibri', color = 'grey7', face='bold',
                     margin = margin(0,0,0,0,'mm')),
     plot.tag.position = c(0, 1),
-    plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0)
+    plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
 )
 colorbar_h <- guide_colorbar(barwidth=2, barheight=.5, ticks=FALSE, title.vjust=1)
 colorbar_v <- guide_colorbar(barwidth=.5, barheight=2, ticks=FALSE)
@@ -106,7 +106,7 @@ plot_brains <- function(maps, atlas='dk',
         legend.position = 'right',
         legend.text = element_text(size=6, family='Calibri', color='grey7'),
         plot.tag.position = c(0, 0.95),
-        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0)
+        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
     )
 
     if (facet=='h') {
@@ -161,7 +161,10 @@ plot_heatmap_enrichments <- function(stats, size=4, limits=NULL) {
     scale_x_discrete(position='top') +
     guides(fill = colorbar_h) +
     xlab('') + ylab('') +
-    coord_fixed()
+    coord_fixed() + 
+    theme(
+        plot.title.position = 'plot'
+    )
 }
 
 
@@ -182,7 +185,6 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switc
     ggplot(aes(x=C_score, y=map_score)) +
     geom_point(aes(fill=C_score), shape=21, color='grey', stroke=.3, size=pointsize) +
     geom_smooth(method='lm', linetype=1, se=FALSE, color='darkgrey', size=.3) +
-    # geom_smooth(method='lm', color=brewer.rdbu(5)[1], size=.3) +
     geom_text(data=corrs, aes(label=r_label, x=x, y=y), size=size, hjust=0.5, vjust=0.5) +
     scale_fill_gradientn(colors=rev(brewer.rdbu(100)), guide='none') +
     scale_x_continuous(breaks=0) + 
@@ -205,32 +207,34 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switc
 
 
 
-plot_venn <- function(overlap_deg_gwas, disorder) {
-    title <- paste(disorder,'genes')
+plot_venn <- function(overlap_deg_gwas, disorder, bottom_margin=1) {
+    # title <- paste(disorder,'genes')
+    title <- disorder
     disorder <- enquo(disorder)
     counts <- overlap_deg_gwas %>% 
     filter(disorder == !!disorder) %>% 
     group_by(gene) %>% 
     summarise(
         GWAS = sum(label=='GWAS'),
-        RNAseq = sum(label=='DEG')
+        DEG = sum(label=='DEG')
         ) %>% 
-    group_by(GWAS, RNAseq) %>% 
+    group_by(GWAS, DEG) %>% 
     count() %>% ungroup() %>% 
     mutate(
-        names = case_when(GWAS+RNAseq==2 ~ 'GWAS&RNAseq', GWAS==1 ~ 'GWAS', RNAseq==1 ~ 'RNAseq'),
+        names = case_when(GWAS+DEG==2 ~ 'GWAS&DEG', GWAS==1 ~ 'GWAS', DEG==1 ~ 'DEG'),
         pct = n/sum(n)
     )
     x <- counts$n
     names(x) <- counts$names
 
-    colors <- c(
-        brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
-    )
+    # colors <- c(
+    #     brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
+    # )
+    colors <- brewer.puor(10)[c(3,8)]
 
     plot <- plot(euler(x), 
                  edges = list(col='grey'),
-                 fills = list(fill = colors[c(1,3)], alpha = 0.3),
+                 fills = list(fill = colors, alpha = 0.5),
                  labels = list(col = "grey7", fontsize = 7, font='plain', cex=1, fontfamily='Calibri'),
                  quantities = list(col = "grey7", fontsize = 7, fontfamily='Calibri')
                 ) %>% 
@@ -239,69 +243,88 @@ plot_venn <- function(overlap_deg_gwas, disorder) {
         coord_cartesian(clip='off') +
         theme( 
             # text=element_text(size=20),
-            plot.margin = margin(t=1, r=1, b=1, l=1, "mm"),
-            plot.title=element_text(hjust=.5, vjust=1, margin=margin(0,0,1,0,'mm'))
+            plot.margin = margin(t=0, r=0, b=bottom_margin, l=0, "mm"),
+            # plot.title=element_text(hjust=.5, vjust=1, margin=margin(0,0,1,0,'mm'))
+            plot.title=element_text(hjust=.5, vjust=.9, margin=margin(0,2,0,0,'mm'), face = 'plain')
         )
     return(plot)
 }
 
 
 
-plot_quantile_curves <- function(quantile_curves, facet='~C', continuous=FALSE, ncol=3, which='pred') {
-    n_quantiles <- quantile_curves$C_quantile %>% unique %>% length
+plot_disorder_layer_enrichments <- function(layer_enrichments, facet='~disorder', ncol=1) {
+    # colors <- c(
+    #     brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
+    # )
+    # colors <- colors[c(1,3)]
+    colors <- brewer.puor(10)[c(3,8)] %>% rev
 
-    p <- quantile_curves %>% 
-    mutate(curve = get(which)) %>% 
-    arrange(desc(C_quantile)) %>% 
-    mutate(C_quantile = factor(C_quantile, ordered=T, levels=unique(.$C_quantile))) %>% 
-    ggplot(aes(x=age_log10, y=10**curve)) +
-    facet_wrap(as.formula(facet), scales='fixed', ncol=ncol) +
-    geom_line(aes(color=C_quantile, group=C_quantile, alpha=C_quantile), size=.3) +
-    scale_x_continuous(
-        breaks=log10(c(-0.5,0,1,5,14,40)*365+40*7),
-        labels=function(x) round((10**x - 40*7)/365,2)) +
-    scale_color_manual(values=brewer.rdbu(10), name='Decile', labels=seq(10,1)) +
-    scale_alpha_manual(values=rep(1, n_quantiles), name='') +
-    guides(color=guide_legend(reverse=T, override.aes = list(size=2)), alpha='none') +
-    ylab('log10 RPKM') +
-    xlab('Age') +
-    coord_cartesian(clip='off') +
-    theme(
-        axis.text.y=element_blank(),
-        axis.title.y = element_text(margin=margin(t=0,b=0,l=0,r=-5, unit='mm')),
-        strip.text.x = element_text(margin=margin(0,0,-2,0,'mm')),
-        legend.text = element_text(size=7),
-        legend.position = 'right',
-        plot.title.position='plot'
-    )
-}
-
-
-plot_quantile_steps <- function(quantile_steps, facet='', ncol=3) {
-    n_quantiles <- quantile_steps$C_quantile %>% unique %>% length
-    
-    p <- quantile_steps %>% 
-    arrange(desc(C_quantile)) %>% 
-    mutate(C_quantile = factor(C_quantile, ordered=T, levels=unique(.$C_quantile))) %>% 
-    ggplot(aes(x=layer, y=pct, group=C_quantile)) + 
-    geom_step(aes(color=C_quantile, alpha=C_quantile), size=.3, direction='mid') + 
-    scale_alpha_manual(values=rep(1,n_quantiles), name='') +
-    ylab('% of genes') +
-    xlab('Cortical layer') +
-    guides(color=guide_legend(reverse=T, override.aes = list(size=2)), alpha='none') +
-    coord_cartesian(clip='off') +
-    theme(
-        # axis.text.y=element_blank(),
-        # axis.title.y = element_text(margin=margin(t=0,b=0,l=0,r=-5, unit='mm')),
-        # strip.text.x = element_text(margin=margin(0,0,-2,0,'mm')),
-        legend.text = element_text(size=7),
-        legend.position = 'right',
-        plot.title.position='plot'
-    )
+    g <- layer_enrichments %>% 
+        mutate(disorder = factor(disorder, ordered=T, levels=unique(.$disorder))) %>% 
+        mutate(which = factor(which, ordered=T, levels=unique(.$which))) %>% 
+        mutate(p_level=ifelse(q<0.001, '***',
+                       ifelse(q<0.01, '**',
+                       ifelse(q<0.05, '*','')))) %>%
+        ggplot(aes(x=layer, y=pct, group=which)) + 
+        geom_linerange(aes(color=which, x=layer, y=0, ymin=0, ymax=pct, alpha=sig), position=position_dodge(width=0.5), size=.3) +
+        geom_point(aes(fill=which, size=n, alpha=sig), position=position_dodge(width=0.5), shape=21, color='grey', stroke=.3) +
+        geom_text(aes(label = p_level), position=position_dodge(width=0.5), size=2.5, direction='mid', vjust=-.5) + 
+        geom_hline(yintercept=0, color='grey', size=.1) +
+        scale_alpha_manual(values=c(.5,1)) +
+        # scale_alpha_continuous(range=c(.2,1)) +
+        # guides(alpha=guide_legend()) +
+        scale_fill_manual(values=colors, name=NULL) +
+        scale_color_manual(values=colors, name=NULL) +
+        scale_size_continuous(range=c(1,4), name='# genes') +
+        scale_y_continuous(breaks=c(0,.1,.2), labels=percent) +
+        ylab('% of C3+ GWAS/DEG genes linked to layer') +
+        xlab('Cortical layer') +
+        guides(fill=guide_legend(reverse=T, override.aes = list(size=2)), alpha='none', color='none') +
+        coord_cartesian(clip='off') +
+        theme(
+            axis.text.y = element_text(size=6), 
+            strip.text = element_text(margin=margin(5,0,-2,0,'mm')),
+            # axis.title.y = element_text(angle=0, vjust=.5),
+            legend.text = element_text(size=7),
+            legend.position = 'right',
+            plot.title = element_text(hjust=0.5, margin=margin(0,0,2,0,'mm')),
+            plot.title.position='panel'
+        )
 
     if (facet=='') {
-        p
+        g
     } else (
-        p + facet_wrap(as.formula(facet), scales='free', ncol=ncol)
+        g + facet_wrap(as.formula(facet), ncol=ncol)
     )
 }
+
+
+
+# plot_disorder_curves <- function(disorder_curves, facet='~disorder', ncol=3) {
+#     colors <- c(
+#         brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
+#     )
+#     colors <- colors[c(1,3)]
+
+#     disorder_curves %>% 
+#         ggplot(aes(x=age_log10, y=10**pred)) +
+#         facet_wrap(as.formula(facet), scales='fixed', ncol=ncol) +
+#         geom_line(aes(color=label, group=label), size=.3) +
+#         scale_x_continuous(
+#             breaks=log10(c(-0.5,0,1,5,14,40)*365+40*7),
+#             labels=function(x) round((10**x - 40*7)/365,2)) +
+#         scale_color_manual(values=colors) +
+#         guides(color=guide_legend(reverse=T, override.aes = list(size=2)), alpha='none') +
+#         ylab('log10 RPKM') +
+#         xlab('Age') +
+#         coord_cartesian(clip='off') +
+#         theme(
+#             axis.title.y = element_text(margin=margin(t=0,b=0,l=0,r=-5, unit='mm')),
+#             strip.text.x = element_text(margin=margin(0,0,-2,0,'mm')),
+#             legend.text = element_text(size=7),
+#             legend.position = 'right',
+#             plot.title.position='plot'
+#         )
+# }
+
+

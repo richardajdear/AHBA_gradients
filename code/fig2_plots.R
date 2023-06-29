@@ -9,7 +9,7 @@ theme_update(
     strip.placement='outside',
     legend.key.size = unit(1, "mm"),
     plot.tag.position = c(0,1),
-    plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0)
+    plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
 )
 theme_colorbar <- guide_colorbar(barwidth=2, barheight=.5, ticks=FALSE)
 
