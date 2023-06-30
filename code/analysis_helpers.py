@@ -8,7 +8,6 @@ from brainsmash.mapgen.base import Base
 from statsmodels.formula.api import ols
 from sklearn.linear_model import LinearRegression
 from scipy import sparse
-import networkx as nx
 
 
 def np_pearson_corr(x, y):

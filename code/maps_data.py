@@ -32,16 +32,26 @@ def get_meg_maps(data_dir="../data/meg_HCPS1200.csv"):
 def get_yeo_mesulam(scores=None):
     lobe_colors = {'Occ':'#E41A1C', 'Fr':'#4A72A6', 'Par':'#48A462', 'Temp':'#7E6E85', 'Ins':'#D16948'}
     lobe_names = {'Occ':'Occipital', 'Fr':'Frontal', 'Par':'Parietal', 'Temp':'Temporal', 'Ins':'Insula'}
+    
+    mesulam_colors = {1:"#FFFFB3", 2:"#FB8072", 3:"#BEBADA", 4:"#80B1D3"}
+    mesulam_names = {1:'Paralimbic',2:'Heteromodal',3:'Unimodal',4:'Idiotypic'}
 
     hcp_yeo_mesulam = (pd.read_csv('../data/parcellations/HCP-MMP1_UniqueRegionList.txt')
      .assign(id=lambda x: [id-20 if id>180 else id for id in x['regionID']])
      .set_index('id')
      .loc[:180, ['region', 'Lobe']]
-     .assign(Lobe_colors = lambda x: x['Lobe'].map(lobe_colors))
-     .assign(Lobe_names = lambda x: x['Lobe'].map(lobe_names))
+     .assign(
+        Lobe_colors = lambda x: x['Lobe'].map(lobe_colors),
+        Lobe_names = lambda x: x['Lobe'].map(lobe_names)
+     )
      .join(pd.read_csv("../data/yeo_asymmetric.csv").set_index('id').drop('label', axis=1))
      .join(pd.read_csv("../data/mesulam_hcp.csv").set_index('id').drop('label', axis=1))
+     .assign(
+        Mesulam_colors = lambda x: x['Mesulam'].map(mesulam_colors),
+        Mesulam_names = lambda x: x['Mesulam'].map(mesulam_names)
+     )
     )
+
 
     if scores is not None:
         hcp_yeo_mesulam = hcp_yeo_mesulam.join(scores)

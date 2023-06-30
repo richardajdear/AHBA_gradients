@@ -2,329 +2,220 @@ theme_set(theme_classic())
 theme_update(
     text = element_text(size=7, family = 'Calibri', color = 'grey7'),
     axis.text = element_text(size=7, family = 'Calibri', color = 'grey7'),
-    axis.line = element_line(size=.2),
+    axis.line = element_blank(),
     axis.ticks = element_blank(),
+    strip.text = element_text(size=7, family = 'Calibri', color = 'grey7'),
+    strip.background = element_blank(),
+    strip.placement='outside',
     legend.key.size = unit(1, "mm"),
-    plot.tag.position = c(0, 1),
+    plot.tag.position = c(0,1),
     plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
 )
 theme_colorbar <- guide_colorbar(barwidth=2, barheight=.5, ticks=FALSE)
 
 
+plot_single_cell_posneg <- function(sc_projected_posneg_plot) {
+    colors <- c(
+        brewer.rdbu(21)[c(2,20)],
+        brewer.piyg(11)[c(2,10)],
+        brewer.brbg(11)[c(2,10)]
+    ) %>% brightness(scalefac(1.5)) %>% c('grey30')
 
-plot_brain_maps <- function(maps, ncol=1,
-                      colors=rev(brewer.rdbu(100)), 
-                      colorscale='fixed', limits=c(-3,3),
-                      labels=c('-3σ','+3σ'), name=NULL) {
-    
-    if ("label" %in% colnames(maps)) {
-        maps <- maps %>% remove_rownames %>% column_to_rownames('label')
-    }
-
-    df <- maps %>%
-        rownames_to_column %>%
-        mutate(region = recode(rowname,'7Pl'='7PL')) %>%
-        select(-rowname) %>%
-        gather('map', 'value', -region) %>%
-        mutate_at(vars(map), ~ factor(., levels=unique(.))) %>%
-        group_by(map)
-    
-    # set scale limits at 99th percentile
-    m_max <- pmax(
-        df %>% .$value %>% quantile(.99, na.rm=T) %>% abs,
-        df %>% .$value %>% quantile(.01, na.rm=T) %>% abs
-    )
-
-    if (colorscale == 'fixed') {
-        m_min <- limits[1]
-        m_max <- limits[2]
-    } else if (colorscale=='symmetric') {
-        m_min <- -m_max
-    } else if (colorscale=='zero') {
-        m_min <- 0
-    } else if (colorscale=='absolute') {
-        m_min <- df %>% .$value %>% quantile(.01)
-    } else {
-        print("Invalid colorscale")
-    }
-
-    # set manual axis labels if desired
-    if (length(labels)>1) {
-        labels = labels
-    } else if (labels=='none') {
-        labels = c(round(m_min,2),round(m_max,2))
-    } else if (labels=='centile') {
-        labels = c(round(m_min+0.5,2),round(m_max+0.5,2))
-    }
-
-    df %>% ggseg(
-        atlas=glasser,
-        hemi='left',
-        mapping=aes(fill=value),
-        colour='grey', size=.05,
-        show.legend=T
-        ) + 
-    facet_wrap(~map, ncol=ncol, dir="v") +
-    scale_fill_gradientn(
-        colors=colors, 
-        limits=c(m_min,m_max), oob=squish, breaks=c(m_min,m_max), 
-        labels=labels, 
-        guide=theme_colorbar,
-        name=name
-    ) +
-    theme_void() + 
+    p1 <- sc_projected_posneg_plot %>% 
+    mutate(cell_type = factor(cell_type, ordered=T, levels=unique(.$cell_type))) %>% 
+    ggplot(aes(positive, negative)) + 
+    facet_wrap(~C, scales='free') + 
+    geom_point(alpha=.1, size=.002, aes(color=cell_type)) +
+    xlab("sc-RNAseq expression of C1/2/3 positive genes") +
+    ylab("sc-RNAseq expression of\nC1/2/3 negative genes") +
+    scale_color_manual(values=colors, name=NULL) +
+    guides(colour = guide_legend(byrow=T, override.aes = list(size=1, alpha=.8))) +
     theme(
-        text = element_text(size=7, family='Calibri', color='grey7'),
-        strip.text = element_text(size=7, family='Calibri', color='grey7'),
-        strip.clip = 'off',
-        legend.position = 'bottom',
-        legend.text = element_text(size=6, family='Calibri', color='grey7'),
-        plot.tag.position = c(0, 0.95),
-        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
-        # panel.spacing.x=unit(spacing_x,'lines'),
-        # panel.spacing.y=unit(spacing_y,'lines'),
+        strip.background = element_blank(),
+        panel.grid = element_blank(),
+        panel.spacing.x = unit(5,'mm'),
+        legend.spacing.y = unit(1,'mm'),
+        legend.text = element_text(size=7),
+        axis.line = element_line(size=.2, color='darkgrey'),
+        axis.text = element_blank(),
+        axis.title.y = element_text(margin=margin(t=0,b=0,l=0,r=-2, unit='mm')),
+        axis.ticks = element_blank()
     )
+
+    single_inset <- function(C) {
+        data_subset <- sc_projected_posneg_plot %>% 
+        filter(subclass_label=='VIP', layer=='L2') %>% 
+        filter(C==!!enquo(C))
+
+        label <- paste0("r = ", round(cor(data_subset$positive, data_subset$negative),2))
+
+        data_subset %>% 
+        ggplot(aes(positive, negative)) +
+        geom_smooth(method='lm', se=F, color='darkgrey', size=.3) + 
+        geom_point(alpha=.1, size=.01, color=colors[2]) +
+        annotate(geom='text', label=label, x=Inf, y=Inf, hjust=1.1, vjust=1.7, size=2,
+                 family='Calibri', color='grey7') +
+        theme_minimal() + 
+        theme(
+            aspect.ratio = 1,
+            panel.border = element_rect(fill=NA, size=.2, color='darkgrey'),
+            panel.grid = element_blank(),
+            axis.text = element_blank(),
+            axis.title = element_blank(),
+            plot.title = element_text(hjust=.5, size=6, family='Calibri', color='gray7')
+        ) +
+        ggtitle("Layer 2 VIP\ninterneurons only")
+    }
+
+    inset_plots <- c('C1','C2','C3') %>% map(single_inset)
+    inset_df <- tibble(
+        x=c(1,1,1), 
+        y=c(1,1,1),
+        plot = inset_plots, C=c('C1','C2','C3'))
+
+    p1 + geom_plot_npc(data=inset_df, 
+        aes(npcx=x, npcy=y, label=plot), 
+        vp.width=0.5, vp.height=0.5)
 }
 
 
-
-plot_corrmat <- function(df, highlight_color='grey7') {
-    ### Correlation matrix using continuous axes to support rectangle annotation of modules
-    df_plot <- df %>%
-    mutate(
-        x = factor(x, ordered=T, levels=unique(.$x)),
-        y = factor(y, ordered=T, levels=unique(.$y)),
-        x1 = as.integer(x),
-        y1 = as.integer(y)
-    )
-    # Set axes labels
-    labels <- levels(df_plot$x)
-    breaks <- seq_along(labels)
-
-    # Get rectangle boundaries from module annotations of x label
-    df_rectangles <- df_plot %>% 
-    group_by(cluster) %>% 
-    summarise(xmin=min(x1)-0.5, xmax=max(x1)+0.5, ymin=min(x1)-0.5, ymax=max(x1)+0.5)
-
-    # # Get G1-3 for marker lines
-    df_lines <- df_plot %>% 
-    filter(x %in% c('C1','C2','C3')) %>% select(x, x1)
-
-    df_plot %>% ggplot() + 
-    geom_raster(aes(x1,y1, fill=r)) + 
-    geom_rect(data=df_rectangles, aes(xmin=xmin, ymin=xmin, xmax=xmax, ymax=xmax),
-              fill=NA, size=.2, color=highlight_color) +
-    scale_x_continuous(breaks=breaks, labels=labels, limits=c(0.5,length(labels)+0.5)) +
-    scale_y_continuous(breaks=breaks, labels=labels, limits=c(0.5,length(labels)+0.5)) +
-    coord_cartesian(clip='off') +
-    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), limits=c(-1,1), breaks=c(-1,1), 
-                         guide=theme_colorbar, name='r',) +
-    xlab('') + ylab('') +
-    theme(
-        aspect.ratio = 1,
-        axis.line = element_blank(),
-        axis.text = element_text(face = ifelse(df_plot$x %in% c('C1','C2','C3'), 'bold', 'plain')),
-        axis.text.x = element_text(angle=90, hjust=1, vjust=.5, margin=margin(t=-10, unit='pt')),
-        axis.text.y = element_text(angle=0, margin=margin(r=-10, unit='pt')),
-        legend.margin = margin(t=-20, unit='pt'),
-        legend.title = element_text(vjust=1),
-        legend.position = 'bottom'
-    )
-}
-
-plot_brain_classes <- function(brain_classes, colors, names) {
+plot_brain_maps <- function(scores_df, 
+                        facet = 'component~version', 
+                        switch = 'y', spacing_x = 0,
+                        colors = rev(brewer.rdbu(100))
+                        ) {
     
-    brain_classes <- brain_classes %>% 
-    mutate(region = recode(region,'7Pl'='7PL')) %>% 
-    select(
-        colors = {{ colors }}, 
-        names = {{ names }},
-        region
-    ) %>% 
-    filter(!is.na(names))
+    # Clean up labels and fix ordering
+    df <- scores_df %>% 
+        mutate_at(vars(version), ~ factor(., levels=unique(.))) %>% 
+        mutate(region = recode(label,'7Pl'='7PL')) %>% select(-label) %>%
+        filter(region != '10pp') %>% # region 10pp is not visualised in ggseg
+        gather('component', 'score', -version, -region) %>%
+        group_by(component, version) %>%
+        mutate(component = factor(component, ordered=T, 
+                                levels=unique(.$component), 
+                                labels=unique(.$component)))
 
-    brain_classes %>% 
+    # Set colorscale limits
+    q99 <- pmax(
+        df %>% .$score %>% quantile(.99, na.rm=T) %>% abs,
+        df %>% .$score %>% quantile(.01, na.rm=T) %>% abs
+    )
+    breaks <- floor(q99)
+    
+    # Plot brains with ggseg
+    p <- df %>% 
     ggseg(
         atlas = glasser,
         hemi = 'left',
-        mapping = aes(fill = colors),
-        colour = 'grey', 
-        alpha = 0.8,
-        size = .05,
+        mapping = aes(fill = score),
+        colour = 'grey', size = .05,
         show.legend = T
-        ) + 
-    scale_fill_identity(
-        breaks = brain_classes$colors %>% unique,
-        labels = brain_classes$names %>% unique,
-        na.translate = F, na.value='grey',
-        name=NULL,
-        guide = guide_legend(ncol=2)
+    ) + 
+    facet_grid(facet, switch = switch) +
+    scale_fill_gradientn(
+        colors = colors, 
+        limits = c(-q99,q99), oob = squish, 
+        breaks = c(-breaks,breaks), 
+        labels = paste0(c(-breaks,breaks),'σ'), 
+        guide = theme_colorbar,
+        name = NULL
     ) +
     theme_void() + 
-    theme(
+    theme( 
         text = element_text(size=7, family='Calibri', color='grey7'),
+        legend.text = element_text(size=6, family='Calibri', color='grey7'),
         strip.text = element_text(size=7, family='Calibri', color='grey7'),
-        strip.clip = 'off',
-        legend.position = 'bottom',
-        legend.text = element_text(size=7, family='Calibri', color='grey7'),
-        legend.key.size = unit(2, "mm"),
-        plot.title = element_text(size=7, family = 'Calibri', color = 'grey7', face='bold',
-                                  hjust=0.5, margin = margin(-0.5,0,1,0,'mm')),
-        plot.tag.position = c(0, 1),
-        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
+        strip.text.x = element_text(vjust = 1, face='bold', margin=margin(t=0,b=2,l=0,r=0, unit='mm')),
+        strip.text.y.left = element_text(angle = 0),
+        legend.position = c(.5,-.1),
+        legend.direction = 'horizontal',
+        legend.title = element_text(vjust=1),
+        plot.tag.position = c(0,1),
+        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0)
     )
 }
 
 
 
-plot_scatter_with_colors <- function(data, corrs, x_var, y_var, y_name, color_var=NULL, ylab_adjust=0) {
+plot_ahba_bs_scatter <- function(both_scores, corrs) {
+    # lim <- 2.8
     
-    data <- data %>% 
-        filter(!is.na(get(x_var)), !is.na(get(y_var))) %>% 
-        arrange(get(color_var)) %>% 
-        mutate(
-            x=get(x_var), y=get(y_var),
-            color = get(paste0(color_var,'_colors')),
-            color_names = get(paste0(color_var,'_names'))
-        ) %>% 
-        mutate(
-            color = factor(color, ordered=T, levels=unique(.$color))
-        )
-
-    corrs <- corrs %>%
-        filter(C == !!enquo(x_var), map == !!enquo(y_var)) %>% 
-        mutate(p_sig=ifelse(p<0.001, '***',
-                    ifelse(p<0.01, '**',
-                    ifelse(p<0.05, '*','')))) %>%
-        mutate(q_sig=ifelse(q<0.001, '†',
-                    ifelse(q<0.01, '†',
-                    ifelse(q<0.05, '†','')))) %>%
-        mutate(r_label=paste('r =', round(r,2), p_sig, q_sig)
-                # '\np = ', round(p,3), p_sig
-                # '\nq = ', round(q,3), q_sig
-                )
-    
-    color_labels <- unique(data$color_names)
-
-    scatter <- data %>%  
-        ggplot() +
-        geom_smooth(aes(x=x, y=y), method='lm', se=F, color='darkgrey', size=.3) +
-        geom_point(aes(x=x, y=y, fill=color), size=1.2, stroke=.3, alpha=.8, color='darkgrey', shape=21) + 
-        scale_fill_identity() +
-        guides(color=F) +
-        annotate(geom='text', label=corrs$r_label, 
-                 size=2.6, color='grey7', family='Calibri',
-                 x=Inf, y=-Inf, vjust=-1.5, hjust=1.1) +
-        xlab(x_var) + ylab(y_name) +
-        coord_cartesian(clip='off') +
-        theme(
-            axis.text=element_blank(),
-            axis.ticks=element_blank(),
-            axis.title.y=element_text(angle=0, vjust=.5, margin=margin(t=0,r=ylab_adjust,b=0,l=0,'mm')),
-        )
-
-    densities <- data %>% 
-        ggplot(aes(x=x, fill=color)) +
-        geom_density(alpha=.3, color='grey', size=.2) +
-        scale_fill_identity(
-            breaks = data$color %>% unique,
-            labels = data$names %>% unique,
-            guide = 'none'
-        ) +
-        theme_void()
-
-    densities / scatter + plot_layout(heights=c(1,3))
-}
-
-
-
-plot_class_densities <- function(classes_with_scores, C, colors, names) {
-    classes_with_scores <- classes_with_scores %>% 
-    mutate(
-        C = {{ C }},
-        colors = {{ colors }}, 
-        names = {{ names }}
-    ) %>% 
-    filter(!is.na(names))
-
-    classes_with_scores %>% 
-    ggplot(aes(x=C, fill=colors)) +
-    geom_density(alpha=.3, color='grey', size=.2) +
-    scale_fill_identity(
-        breaks = classes_with_scores$colors %>% unique,
-        labels = classes_with_scores$names %>% unique,
-        na.translate = F, na.value='grey',
-        guide = 'none'
+    g <- ggplot(both_scores, aes(AHBA, Brainspan)) + 
+    facet_rep_grid(C~., repeat.tick.labels=T) +
+    geom_point(aes(fill=AHBA), size=1.2, shape=21, stroke=.3, color='darkgrey') +
+    geom_smooth(method='lm', linetype=1, se=FALSE, color='darkgrey', size=.3) +
+    scale_fill_gradientn(colors=rev(brewer.rdbu(100)), guide='none') +
+    geom_text(data=data.frame(C=names(corrs), 
+                              label=paste("r =", round(corrs, 2)))
+              , aes(x=-.5,y=1.2, label=label), size=2.6
     ) +
-    theme_void() + 
+    coord_fixed() +
+    xlab('AHBA Score') + ylab('BrainSpan Score') +
+    scale_y_continuous(breaks=0) +
+    scale_x_continuous(breaks=0) +
     theme(
-        legend.text=element_text(size=7, color='grey7', family='Calibri'),
-        legend.key.height = unit(3, "mm"),
-        legend.key.width = unit(3, "mm"),
-    ) + plot_layout(tag_level='new')
+        panel.grid=element_blank(),
+        axis.text = element_blank(),
+        strip.text = element_blank(),
+        aspect.ratio=1
+    )
 }
 
-# plot_scatter_with_colors <- function(data, corrs, x_name, x_var, y_var, color_var=NULL, left_margin=0) {
-    
-#     data <- data %>% 
-#         filter(!is.na(get(x_var)), !is.na(get(y_var))) %>% 
-#         arrange(get(color_var)) %>% 
-#         mutate(
-#             x=get(x_var), y=get(y_var),
-#             color = get(paste0(color_var,'_colors')),
-#             color_names = get(paste0(color_var,'_names'))
-#         ) %>% 
-#         mutate(
-#             color = factor(color, ordered=T, levels=unique(.$color))
-#         )
 
-#     corrs <- corrs %>%
-#         filter(map == !!enquo(x_var), C == !!enquo(y_var)) %>% 
-#         mutate(p_sig=ifelse(p<0.001, '***',
-#                     ifelse(p<0.01, '**',
-#                     ifelse(p<0.05, '*','')))) %>%
-#         mutate(q_sig=ifelse(q<0.001, '†',
-#                     ifelse(q<0.01, '†',
-#                     ifelse(q<0.05, '†','')))) %>%
-#         mutate(r_label=paste('r =', round(r,2), p_sig, q_sig),
-#                 # '\np = ', round(p,3), p_sig
-#                 # '\nq = ', round(q,3), q_sig
-#                 ) %>% 
-#         mutate(
-#             x = -Inf,
-#             y = ifelse(r > 0, Inf, -Inf),
-#             vjust = ifelse(r > 0, 1.5, -1)
-#             )
-    
-#     color_labels <- unique(data$color_names)
 
-#     scatter <- data %>%  
-#         ggplot() +
-#         geom_smooth(aes(x=x, y=y), method='lm', se=F, color='black', size=.3) +
-#         geom_point(aes(x=x, y=y, fill=color), size=1.2, stroke=.3, alpha=.8, color='darkgrey', shape=21) + 
-#         scale_fill_identity() +
-#         guides(color=F) +
-#         annotate(geom='text', label=corrs$r_label, size=2.6, color='grey7', family='Calibri',
-#                  x=corrs$x, y=corrs$y, vjust=corrs$vjust, hjust=-.1) +
-#         xlab(x_name) + ylab(y_var) +
-#         theme(
-#             axis.text=element_blank(),
-#             axis.ticks=element_blank(),
-#             axis.title.y=element_text(angle=0, vjust=.5, margin=margin(t=0,r=0,b=0,l=left_margin,'cm')),
-#         )
+plot_bs_scores_corr <- function(bs_scores_corr) {
+    colors <- c(
+        brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
+    )
 
-#     densities <- data %>% 
-#         ggplot(aes(x=y, fill=color)) +
-#         geom_density(alpha=.3, color='grey', size=.2) +
-#         scale_fill_identity(name=NULL, labels=color_labels, 
-#             guide=guide_legend(reverse=T)) + 
-#         coord_flip() + 
-#         theme_void() + 
-#         theme(
-#             legend.text=element_text(size=7, color='grey7', family='Calibri'),
-#             legend.key.height = unit(3, "mm"),
-#             legend.key.width = unit(3, "mm"),
-#         ) + plot_layout(tag_level='new')
+    g <- bs_scores_corr %>% 
+    mutate_at(vars(age), ~ factor(., levels=unique(.))) %>%
+    ggplot() + 
+    geom_line(aes(x=age, y=corr, color=C, group=C), size=.3, alpha=1) + 
+    geom_point(aes(x=age, y=corr, color=C), size=1.2) + 
+    xlab("") + ylab("AHBA-BrainSpan correlation") +
+    scale_color_manual(values=colors, guide=guide_legend(byrow=T)) +
+    scale_y_continuous(limits=c(0,1), breaks=seq(0,1,.2)) +
+    theme(
+        axis.line = element_blank(),
+        axis.text.x = element_text(margin = margin(-1,0,0,0, 'mm')),
+        axis.text.y = element_text(margin = margin(0,-4,0,0, 'mm')),
+        panel.grid = element_blank(),
+        legend.position = 'right',
+        legend.title = element_blank(),
+        legend.spacing.y = unit(1, 'mm'),
+        legend.text = element_text(size=7)
+    )
+}
 
-#     scatter + densities + plot_layout(widths=c(3,1))
-# }
+
+
+
+plot_quantile_curves <- function(quantile_curves, facet='~C', continuous=FALSE, ncol=3, which='pred') {
+    n_quantiles <- quantile_curves$C_quantile %>% unique %>% length
+
+    p <- quantile_curves %>% 
+    mutate(curve = get(which)) %>% 
+    arrange(desc(C_quantile)) %>% 
+    mutate(C_quantile = factor(C_quantile, ordered=T, levels=unique(.$C_quantile))) %>% 
+    ggplot(aes(x=age_log10, y=10**curve)) +
+    facet_wrap(as.formula(facet), scales='fixed', ncol=ncol) +
+    geom_line(aes(color=C_quantile, group=C_quantile, alpha=C_quantile), size=.3) +
+    scale_x_continuous(
+        breaks=log10(c(-0.5,0,1,5,14,40)*365+40*7),
+        labels=function(x) round((10**x - 40*7)/365,2)) +
+    scale_color_manual(values=brewer.rdbu(10), name='Decile', labels=seq(10,1)) +
+    scale_alpha_manual(values=rep(1, n_quantiles), name='') +
+    guides(color=guide_legend(override.aes = list(size=2)), alpha='none') +
+    ylab('log10 RPKM') +
+    xlab('Age') +
+    coord_cartesian(clip='off') +
+    theme(
+        axis.text.y=element_blank(),
+        axis.title.y = element_text(margin=margin(t=0,b=0,l=0,r=-5, unit='mm')),
+        strip.text.x = element_text(margin=margin(0,0,-2,0,'mm')),
+        legend.text = element_text(size=7),
+        plot.title.position='plot'
+    )
+}
