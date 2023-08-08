@@ -6,7 +6,9 @@ repos = c(
 )
 
 package_list <- c(
-	'sf',
+	'httpgd',
+	#'sf', # try mamba installing instead
+	'Rcpp',
 	'ggseg',
 	# 'ggsegExtra',
 	'ggsegGlasser',
@@ -18,6 +20,9 @@ package_list <- c(
         'ggwordcloud',
 	'ggtext',
 	'ggpubr',
+	'ggpmisc',
+	'gggrid',
+	'vctrs=0.5.0',
 	'ggh4x',
 	'lemon',
 	'patchwork',
@@ -29,8 +34,6 @@ package_list <- c(
 	'png',
 	'gdtools',
 	'flextable',
-	'vctrs=0.5.0'
+	'eulerr'
 )
 install.packages(package_list)
-
-devtools::install_github("ricardo-bion/ggradar", dependencies = TRUE)

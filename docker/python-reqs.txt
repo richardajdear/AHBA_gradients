@@ -4,10 +4,12 @@ plotnine
 abagen
 gseapy
 gprofiler-official
-git+https://github.com/enthought/mayavi.git
-git+https://github.com/nipy/PySurfer.git
+#git+https://github.com/enthought/mayavi.git
+#git+https://github.com/nipy/PySurfer.git
 git+https://github.com/netneurolab/netneurotools.git
 neuromaps
 brainsmash
 brainspace
 scikit-network
+mygene
+mat73:

@@ -11,8 +11,12 @@ RUN sudo apt-get update && \
 #    apt-get install -y libmagick++-dev && \
 #    apt-get install -y libmagickwand-dev
 
-### conda install some R packages (needed for ggseg, images)
-RUN conda install -y libgdal r-units
+### mamba install some R packages (needed for ggseg, images)
+RUN mamba install -y libgdal r-units
+RUN mamba install -y r-rcpp
+
+### conda install r-sf (testing if this fixes ggseg)
+RUN conda install -y r-sf
 
 ### magick requires r-magick conda build, but it's not currently available for ARM64
 # RUN R -e "install.packages('magick', dependencies=TRUE, repos='http://cran.rstudio.com/')"
@@ -22,8 +26,8 @@ RUN conda install -y libgdal r-units
 COPY r-reqs.R ./
 RUN Rscript r-reqs.R
 
-### conda install 'vtk' for python
-RUN conda install -y vtk
+### mamba install 'vtk' for python
+RUN mamba install -y vtk
 # RUN sudo apt-get install -y vtk6 python-vtk
 
 ### Python reqs
@@ -40,24 +44,25 @@ RUN pip3 install -r python-reqs.txt
 
 
 ### Connectome Workbench
-#RUN wget -O- http://neuro.debian.net/lists/focal.us-tn.libre | sudo tee /etc/apt/sources.list.d/neurodebian.sources.list
-#RUN sudo apt-get install -y gnupg
-#RUN sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xA5D32F012649A5A9
-#RUN sudo apt install ca-certificates
-#RUN sudo apt-get update
-#RUN sudo apt-get install -y connectome-workbench
+RUN wget -O- http://neuro.debian.net/lists/focal.us-tn.libre | sudo tee /etc/apt/sources.list.d/neurodebian.sources.list
+RUN sudo apt-get install -y gnupg
+RUN sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xA5D32F012649A5A9
+RUN sudo apt install ca-certificates
+RUN sudo apt-get update
+RUN sudo apt-get install -y connectome-workbench
 #RUN sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
 
 
 ENV MPLCONFIGDIR=~/tmp/matplotlib
 
+### [Legacy – switched to VS Code]
 ### Jupyter lab and extensions
-RUN pip3 install --upgrade jupyterlab
-RUN pip3 install -U "nbclassic>=0.2.8"
-RUN pip3 install lckr-jupyterlab-variableinspector
-RUN pip3 install aquirdturtle_collapsible_headings
-RUN jupyter labextension install @hokyjack/jupyterlab-monokai-plus 
-#RUN pip3 install jupyterlab-lsp
+#RUN pip3 install --upgrade jupyterlab
+#RUN pip3 install -U "nbclassic>=0.2.8"
+#RUN pip3 install lckr-jupyterlab-variableinspector
+#RUN pip3 install aquirdturtle_collapsible_headings
+#RUN jupyter labextension install @hokyjack/jupyterlab-monokai-plus 
+##RUN pip3 install jupyterlab-lsp
 #RUN pip3 install 'python-lsp-server[all]'
 #RUN pip3 install jupyterlab_sublime
 #RUN jupyter labextension install @techrah/text-shortcuts --no-build
