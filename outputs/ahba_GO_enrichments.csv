@@ -1,0 +1,186 @@
+,C,direction,description,n_genes,enrichment,FDR,neglogFDR,FDR_rank,enrichment_rank,rank,maxrank
+0,C2,bottom,Generation of metabolites and energy,179,1.83935,0.00065,3.1870866433571443,1.0,25.0,36.0,36.0
+1,C2,top,Regulation of epigenetic expression,72,2.03254,0.00065,3.1870866433571443,1.0,4.0,23.0,23.0
+2,C2,bottom,Mitochondrion organization,181,1.4967,0.002,2.6989700043360187,2.0,32.0,35.0,36.0
+3,C2,bottom,Steroid metabolic process,105,1.61331,0.0026,2.585026652029182,3.0,29.0,34.0,36.0
+4,C2,bottom,Steroid biosynthetic process,62,2.243,0.0034,2.468521082957745,4.0,21.0,33.0,36.0
+5,C2,top,mRNA processing,157,1.60222,0.004,2.3979400086720375,2.0,11.0,22.0,23.0
+6,C2,top,Germ cell development,96,1.32916,0.0044,2.3565473235138126,3.0,15.0,21.0,23.0
+7,C2,bottom,Energy derivation by oxidation,99,1.98459,0.0044,2.3565473235138126,5.0,24.0,32.0,36.0
+8,C2,bottom,Sterol biosynthetic process,27,3.18342,0.0044,2.3565473235138126,6.0,11.0,31.0,36.0
+9,C2,top,Covalent chromatin modification,153,1.38817,0.0044,2.3565473235138126,4.0,14.0,20.0,23.0
+10,C2,top,"Regulation of gene expression, epigenetic",34,2.35004,0.0044,2.3565473235138126,5.0,2.0,19.0,23.0
+11,C2,bottom,ATP metabolic process,72,2.32397,0.0044,2.3565473235138126,7.0,19.0,30.0,36.0
+12,C2,top,Cellular process involved in reproduction ,129,1.26294,0.005,2.3010299956639813,6.0,18.0,18.0,23.0
+13,C2,top,Peptidyl-lysine modification,125,1.3142,0.0063,2.2006594505464183,7.0,16.0,17.0,23.0
+14,C2,bottom,Alcohol metabolic process,163,1.41172,0.0071,2.1487416512809245,8.0,33.0,29.0,36.0
+15,C2,top,RNA splicing,139,1.40988,0.0071,2.1487416512809245,8.0,13.0,16.0,23.0
+16,C2,top,Cilium organization,162,1.12911,0.0071,2.1487416512809245,9.0,19.0,15.0,23.0
+17,C2,bottom,Secondary alcohol metabolic process,60,1.9884,0.0071,2.1487416512809245,9.0,22.0,28.0,36.0
+18,C2,bottom,Mitochondrial translation,47,2.63259,0.008,2.0969100130080562,10.0,15.0,27.0,36.0
+19,C2,top,Histone modification,149,1.31042,0.0089,2.050609993355087,10.0,17.0,14.0,23.0
+20,C2,top,Cilium assembly,157,1.10682,0.0091,2.040958607678906,11.0,20.0,13.0,23.0
+21,C2,bottom,Cellular component disassembly,157,1.29789,0.0101,1.9956786262173574,11.0,34.0,26.0,36.0
+22,C2,bottom,Cellular protein complex disassembly,55,2.26183,0.0118,1.9281179926938745,12.0,20.0,25.0,36.0
+23,C2,top,Chromatin assembly,52,1.98858,0.0127,1.8961962790440432,12.0,5.0,12.0,23.0
+24,C2,bottom,Mitochondrial translational termination,38,2.62055,0.0168,1.7746907182741372,13.0,16.0,24.0,36.0
+25,C2,bottom,Cholesterol biosynthetic process,22,3.47961,0.0187,1.728158393463501,14.0,8.0,23.0,36.0
+26,C2,bottom,Regulation of mitochondrial fusion,5,6.09192,0.0194,1.712198270069774,15.0,3.0,22.0,36.0
+27,C2,bottom,Translational termination,41,2.55892,0.0214,1.6695862266508092,16.0,18.0,21.0,36.0
+28,C2,bottom,Secondary alcohol biosynthetic process,24,3.19658,0.0214,1.6695862266508092,17.0,10.0,20.0,36.0
+29,C2,bottom,Response to jasmonic acid,3,7.38886,0.0221,1.6556077263148892,18.0,1.0,19.0,36.0
+30,C2,bottom,Positive regulation of autophagy of mitochondrion,10,4.36043,0.0249,1.6038006529042637,19.0,6.0,18.0,36.0
+31,C2,top,Nucleosome assembly,41,1.94192,0.0278,1.5559552040819238,13.0,7.0,11.0,23.0
+32,C2,bottom,Sulfur compound metabolic process,163,1.05837,0.0278,1.5559552040819238,20.0,35.0,17.0,36.0
+33,C2,top,Regulation of chromosome organization,134,1.08543,0.0278,1.5559552040819238,14.0,21.0,10.0,23.0
+34,C2,top,Regulation of rna splicing,63,1.74659,0.0278,1.5559552040819238,15.0,10.0,9.0,23.0
+35,C2,bottom,Mitochondrial gene expression,60,1.98664,0.0278,1.5559552040819238,21.0,23.0,16.0,36.0
+36,C2,bottom,Sterol metabolic process,59,1.78165,0.0348,1.458420756053419,22.0,28.0,15.0,36.0
+37,C2,top,Regulation of dna recombination,45,1.81882,0.0351,1.454692883534176,16.0,9.0,8.0,23.0
+38,C2,top,Chromatin assembly or disassembly,61,1.91059,0.0351,1.454692883534176,17.0,8.0,7.0,23.0
+39,C2,bottom,Mitochondrial translational elongation,37,2.67223,0.0375,1.4259687322722812,23.0,14.0,14.0,36.0
+40,C2,bottom,acyl-CoA metabolic process,38,1.60237,0.0387,1.4122890349810886,24.0,31.0,13.0,36.0
+41,C2,bottom,Antigen processing,99,1.03412,0.0387,1.4122890349810886,25.0,36.0,12.0,36.0
+42,C2,bottom,Intestinal cholesterol absorption,3,7.01447,0.0387,1.4122890349810886,26.0,2.0,11.0,36.0
+43,C2,top,Chromatin organization involved in regulation of transcription,37,1.94995,0.0387,1.4122890349810886,18.0,6.0,6.0,23.0
+44,C2,bottom,Alcohol biosynthetic process,66,1.78345,0.0387,1.4122890349810886,27.0,27.0,10.0,36.0
+45,C2,top,Regulation of chromatin organization,79,1.42475,0.0391,1.4078232426041333,19.0,12.0,5.0,23.0
+46,C2,bottom,Oxidative phosphorylation,36,2.61332,0.0415,1.3819519032879073,28.0,17.0,9.0,36.0
+47,C2,bottom,C21-steroid hormone metabolic process,15,3.34875,0.0432,1.3645162531850878,29.0,9.0,8.0,36.0
+48,C2,top,Regulation of mRNA splicing,48,2.28643,0.0469,1.3288271572849168,20.0,3.0,4.0,23.0
+49,C2,bottom,Cholesterol metabolic process,51,1.83552,0.0472,1.3260580013659122,30.0,26.0,7.0,36.0
+50,C2,bottom,Tricarboxylic acid cycle,19,2.80545,0.0488,1.3115801779972893,31.0,13.0,6.0,36.0
+51,C2,top,RNA catabolic process,97,1.03917,0.0488,1.3115801779972893,21.0,23.0,3.0,23.0
+52,C2,bottom,ATP biosynthetic process,12,3.70052,0.0488,1.3115801779972893,32.0,7.0,5.0,36.0
+53,C2,top,Viral gene expression,53,1.06973,0.0488,1.3115801779972893,22.0,22.0,2.0,23.0
+54,C2,top,Regulation of chromatin silencing,6,5.12948,0.0488,1.3115801779972893,23.0,1.0,1.0,23.0
+55,C2,bottom,Mitochondrial respiratory chain complex i assembly,20,2.82233,0.0488,1.3115801779972893,33.0,12.0,4.0,36.0
+56,C2,bottom,Progesterone metabolic process,7,4.69118,0.0488,1.3115801779972893,34.0,5.0,3.0,36.0
+57,C2,bottom,Organic hydroxy compound biosynthetic process,99,1.60397,0.0488,1.3115801779972893,35.0,30.0,2.0,36.0
+58,C2,bottom,Regulation of protein catabolic process in the vacuole,7,4.71063,0.0488,1.3115801779972893,36.0,4.0,1.0,36.0
+59,C3,top,Inflammatory response,185,1.19725,5.99e-06,5.2225731776106885,1.0,67.0,84.0,84.0
+60,C3,top,Extracellular matrix organization,163,1.57165,1.57e-05,4.804100347590766,2.0,48.0,83.0,84.0
+61,C3,top,Antigen processing,8,7.45515,3.94e-05,4.404503778174426,3.0,1.0,82.0,84.0
+62,C3,top,Blood vessel morphogenesis,192,1.54237,5.31e-05,4.274905478918531,4.0,50.0,81.0,84.0
+63,C3,top,Regulation of angiogenesis,141,1.40299,0.00021,3.677780705266081,5.0,58.0,80.0,84.0
+64,C3,bottom,Regulation of synaptic plasticity,117,1.74119,0.00029,3.537602002101044,1.0,11.0,27.0,27.0
+65,C3,top,Regulation of vasculature development,158,1.29732,0.00051,3.2924298239020637,6.0,63.0,79.0,84.0
+66,C3,top,Positive regulation of cell adhesion,176,1.25689,0.0013,2.886056647693163,7.0,65.0,78.0,84.0
+67,C3,top,Artery morphogenesis,27,2.93568,0.003,2.5228787452803374,8.0,30.0,77.0,84.0
+68,C3,top,Detection of external biotic stimulus,10,4.88031,0.0034,2.468521082957745,9.0,16.0,76.0,84.0
+69,C3,top,T cell activation,90,1.45166,0.0044,2.3565473235138126,10.0,54.0,75.0,84.0
+70,C3,top,Adaptive immune response,109,1.74172,0.0046,2.337242168318426,11.0,46.0,74.0,84.0
+71,C3,top,Regulation of apoptotic signaling pathway,19,3.47186,0.0046,2.337242168318426,12.0,22.0,73.0,84.0
+72,C3,top,Angiogenesis,147,1.39629,0.0047,2.3279021420642825,13.0,59.0,72.0,84.0
+73,C3,bottom,Serotonin receptor signaling,16,3.44786,0.0047,2.3279021420642825,2.0,4.0,26.0,27.0
+74,C3,top,Leukocyte migration,120,1.43768,0.0047,2.3279021420642825,14.0,56.0,71.0,84.0
+75,C3,top,Regulation of killer cell mediated cytotoxicity,8,5.20111,0.0053,2.275724130399211,15.0,14.0,70.0,84.0
+76,C3,top,Regulation of epithelial cell proliferation,157,1.26496,0.0059,2.2291479883578558,16.0,64.0,69.0,84.0
+77,C3,top,Cotranslational protein targeting,43,1.06788,0.0065,2.1870866433571443,17.0,75.0,68.0,84.0
+78,C3,top,Viral transcription,49,1.05245,0.0065,2.1870866433571443,18.0,76.0,67.0,84.0
+79,C3,top,Regulation of interleukin-8 production,31,2.08176,0.0066,2.1804560644581312,19.0,42.0,66.0,84.0
+80,C3,bottom,Regulation of circadian rhythm,56,1.68578,0.0066,2.1804560644581312,3.0,12.0,25.0,27.0
+81,C3,bottom,Dendrite development,82,1.46909,0.0066,2.1804560644581312,4.0,19.0,24.0,27.0
+82,C3,top,Detection of bacterium,7,5.30941,0.0074,2.1307682802690238,20.0,11.0,65.0,84.0
+83,C3,top,Morphogenesis of a branching structure,74,1.36423,0.0081,2.0915149811213505,21.0,60.0,64.0,84.0
+84,C3,top,SRP-dependent protein targeting,42,1.08563,0.0083,2.0809219076239263,22.0,74.0,63.0,84.0
+85,C3,top,Protection from killer cell mediated cytotoxicity,5,6.17031,0.0083,2.0809219076239263,23.0,6.0,62.0,84.0
+86,C3,bottom,Dendritic spine development,44,2.05048,0.0112,1.9507819773298183,5.0,9.0,23.0,27.0
+87,C3,top,Regulation of cytokine production,6,5.54837,0.0113,1.9469215565165803,24.0,9.0,61.0,84.0
+88,C3,bottom,Response to dopamine,38,2.00641,0.0116,1.9355420107730814,6.0,10.0,22.0,27.0
+89,C3,top,Negative regulation of immune effector process,55,2.41855,0.0117,1.9318141382538383,25.0,33.0,60.0,84.0
+90,C3,top,Morphogenesis of a branching epithelium,69,1.41099,0.0117,1.9318141382538383,26.0,57.0,59.0,84.0
+91,C3,top,Linoleic acid metabolic process,7,5.13319,0.0121,1.91721462968355,27.0,15.0,58.0,84.0
+92,C3,top,Artery development,41,2.2095,0.0123,1.9100948885606022,28.0,38.0,57.0,84.0
+93,C3,top,Exocrine system development,22,1.96834,0.013,1.8860566476931633,29.0,43.0,56.0,84.0
+94,C3,top,Protein targeting to ER,53,0.787276,0.013,1.8860566476931633,30.0,82.0,55.0,84.0
+95,C3,top,Interferon-gamma-mediated signaling pathway,32,3.33173,0.0131,1.8827287043442358,31.0,23.0,54.0,84.0
+96,C3,top,Response to interferon-gamma,72,2.17435,0.0132,1.8794260687941502,32.0,39.0,53.0,84.0
+97,C3,top,Immune response to tumor cell,3,7.34631,0.0135,1.869666231504994,33.0,2.0,52.0,84.0
+98,C3,bottom,Response to catecholamine,49,1.59336,0.0135,1.869666231504994,7.0,15.0,21.0,27.0
+99,C3,top,Detection of other organism,8,4.8167,0.014,1.853871964321762,34.0,17.0,51.0,84.0
+100,C3,top,Regulation of alpha-beta T cell activation,36,2.37643,0.0142,1.8477116556169435,35.0,36.0,50.0,84.0
+101,C3,top,Regulation of viral process,74,1.16415,0.0142,1.8477116556169435,36.0,69.0,49.0,84.0
+102,C3,top,Cell-substrate adhesion,93,1.5495,0.0144,1.8416375079047504,37.0,49.0,48.0,84.0
+103,C3,bottom,Regulation of neurotransmitter secretion,18,2.89772,0.0155,1.8096683018297086,8.0,6.0,20.0,27.0
+104,C3,bottom,Learning or memory,139,1.08768,0.0155,1.8096683018297086,9.0,24.0,19.0,27.0
+105,C3,top,Regulation of biological process involved in symbiotic interaction,78,1.15299,0.0155,1.8096683018297086,38.0,72.0,47.0,84.0
+106,C3,bottom,Regulation of synapse organization,126,1.20385,0.0155,1.8096683018297086,10.0,21.0,18.0,27.0
+107,C3,top,Negative regulation of lymphocyte mediated immunity,20,3.03331,0.0162,1.7904849854573692,39.0,27.0,46.0,84.0
+108,C3,top,Cellular response to vascular endothelial growth factor stimulus,21,2.40271,0.0162,1.7904849854573692,40.0,35.0,45.0,84.0
+109,C3,bottom,Regulation of synapse structure or activity,133,1.18506,0.0168,1.7746907182741372,11.0,22.0,17.0,27.0
+110,C3,top,Mesodermal cell differentiation,10,4.20312,0.0172,1.764471553092451,41.0,21.0,44.0,84.0
+111,C3,top,Lymphocyte migration,19,3.08911,0.0189,1.723538195826756,42.0,26.0,43.0,84.0
+112,C3,top,Positive regulation of regulatory T cell differentiation,4,6.326,0.019,1.7212463990471711,43.0,5.0,42.0,84.0
+113,C3,top,Wound healing,168,0.990447,0.0194,1.712198270069774,44.0,78.0,41.0,84.0
+114,C3,top,Cellular response to iron ion,6,5.27265,0.02,1.6989700043360187,45.0,12.0,40.0,84.0
+115,C3,top,Cellular response to interferon-gamma,68,2.16235,0.02,1.6989700043360187,46.0,40.0,39.0,84.0
+116,C3,top,Branching morphogenesis of an epithelial tube,57,1.45586,0.0214,1.6695862266508092,47.0,53.0,38.0,84.0
+117,C3,top,Detection of biotic stimulus,16,3.2355,0.0227,1.6439741428068773,48.0,25.0,37.0,84.0
+118,C3,top,Regulation of antigen processing and presentation,8,4.53064,0.0235,1.6289321377282637,49.0,19.0,36.0,84.0
+119,C3,top,Regulation of lamellipodium morphogenesis,5,5.62833,0.0235,1.6289321377282637,50.0,8.0,35.0,84.0
+120,C3,bottom,Positive regulation of excitatory postsynaptic potential,18,2.76722,0.0242,1.6161846340195687,12.0,7.0,16.0,27.0
+121,C3,bottom,Regulation of short-term plasticity,9,3.83811,0.0247,1.6073030467403342,13.0,2.0,15.0,27.0
+122,C3,bottom,Regulation of postsynaptic membrane potential,61,1.67389,0.0247,1.6073030467403342,14.0,13.0,14.0,27.0
+123,C3,top,Positive regulation of hemopoiesis,80,1.30911,0.0247,1.6073030467403342,51.0,62.0,34.0,84.0
+124,C3,top,Positive regulation of angiogenesis,84,1.34861,0.0249,1.6038006529042637,52.0,61.0,33.0,84.0
+125,C3,top,Protein localization to endoplasmic reticulum,56,0.643851,0.0255,1.5934598195660448,53.0,83.0,32.0,84.0
+126,C3,top,Viral gene expression,53,0.818271,0.0257,1.5900668766687054,54.0,81.0,31.0,84.0
+127,C3,bottom,Vocal learning,4,5.77498,0.0259,1.586700235918748,15.0,1.0,13.0,27.0
+128,C3,top,Lymphocyte activation,147,0.849509,0.0259,1.586700235918748,55.0,80.0,30.0,84.0
+129,C3,top,Negative regulation of lymphocyte activation,71,1.54184,0.0261,1.583359492661719,56.0,51.0,29.0,84.0
+130,C3,top,Outflow tract morphogenesis,39,1.7048,0.0264,1.578396073130169,57.0,47.0,28.0,84.0
+131,C3,top,Humoral immune response,76,1.1705,0.0264,1.578396073130169,58.0,68.0,27.0,84.0
+132,C3,bottom,Modulation of excitatory postsynaptic potential,26,2.5894,0.0264,1.578396073130169,16.0,8.0,12.0,27.0
+133,C3,bottom,Regulation of cation transmembrane transport,186,0.738456,0.0265,1.576754126063192,17.0,27.0,11.0,27.0
+134,C3,top,Urogenital system development,146,0.99644,0.0305,1.5157001606532141,59.0,77.0,26.0,84.0
+135,C3,top,Positive regulation of alpha-beta T cell activation,24,2.34773,0.0305,1.5157001606532141,60.0,37.0,25.0,84.0
+136,C3,bottom,"Chemical synaptic transmission, postsynaptic",62,1.56986,0.0306,1.51427857351842,18.0,17.0,10.0,27.0
+137,C3,top,Negative regulation of cell activation,99,1.1551,0.0314,1.5030703519267852,61.0,71.0,24.0,84.0
+138,C3,top,Positive regulation of axon guidance,5,5.44008,0.0315,1.5016894462103996,62.0,10.0,23.0,84.0
+139,C3,top,Regulation of endothelial cell apoptotic process,19,2.93781,0.0315,1.5016894462103996,63.0,29.0,22.0,84.0
+140,C3,top,Endothelium development,46,1.9071,0.0351,1.454692883534176,64.0,44.0,21.0,84.0
+141,C3,bottom,Regulation of neurotransmitter levels,134,1.18019,0.0355,1.449771646944906,19.0,23.0,9.0,27.0
+142,C3,top,Leukocyte cell-cell adhesion,27,2.64452,0.0355,1.449771646944906,65.0,31.0,20.0,84.0
+143,C3,top,Positive regulation of vasculature development,95,1.15599,0.0356,1.448550002027125,66.0,70.0,19.0,84.0
+144,C3,bottom,Regulation of signaling receptor activity,86,0.997519,0.0357,1.4473317838878068,20.0,25.0,8.0,27.0
+145,C3,top,Response to tumor cell,7,4.71471,0.0362,1.4412914294668342,67.0,18.0,18.0,84.0
+146,C3,bottom,Response to histamine,9,3.58342,0.0362,1.4412914294668342,21.0,3.0,7.0,27.0
+147,C3,top,Positive regulation of cell-cell adhesion,105,1.13094,0.0363,1.4400933749638876,68.0,73.0,17.0,84.0
+148,C3,top,Morphogenesis of an epithelium,193,0.898891,0.0389,1.4100503986742923,69.0,79.0,16.0,84.0
+149,C3,bottom,Regulation of nervous system process,77,1.3117,0.039,1.408935392973501,22.0,20.0,6.0,27.0
+150,C3,top,Organic cyclic compound catabolic process,199,0.492991,0.0395,1.4034029043735399,70.0,84.0,15.0,84.0
+151,C3,bottom,Neurotransmitter transport,77,1.58264,0.0398,1.4001169279263121,23.0,16.0,5.0,27.0
+152,C3,bottom,Cognition,161,0.987496,0.0401,1.3968556273798178,24.0,26.0,4.0,27.0
+153,C3,top,Regulation of T cell cytokine production,8,4.31939,0.0403,1.3946949538588904,71.0,20.0,14.0,84.0
+154,C3,top,Establishment of epithelial cell polarity,17,2.96418,0.0403,1.3946949538588904,72.0,28.0,13.0,84.0
+155,C3,top,Regulation of pathway-restricted SMAD protein phosphorylation,26,2.47347,0.0424,1.3726341434072673,73.0,32.0,12.0,84.0
+156,C3,top,Regulation of endothelial cell proliferation,63,1.79751,0.0436,1.360513510731414,74.0,45.0,11.0,84.0
+157,C3,bottom,Regulation of neurotransmitter receptor activity,50,1.50986,0.0436,1.360513510731414,25.0,18.0,3.0,27.0
+158,C3,top,Integrin-mediated signaling pathway,49,2.1064,0.0448,1.348721986001856,75.0,41.0,10.0,84.0
+159,C3,top,Positive regulation of axon extension involved in axon guidance,4,5.80558,0.0448,1.348721986001856,76.0,7.0,9.0,84.0
+160,C3,bottom,Vocalization behavior,10,3.34937,0.0448,1.348721986001856,26.0,5.0,2.0,27.0
+161,C3,bottom,Neurotransmitter secretion,64,1.62466,0.0469,1.3288271572849168,27.0,14.0,1.0,27.0
+162,C3,top,Regulation of chemotaxis,103,1.44869,0.0469,1.3288271572849168,77.0,55.0,8.0,84.0
+163,C3,top,Negative regulation of leukocyte activation,89,1.23852,0.0473,1.3251388592621884,78.0,66.0,7.0,84.0
+164,C3,top,Regulation of wound healing,59,1.54159,0.0473,1.3251388592621884,79.0,52.0,6.0,84.0
+165,C3,top,Regulation of macrophage migration,3,6.65491,0.0473,1.3251388592621884,80.0,3.0,5.0,84.0
+166,C3,top,"Positive regulation of CD8-positive, alpha-beta T cell activation",3,6.64237,0.0473,1.3251388592621884,81.0,4.0,4.0,84.0
+167,C3,top,Bleb assembly,5,5.21051,0.0493,1.30715308072277,82.0,13.0,3.0,84.0
+168,C3,top,Cell adhesion mediated by integrin,13,3.28086,0.0493,1.30715308072277,83.0,24.0,2.0,84.0
+169,C3,top,Regulation of epithelial cell apoptotic process,38,2.40471,0.0493,1.30715308072277,84.0,34.0,1.0,84.0
+170,C1,top,Protein targeting to membrane,76,3.67735,0.0019,2.721246399047171,1.0,7.0,12.0,12.0
+171,C1,top,Cotranslational protein targeting,43,4.52387,0.0019,2.721246399047171,2.0,3.0,11.0,12.0
+172,C1,top,SRP-dependent protein targeting,42,4.82605,0.0019,2.721246399047171,3.0,2.0,10.0,12.0
+173,C1,top,Protein targeting to er,53,4.19848,0.0019,2.721246399047171,4.0,4.0,9.0,12.0
+174,C1,top,mRNA catabolic process,47,3.83554,0.0033,2.4814860601221125,5.0,6.0,8.0,12.0
+175,C1,top,Protein localization to endoplasmic reticulum,56,3.86005,0.0042,2.3767507096020997,6.0,5.0,7.0,12.0
+176,C1,top,Protein localization to membrane,118,2.56126,0.0042,2.3767507096020997,7.0,11.0,6.0,12.0
+177,C1,bottom,Covalent chromatin modification,153,1.99741,0.0059,2.2291479883578558,1.0,2.0,3.0,3.0
+178,C1,top,Regulation of leukocyte proliferation,100,2.68637,0.0089,2.050609993355087,8.0,10.0,5.0,12.0
+179,C1,bottom,Histone modification,149,1.90914,0.0147,1.832682665251824,2.0,3.0,2.0,3.0
+180,C1,top,Viral gene expression,53,3.39634,0.0147,1.832682665251824,9.0,8.0,4.0,12.0
+181,C1,bottom,Peptidyl-lysine modification,125,2.00569,0.0223,1.6516951369518393,3.0,1.0,1.0,3.0
+182,C1,top,Positive regulation of leukocyte proliferation,59,2.95586,0.0412,1.3851027839668655,10.0,9.0,3.0,12.0
+183,C1,top,7-methylguanosine mRNA capping,9,7.357,0.0459,1.3381873144627388,11.0,1.0,2.0,12.0
+184,C1,top,Regulation of lymphocyte proliferation,91,2.46684,0.0466,1.3316140833099999,12.0,12.0,1.0,12.0
