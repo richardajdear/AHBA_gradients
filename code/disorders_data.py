@@ -22,7 +22,7 @@ def ensembl_id_to_gene_symbol(ensembl_ids):
     return(matches)
 
 
-def get_disorder_maps(data_dir="../data/lifespan_dx_DKatlas.csv"):
+def get_disorder_maps(data_dir="../data/brainchart_maps_dk.csv"):
     maps = (
         pd.read_csv(data_dir, index_col=0)
         # .apply(lambda x: (x-np.mean(x))/np.std(x))
