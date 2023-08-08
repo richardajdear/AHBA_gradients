@@ -1,3 +1,18 @@
+library(ggseg)
+library(ggtext)
+library(ggsegGlasser)
+library(ggrepel)
+# library(ggh4x) # needed for facet_grid2 to not clip strip labels
+library(ggpmisc)
+library(eulerr)
+suppressMessages(library(lemon))
+suppressMessages(library(scales))
+library(pals)
+library(shades)
+library(patchwork)
+suppressMessages(library(tidyverse))
+
+
 theme_set(theme_classic())
 theme_update(
     text = element_text(size=7, family = 'Calibri', color = 'grey7'),
@@ -11,9 +26,9 @@ theme_update(
     strip.background = element_blank(),
     strip.placement = 'outside',
     strip.clip = 'off',
-    plot.title.position='panel',
+    plot.title.position='plot',
     plot.title = element_text(size=7, family = 'Calibri', color = 'grey7', face='bold',
-                    margin = margin(0,0,0,0,'mm')),
+                    hjust = 0.25, margin = margin(-1,0,0,0,'mm')),
     plot.tag.position = c(0, 1),
     plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
 )
@@ -29,10 +44,13 @@ plot_generalisability <- function(triplets_df)
                     aes(color=version, group=version)) +
         scale_color_manual(values=brewer.rdbu(10)[c(9,2)]) +
         scale_y_continuous(limits=c(0,1), breaks=seq(0,1,.2)) +
+        scale_x_discrete(labels=c('C1','C2','C3','C4','C5')) +
         geom_hline(size=.1, yintercept=.6, linetype='dashed') +
-        ylab('Generalisability') + xlab('Component') +
+        ylab(expression(italic('g'))) +
         theme(
             axis.line = element_blank(),
+            axis.title.y = element_text(angle=0, vjust=.5),
+            axis.title.x = element_blank(),
             legend.text = element_text(size=7),
             legend.title = element_blank(),
             legend.spacing.y = unit(2, 'mm'),
@@ -104,7 +122,7 @@ plot_go_enrichments <- function(enrichments) {
     df_title <- go_enrichments %>% 
         group_by(C) %>% 
         summarize(n=n()) %>% 
-        mutate(label = paste0(C, ": ", n, " enrichments"))
+        mutate(label = paste0(C, ": ", n, " GO Enrichments"))
 
     df <- go_enrichments %>% 
     left_join(df_title, by='C') %>% 
@@ -166,7 +184,7 @@ plot_go_enrichments <- function(enrichments) {
                     force=10, force_pull=0, xlim=c(2,5), ylim=c(0.5,8), max.time=1, nudge_y=-2.5) +
     geom_text_repel(aes(label=description), data=df_label %>% filter(direction=='top', C=='C2'), 
                     size=label_size, family='Calibri', segment.linetype=1, segment.color='grey',
-                    force=10, force_pull=0, xlim=c(1.8,5), ylim=c(0,8), max.time=1, nudge_y=3) +
+                    force=10, force_pull=0, xlim=c(1.6,5), ylim=c(0,8), max.time=1, nudge_y=3) +
     geom_text_repel(aes(label=description), data=df_label %>% filter(direction=='top', C=='C3'), 
                     size=label_size, family='Calibri', segment.linetype=1, segment.color='grey',
                     force=10, force_pull=0, xlim=c(2,5), ylim=c(0,8), max.time=1, nudge_y=1.3) +
@@ -255,41 +273,3 @@ plot_enrichment_bars_z <- function(stats, xlab='Enrichment z-score', facet='.~C'
     coord_cartesian(clip = 'off')
 }
 
-
-
-plot_coexp <- function(coexp_df) {
-    # Take 99th percentile as limit for colorscale
-    limit <- coexp_df %>% filter(x!=y) %>% .$r %>% abs %>% quantile(.99)
-
-    coexp_df %>%
-        ggplot(aes(x, rev(y))) +
-        facet_wrap(~version) +
-        geom_raster(aes(fill=r)) +
-        scale_fill_gradientn(colors=rev(brewer.rdbu(200)), name='r', 
-                             limits=c(-limit,limit), 
-                             breaks=c(-floor(limit*10)/10,floor(limit*10)/10),
-                             labels=c(-floor(limit*10)/10,floor(limit*10)/10)
-                             ) +
-        coord_cartesian(clip='off') +
-        theme_void() +
-        # ylab("G1-regressed\nregion-region\nco-expression") +
-        # guides(fill=guide_colorbar(barwidth=5, title.vjust=1)) +
-        # ggtitle("G1-regressed\nregion-region\nco-expression") +
-        theme(
-            aspect.ratio=1,  
-            text = element_text(size=20, family='Calibri', color='grey7'),
-            strip.text = element_text(size=20, family='Calibri', color='grey7'),
-            panel.spacing.x = unit(4, 'cm'),
-            # axis.title.y = element_text(size=20, family='Calibri', color='grey7', angle=0, vjust=.8),
-            # plot.title.position='panel',
-            # plot.title = element_text(size=20, family='Calibri', color='grey7',
-            #                           hjust=.5,
-            #                           margin=margin(t=2,b=0,l=-5,r=0, unit='cm')),
-            legend.text = element_text(size=18, family='Calibri', color='grey7'),
-            legend.title = element_text(size=18, family='Calibri', color='grey7', vjust=1),
-            legend.position='bottom',
-            # legend.position='right'
-            # legend.direction = 'horizontal',
-            # legend.position = c(-.3, .3)
-        )
-}

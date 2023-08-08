@@ -54,19 +54,21 @@ def test_layers_all_combinations(background, disorder_genes, layer_genes, refere
     Optionally add additional filter on the target layer genes (e.g. only C3-positive genes)
     """
     enrichments_list = []
-    for which in ['GWAS', 'DEG']:
-        for disorder in ['ASD', 'MDD', 'SCZ']:
+    for disorder in disorder_genes['disorder'].unique():
+        unique_labels = disorder_genes.loc[lambda x: x['disorder']==disorder, 'label'].unique()
+        for label in unique_labels:
             for layer in layer_genes['label'].unique():
+                # print(f"Testing {label}-{disorder}-{layer}...")
                 n_in_disorder, n_layer_in_disorder, odds_ratio, p = test_one_layer(
                                                                 background = background, 
-                                                                disorder_genes = disorder_genes, 
+                                                                disorder_genes = disorder_genes,
                                                                 layer_genes = layer_genes,
                                                                 target_layer = layer, 
                                                                 reference_disorder = disorder, 
-                                                                reference_label = which, 
+                                                                reference_label = label, 
                                                                 reference_filter = reference_filter)
                 out = pd.Series({
-                        'which': which,
+                        'label': label,
                         'disorder': disorder,
                         'layer': layer,
                         'n': n_layer_in_disorder,
@@ -76,7 +78,7 @@ def test_layers_all_combinations(background, disorder_genes, layer_genes, refere
                         'p': p
                         })
                 enrichments_list.append(out)
-            print(f"Done {which}-{disorder}.")
+            print(f"Done {label}-{disorder}.")
 
     stats = (pd.DataFrame(enrichments_list)
           .assign(q = lambda x: multipletests(x['p'], method='fdr_bh')[1])
@@ -124,28 +126,29 @@ def make_label_quantiles_by_component(weights, labels, q=10):
     return label_percentiles
 
 
-def aggregate_disorder_gene_quantiles_over_layers(quantiles, layers, disorder='SCZ'):
-    quantile_layers = (quantiles
-        .join(layers.set_index('gene')['label'].rename('layer'), on='gene')
-        .fillna({'layer':'no_layer'})
-        .groupby(['label','C','C_quantile','layer']).count()
-        .assign(pct = lambda x: x['gene']/x.groupby(['label','C','C_quantile'])['gene'].sum())
-        .reset_index()
-        .loc[lambda x: x['C']=='C3']
-        .loc[lambda x: x['layer']!='no_layer']
-        .replace({'label':{'DEG':f'{disorder} RNAseq', 'GWAS':f'{disorder} GWAS'}})
-        )
-    return quantile_layers
+
+# def aggregate_disorder_gene_quantiles_over_layers(quantiles, layers, disorder='SCZ'):
+#     quantile_layers = (quantiles
+#         .join(layers.set_index('gene')['label'].rename('layer'), on='gene')
+#         .fillna({'layer':'no_layer'})
+#         .groupby(['label','C','C_quantile','layer']).count()
+#         .assign(pct = lambda x: x['gene']/x.groupby(['label','C','C_quantile'])['gene'].sum())
+#         .reset_index()
+#         .loc[lambda x: x['C']=='C3']
+#         .loc[lambda x: x['layer']!='no_layer']
+#         .replace({'label':{'DEG':f'{disorder} RNAseq', 'GWAS':f'{disorder} GWAS'}})
+#         )
+#     return quantile_layers
 
 
-def aggregate_disorder_gene_quantiles_over_development(quantiles, curves, disorder='SCZ'):
-    quantile_curves_disorders = (quantiles
-     .join(curves.set_index('gene'), on='gene').dropna()
-     .groupby(['label','C','C_quantile','age_log10'])
-     .agg({'pred':'mean'})
-     .reset_index()
-     .loc[lambda x: x['C']=='C3']
-     .replace({'label':{'DEG':f'{disorder} RNAseq', 'GWAS':f'{disorder} GWAS'}})
-    )
-    return quantile_curves_disorders
+# def aggregate_disorder_gene_quantiles_over_development(quantiles, curves, disorder='SCZ'):
+#     quantile_curves_disorders = (quantiles
+#      .join(curves.set_index('gene'), on='gene').dropna()
+#      .groupby(['label','C','C_quantile','age_log10'])
+#      .agg({'pred':'mean'})
+#      .reset_index()
+#      .loc[lambda x: x['C']=='C3']
+#      .replace({'label':{'DEG':f'{disorder} RNAseq', 'GWAS':f'{disorder} GWAS'}})
+#     )
+#     return quantile_curves_disorders
 

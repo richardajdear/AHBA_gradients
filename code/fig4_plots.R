@@ -1,3 +1,17 @@
+library(ggseg)
+library(ggtext)
+library(ggsegGlasser)
+library(ggrepel)
+# library(ggh4x) # needed for facet_grid2 to not clip strip labels
+suppressMessages(library(ggpmisc))
+library(eulerr)
+suppressMessages(library(lemon))
+suppressMessages(library(scales))
+library(pals)
+library(shades)
+library(patchwork)
+suppressMessages(library(tidyverse))
+
 theme_set(theme_classic())
 theme_update(
     text = element_text(size=7, family = 'Calibri', color = 'grey7'),
@@ -193,11 +207,14 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, facet='v', switc
     coord_cartesian(clip='off') +
     theme(
         #   strip.text.x=element_text(),
-            # strip.text.x=element_blank(),
-            strip.text.y.left=element_text(angle=0),
+            strip.text = element_blank(),
+            axis.line = element_line(size=.3, color='grey'),
+            # panel.grid.major = element_line(),
+            # strip.text.y.left=element_text(angle=0, hjust=1, margin(0,0,0.5,0,'mm')),
             axis.text = element_blank(),
-            axis.title.y = element_text(angle=0, vjust=.5),
-            strip.text.x = element_text(margin=margin(-1,0,0,0,'mm')),
+            axis.title.y = element_text(angle=0, vjust=.5, margin=margin(0,0,0,0,'mm')),
+            axis.title.x = element_text(angle=0, vjust=.5, margin=margin(-4,0,0,0,'mm')),
+            # strip.text.x = element_text(margin=margin(-1,0,0,0,'mm')),
             strip.clip = 'off',
             plot.title = element_text(hjust=0.5, vjust=1)
             ) +
@@ -230,7 +247,9 @@ plot_venn <- function(overlap_deg_gwas, disorder, bottom_margin=1) {
     # colors <- c(
     #     brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
     # )
-    colors <- brewer.puor(10)[c(3,8)]
+    # colors <- brewer.puor(10)[c(3,8)]
+    # colors <- brewer.piyg(11)[c(2,10)]
+    colors <- brewer.brbg(11)[c(3,9)]
 
     plot <- plot(euler(x), 
                  edges = list(col='grey'),
@@ -252,23 +271,35 @@ plot_venn <- function(overlap_deg_gwas, disorder, bottom_margin=1) {
 
 
 
-plot_disorder_layer_enrichments <- function(layer_enrichments, facet='~disorder', ncol=1) {
+plot_disorder_layer_enrichments <- function(
+            layer_enrichments, 
+            facet = '~disorder', 
+            ylab = '% of C3+ GWAS/DEG genes linked to layer', 
+            ncol = 1, 
+            colors = NULL
+            ) {
     # colors <- c(
     #     brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
     # )
     # colors <- colors[c(1,3)]
-    colors <- brewer.puor(10)[c(3,8)] %>% rev
+    if (is.null(colors)) {
+        # colors <- brewer.puor(10)[c(3,8)] %>% rev
+        # colors <- brewer.piyg(11)[c(2,10)] %>% rev
+        colors <- brewer.brbg(11)[c(3,9)] %>% rev
+    }
+
+    position = position_dodge2(reverse=TRUE, width=0.5)
 
     g <- layer_enrichments %>% 
         mutate(disorder = factor(disorder, ordered=T, levels=unique(.$disorder))) %>% 
-        mutate(which = factor(which, ordered=T, levels=unique(.$which))) %>% 
+        mutate(label = factor(label, ordered=T, levels=unique(.$label))) %>% 
         mutate(p_level=ifelse(q<0.001, '***',
                        ifelse(q<0.01, '**',
                        ifelse(q<0.05, '*','')))) %>%
-        ggplot(aes(x=layer, y=pct, group=which)) + 
-        geom_linerange(aes(color=which, x=layer, y=0, ymin=0, ymax=pct, alpha=sig), position=position_dodge(width=0.5), size=.3) +
-        geom_point(aes(fill=which, size=n, alpha=sig), position=position_dodge(width=0.5), shape=21, color='grey', stroke=.3) +
-        geom_text(aes(label = p_level), position=position_dodge(width=0.5), size=2.5, direction='mid', vjust=-.5) + 
+        ggplot(aes(x=layer, y=pct, group=label)) + 
+        geom_linerange(aes(color=label, x=layer, y=0, ymin=0, ymax=pct, alpha=sig), position=position, size=.3) +
+        geom_point(aes(fill=label, size=n, alpha=sig), position=position, shape=21, color='grey', stroke=.3) +
+        geom_text(aes(label = p_level), position=position, size=2.5, direction='mid', vjust=-.5) + 
         geom_hline(yintercept=0, color='grey', size=.1) +
         scale_alpha_manual(values=c(.5,1)) +
         # scale_alpha_continuous(range=c(.2,1)) +
@@ -277,7 +308,7 @@ plot_disorder_layer_enrichments <- function(layer_enrichments, facet='~disorder'
         scale_color_manual(values=colors, name=NULL) +
         scale_size_continuous(range=c(1,4), name='# genes') +
         scale_y_continuous(breaks=c(0,.1,.2), labels=percent) +
-        ylab('% of C3+ GWAS/DEG genes linked to layer') +
+        ylab(ylab) +
         xlab('Cortical layer') +
         guides(fill=guide_legend(reverse=T, override.aes = list(size=2)), alpha='none', color='none') +
         coord_cartesian(clip='off') +

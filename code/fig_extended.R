@@ -92,7 +92,7 @@ plot_triplets_raster <- function(triplets_raster, n_components=3, highlight = 't
 
 
 plot_brains <- function(maps, atlas='hcp',
-                      title="", ncol=1, facet='w', spacing=0,
+                      title="", ncol=1, facet='w', legend_pos='right', spacing=0, strip=FALSE,
                       colors=rev(brewer.rdbu(100)), colorscale=c(-3,3),
                       name='', labels=c('-3σ','+3σ')) {
     
@@ -186,20 +186,31 @@ plot_brains <- function(maps, atlas='hcp',
         labels=labels, 
         name=name
     ) +
-    guides(fill = colorbar_v) +
     theme_void() + 
     theme(
         text = element_text(size=7, family='Calibri', color='grey7'),
-        # strip.text = element_text(size=7, family='Calibri', color='grey7'),
-        strip.text = element_blank(),
         strip.clip = 'off',
-        legend.position = 'right',
+        legend.position = legend_pos,
         legend.text = element_text(size=6, family='Calibri', color='grey7'),
         plot.title = element_text(size=7, family = 'Calibri', color = 'grey7', face='bold',
                                   hjust=.5, margin = margin(0,0,1,0,'mm')),
         plot.tag.position = c(0, 0.95),
         plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
     )
+
+    if (strip==TRUE) {
+        p <- p + theme(strip.text = element_text(size=7, family='Calibri', color='grey7'))
+    } else {
+        p <- p + theme(strip.text = element_blank())
+    }
+
+    if (legend_pos=='right') {
+        p <- p + guides(fill = colorbar_v)
+    } else if (legend_pos=='bottom') {
+        p <- p + guides(fill = colorbar_h)
+    } else {
+        p <- p + guides(fill = 'none')
+    }
 
     if (facet=='h') {
         p + facet_grid(.~map)
@@ -299,6 +310,7 @@ plot_versions_scatter <- function(df, x=-2, y=2.5, size=2.6) {
     theme(
         axis.text = element_blank(), 
         axis.title.y = element_blank(),
+        strip.text.y.left = element_text(angle=0),
         panel.border=element_rect(fill='transparent', color='grey', size=.3),
         legend.position='right',
         aspect.ratio=1
@@ -375,5 +387,210 @@ plot_single_scatter <- function(maps, x, y, label='r =', xlabel=-1, ylabel=1) {
         legend.position='right',
         aspect.ratio=1,
         panel.margin=margin(l=2,r=2,b=2,t=2,'mm')
+    )
+}
+
+
+
+plot_coexp_with_labels <- function(coexp_df, coexp_labels, flip=FALSE) {
+    matrix <- plot_coexp(coexp_df)
+    labels <- plot_coexp_labels(coexp_labels, flip=flip)
+    if (flip) {
+        p <- labels + matrix + plot_layout(widths=c(1,3))
+    } else {
+        p <- matrix + labels + plot_layout(widths=c(3,1))
+    }
+    return(p)
+}
+
+plot_coexp_labels <- function(coexp_labels, flip=FALSE, extra_space=12) {
+    text <- coexp_labels %>% group_by(Lobe) %>% summarise(number=mean(number))
+
+    if (flip) {
+        hjust <- 1
+        flip_x <- -1
+    } else {
+        hjust <- 0
+        flip_x <- 1
+    }
+
+    coexp_labels %>% 
+    ggplot(aes(x=0, y=number, fill=Lobe)) + 
+    geom_raster() + 
+    geom_text(data=text, aes(x=1*flip_x, y=number, label=Lobe), hjust=hjust, size=2.3, family='Calibri', color='grey7') +
+    geom_text(data=text, aes(x=extra_space*flip_x, y=number, label=''), hjust=hjust, size=2.3) +
+    guides(fill='none') +
+    scale_fill_manual(values=brewer.set1(5)) +
+    theme_void() + 
+    theme(
+        text = element_text(size=7),
+        plot.tag.position = c(0, 1),
+        plot.tag = element_text(size=10, face='bold', family='Calibri', hjust=0, color='grey7')
+    )
+}
+
+plot_coexp <- function(coexp_df, limit=NULL) {
+    if (is.null(limit)) {
+        # Take 99th percentile as limit for colorscale
+        limit <- coexp_df %>% filter(x!=y) %>% .$r %>% abs %>% quantile(.99)
+    }
+
+    coexp_df %>%
+        ggplot(aes(x, rev(y))) +
+        geom_raster(aes(fill=r)) +
+        scale_fill_gradientn(colors=rev(brewer.rdbu(200)), name='r', 
+                             limits=c(-limit,limit), 
+                             breaks=c(-floor(limit*10)/10,floor(limit*10)/10),
+                             labels=c(-floor(limit*10)/10,floor(limit*10)/10)
+                             ) +
+        coord_cartesian(clip='off') +
+        guides(fill=colorbar_h) +
+        theme_void() +
+        theme(
+            aspect.ratio=1,  
+            text = element_text(size=7, family='Calibri', color='grey7'),
+            legend.text = element_text(size=6, family='Calibri', color='grey7'),
+            legend.title = element_text(size=6, family='Calibri', color='grey7', vjust=1),
+            plot.title = element_text(size=7, family='Calibri', color='grey7', hjust=.5),
+            legend.position='bottom'
+        )
+}
+
+
+plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, switch='both',
+                              xlab='', ylab='') {
+
+    corrs <- maps_scatter_corrs %>%
+    mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
+    mutate(sig_label=ifelse(round(q,2)<=0.001, '***',
+                   ifelse(round(q,2)<=0.01, '**',
+                   ifelse(round(q,2)<=0.05, '*','')))) %>%
+    mutate(r_label=paste('r =', round(r,2), sig_label))
+
+    plot <- maps_scatter %>%
+    mutate(map = factor(map, ordered=T, levels=unique(.$map))) %>%
+    ggplot(aes(x=C_score, y=map_score)) +
+    facet_grid(map~C, switch=switch) +
+    geom_point(size=1, shape=21, stroke=.3, alpha=0.7, color='darkgrey', fill='lightgrey') +
+    geom_smooth(method='lm', color='darkgrey', size= .3, se=F) +
+    geom_text(data=corrs, aes(label=r_label), x=-Inf, y=Inf, size=2.6, hjust=0, vjust=2) +
+    guides(fill='none') +
+    scale_x_continuous(breaks=0, position='top') + 
+    scale_y_continuous(breaks=0) +
+    xlab(xlab) + ylab(ylab) +
+    coord_cartesian(clip='off') +
+    theme_minimal() +
+    theme(
+          strip.text.y.left = element_blank(),
+          strip.text = element_text(size=7, family = 'Calibri', color = 'grey7'),
+          panel.grid.minor = element_blank(),
+          axis.text = element_blank(),
+          axis.title.y = element_text(angle=0, vjust=.5),
+          plot.title = element_text(hjust=0.5, vjust=1),
+          aspect.ratio=1
+         )
+}
+
+
+## Supplementary plots on variance explained vs number of genes
+
+plot_var_explained_bars <- function(var_explained_bars) {
+    var_explained_bars %>% 
+    pivot_longer(cols=c('VE','pct'), names_to='variable') %>% 
+    ggplot() + 
+    geom_col(aes(x=C, y=value, fill=variable), position='dodge', alpha=.7) + 
+    geom_text(aes(x=C, y=pct, label=paste0(signif(pct,2)*100, '%\n(', n, ')')),
+            nudge_x=-0.2, nudge_y=0.003, hjust=.5, vjust=0.5, data=var_explained_bars, size=3) +
+    geom_text(aes(x=C, y=VE, label=paste0(signif(VE,2)*100,'%')),
+            nudge_x=0.2, nudge_y=0.02, hjust=.5, vjust=0.5, data=var_explained_bars, size=3) +
+    scale_y_continuous(name='%', labels=percent, limits=c(0,.7)) +
+    scale_fill_manual(values=brewer.brbg(11)[c(3,9)] %>% rev, labels=c('% genes with |r|>0.5', '% variance explained')) +
+    # scale_color_manual(values=brewer.brbg(11)[c(3,9)], labels=c('% genes with |r|>0.5', '% variance explained')) +
+    guides(fill=guide_legend(ncol=1)) +
+    theme(
+        axis.title.y = element_text(angle=0, vjust=.5),
+        axis.title.x = element_blank(),
+        legend.text = element_text(size=7),
+        legend.title = element_blank(),
+        legend.key.size = unit(3, "mm"),
+        legend.margin = margin(-5,0,0,0,'mm')
+    )
+}
+
+plot_var_explained_scatter <- function(var_explained_bars) {
+
+    df_slope <- var_explained_bars %>% 
+    group_by(threshold) %>% 
+    mutate(
+        slope = round(lm(pct ~ VE)$coefficients[2], 2),
+        significance = summary(lm(pct ~ VE))$coefficients[2, 4],
+        y = mean(pct)+.1,   # y coordinate for slope label
+        x = mean(VE)+(.5-y)/3   # x coordinate for slope label
+    ) %>% 
+    mutate(label = paste0('slope = ', slope))
+
+    # df_label <- data.frame(
+    #     y = c(0.2, 0.35, 0.5),
+    #     label = c('|r| > 0.6', '|r| > 0.5', '|r| > 0.4')
+    # )
+
+    colors <- c(
+        brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
+    )
+
+    var_explained_bars %>% 
+    ggplot(aes(x=VE, y=pct, color=factor(threshold), group=threshold)) + 
+    geom_point(aes(size=n)) +
+    # geom_text(aes(label=C), vjust=1, hjust=0, nudge_x=.02, size=2.5, data=var_explained_bars %>% filter(threshold==0.4)) +
+    geom_text(aes(label=C, y=.8), color='grey7', hjust=1, nudge_x=0, size=2.7, data=var_explained_bars %>% filter(threshold==0.4)) +
+    geom_text(aes(label=n, hjust=ifelse(C=='C2',-0.3,1.3)), color='grey7', size=2.2) +
+    geom_vline(aes(xintercept=VE), data=var_explained_bars %>% filter(threshold==0.4), linetype='dashed', color='grey', size=.3) +
+    geom_smooth(method='lm', se=F, size=.3, color='darkgrey') +
+    # geom_text(aes(x=x, y=y, label=label, group=threshold), color='grey7', data=df_slope, inherit.aes = F, size=2.5, font='Calibri') +
+    # scale_y_continuous(name='% of genes |r|>0.5', labels=percent, limits=c(0,.7)) +
+    # scale_x_continuous(name='% variance explained', labels=percent, limits=c(0,.7)) + 
+    scale_color_manual(values=colors, name='|r| threshold') +
+    scale_size_continuous(range=c(1,5)) +
+    guides(colour = guide_legend(order = 1), 
+        #    size = guide_legend(order = 2)) +
+           size = 'none') +
+    scale_y_continuous(name='% of genes', labels=percent) +
+    scale_x_continuous(name='% variance explained', labels=percent, limits=c(0,.5)) + 
+    theme(
+        # text = element_text(size=6),
+        # axis.text = element_text(size=6),
+        legend.box='vertical',
+        legend.spacing.y = unit(0, 'mm'),
+        legend.text = element_text(size=7),
+        axis.line = element_line(size=.3, color='grey')
+    )
+}
+
+
+plot_var_explained_violins <- function(var_explained_violins) {
+    colors <- c(
+        brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
+    )
+
+    var_explained_violins %>% 
+    ggplot(aes(x=VE, y=r)) + 
+    # ggplot(aes(x=r, y=VE)) + 
+    geom_jitter(aes(color=r>0.5), alpha=.2, size=.1) +
+    # geom_violin(aes(group=C), fill=NA) + 
+    # geom_violin(aes(color=C, fill=C), alpha=.5) + 
+    # geom_boxplot(aes(group=C), color='grey', fill='white', width=.01) + 
+    # geom_smooth(formula='y ~ x', method='lm', se=F, data=var_explained_violins %>% filter(r>=0.5),
+    #           color='darkgrey', size=.3) +
+    geom_hline(yintercept=0.5, linetype=2, size=.3, color='grey') +
+    scale_y_continuous(name='|r|') +
+    scale_x_continuous(name='% variance explained of component', labels=percent, limits=c(0,.45)) + 
+    scale_fill_manual(values=colors) +
+    scale_color_manual(values=colors) +
+    theme(
+        axis.title.y = element_text(angle=0, vjust=.5),
+        legend.text = element_text(size=7),
+        legend.title = element_blank(),
+        legend.key.size = unit(3, "mm"),
+        legend.margin = margin(-2,0,0,0,'mm')
     )
 }

@@ -78,13 +78,14 @@ def get_gwas_combined():
 
 
 
-def get_deg_combined(scz_only=False, updown=False):
+def get_deg_combined(scz_only=False, updown=False, logFC = False):
     deg_dict = {
         'ASD--Gandal 2022': pd.read_csv("../data/deg/gandal2022_tableS3.csv").loc[lambda x: x['WholeCortex_ASD_FDR']<=0.05, ['external_gene_name', 'WholeCortex_ASD_logFC']],
         # 'ASD--Ramaswami 2020': pd.read_csv("../data/deg/ramaswami2020_tableS2.csv", header=1).loc[lambda x: x['p.condition.fdr']<=0.05, 'Gene'].pipe(ensembl_id_to_gene_symbol),
         'ASD--Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['ASD.fdr']<=0.05, ['gene_name', 'ASD.log2FC']],
         'ASD--Parikshak 2016': pd.read_csv("../data/deg/parikshak2016_tableS2.csv", header=1, dtype={'Chr':'object', 'HGNC Symbol':'object'}).loc[lambda x: x['FDR-adjusted P value, ASD vs CTL']<=0.05, ['HGNC Symbol', 'log2(FC) ASD vs CTL']],
         'MDD--Jaffe 2022': pd.read_csv("../data/deg/jaffe2022_dataS1.csv", header=0, usecols=['Symbol','Cortex_logFC_MDD','Cortex_adjPVal_MDD']).loc[lambda x: x['Cortex_adjPVal_MDD']<=0.05, ['Symbol','Cortex_logFC_MDD']],
+        # 'MDD--Girgenti 2021': pd.read_csv("../data/deg/girgenti2021_tableS9.csv", header=0, usecols=['Genename','MDD.dlPFC.log2FoldChange','MDD.dlPFC.padj']).loc[lambda x: x['MDD.dlPFC.padj']<=0.05, ['Genename','MDD.dlPFC.log2FoldChange']],
         'SCZ--Gandal 2018': pd.read_csv("../data/deg/gandal_genes_rnaseq.csv").loc[lambda x: x['SCZ.fdr']<=0.05, ['gene_name', 'SCZ.log2FC']],
         'SCZ--Fromer 2016': pd.read_csv("../data/deg/fromer2016_tableS3.csv", header=1).loc[lambda x: x['FDR estimate']<=0.05, ['Gene Symbol','logFC']],
         'SCZ--Collado-Torres 2019': pd.read_csv("../data/deg/colladotorres2019_tableS11.csv").query("region=='DLPFC'").loc[lambda x: x['adj.P.Val']<=0.05, ['Symbol', 'logFC']],
@@ -100,8 +101,11 @@ def get_deg_combined(scz_only=False, updown=False):
     if updown:
         deg_genes = deg_genes.assign(updown = lambda x: np.where(x['log2FC']>0,'up','down'))
 
+    if not logFC:
+        # drop logFC to cleanly remove duplicates
+        deg_genes = deg_genes.drop('log2FC', axis=1)
+
     deg_genes = (deg_genes
-                 .drop('log2FC', axis=1) # drop logFC to cleanly remove duplicates
                  .drop_duplicates()
                  .dropna()
     )
@@ -117,8 +121,8 @@ def get_deg_combined(scz_only=False, updown=False):
     return deg_genes
 
 
-def get_deg_consensus(updown=False):
-    deg_all = get_deg_combined(updown=updown)
+def get_deg_consensus(updown=False, logFC=False):
+    deg_all = get_deg_combined(updown=updown, logFC=logFC)
 
     # Optionally take only consensus with directional agreement
     if updown:
@@ -126,15 +130,17 @@ def get_deg_consensus(updown=False):
     else:
         grouping = ['label','gene']
 
+    if logFC:
+        agg_dict = {'study':'nunique', 'log2FC': 'mean'}
+    else:
+        agg_dict = {'study':'nunique'}
+
     deg_consensus = (deg_all
                     .assign(
                         study = lambda x: x['label'].str.split('--', expand=True)[1],
                         label = lambda x: x['label'].str.split('--', expand=True)[0]
                         )
-                    #  .assign(
-                    #     n_studies = lambda x: x.groupby(['label','gene'], as_index=False)['study'].transform('nunique')
-                    #  )
-                    .groupby(grouping, as_index=False)['study'].nunique()
+                    .groupby(grouping, as_index=False).agg(agg_dict)
                     .loc[lambda x: (x['study'] >= 2) | (x['label']=='MDD')] # either 2+ studies, or MDD
                     )
     
@@ -145,7 +151,7 @@ def get_deg_consensus(updown=False):
 def get_scz_gyral_sulcal(
             data_path = '../data/lh.GyralSulcalDifferences.mgh', 
             hcp_img = '../data/parcellations/lh.HCPMMP1.annot',
-            name = 'SCZ L2-Specific Thinning'
+            name = 'SCZ supragranular'
         ):
     scz_diff_img = nib.load(data_path)
     hcp_img = annot_to_gifti(hcp_img)
@@ -166,7 +172,37 @@ def get_scz_gyral_sulcal(
     return scz_diff
 
 
-
+def get_pergola_consensus():
+    return [
+        'CHRNA4',
+        'DENND1A',
+        'ADCY9',
+        'ADCY5',
+        'MKL1',
+        'DLGAP2',
+        'RTL10',
+        'HECW1',
+        'RAB3A',
+        'ATP2A2',
+        'UBE2O',
+        'KCNQ3',
+        'NOS1AP',
+        'KIF3C',
+        'DPP6',
+        'SRRM4',
+        'KSR2',
+        'SLITRK1',
+        'OPCML',
+        'PI4KA',
+        'KIAA1549L',
+        'UNC79',
+        'CLSTN3',
+        'UNC80',
+        'TENM2',
+        'FAM135B',
+        'PTPRN2',
+        'RGAG',
+    ]
 
 ### LEGACY
 

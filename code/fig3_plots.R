@@ -1,3 +1,17 @@
+library(ggseg)
+library(ggtext)
+library(ggsegGlasser)
+library(ggrepel)
+# library(ggh4x) # needed for facet_grid2 to not clip strip labels
+library(ggpmisc)
+library(eulerr)
+suppressMessages(library(lemon))
+suppressMessages(library(scales))
+library(pals)
+library(shades)
+library(patchwork)
+suppressMessages(library(tidyverse))
+
 theme_set(theme_classic())
 theme_update(
     text = element_text(size=7, family = 'Calibri', color = 'grey7'),
@@ -14,7 +28,11 @@ theme_update(
 theme_colorbar <- guide_colorbar(barwidth=2, barheight=.5, ticks=FALSE)
 
 
-plot_single_cell_posneg <- function(sc_projected_posneg_plot) {
+plot_single_cell_posneg <- function(sc_projected_posneg_plot, ncol=3,
+                                    ytitle_rmargin = -2,
+                                    ylab = "sc-RNAseq expression\nof C1-C3 negative genes",
+                                    xlab = "sc-RNAseq expression of C1-C3 positive genes"
+                            ) {
     colors <- c(
         brewer.rdbu(21)[c(2,20)],
         brewer.piyg(11)[c(2,10)],
@@ -24,21 +42,22 @@ plot_single_cell_posneg <- function(sc_projected_posneg_plot) {
     p1 <- sc_projected_posneg_plot %>% 
     mutate(cell_type = factor(cell_type, ordered=T, levels=unique(.$cell_type))) %>% 
     ggplot(aes(positive, negative)) + 
-    facet_wrap(~C, scales='free') + 
+    facet_wrap(~C, scales='free', ncol=ncol) + 
     geom_point(alpha=.1, size=.002, aes(color=cell_type)) +
-    xlab("sc-RNAseq expression of C1/2/3 positive genes") +
-    ylab("sc-RNAseq expression of\nC1/2/3 negative genes") +
+    xlab(xlab) +
+    ylab(ylab) +
     scale_color_manual(values=colors, name=NULL) +
     guides(colour = guide_legend(byrow=T, override.aes = list(size=1, alpha=.8))) +
     theme(
         strip.background = element_blank(),
         panel.grid = element_blank(),
         panel.spacing.x = unit(5,'mm'),
+        panel.spacing.y = unit(5,'mm'),
         legend.spacing.y = unit(1,'mm'),
         legend.text = element_text(size=7),
         axis.line = element_line(size=.2, color='darkgrey'),
         axis.text = element_blank(),
-        axis.title.y = element_text(margin=margin(t=0,b=0,l=0,r=-2, unit='mm')),
+        axis.title.y = element_text(margin=margin(t=0,b=0,l=0,r=ytitle_rmargin, unit='mm')),
         axis.ticks = element_blank()
     )
 
@@ -53,7 +72,7 @@ plot_single_cell_posneg <- function(sc_projected_posneg_plot) {
         ggplot(aes(positive, negative)) +
         geom_smooth(method='lm', se=F, color='darkgrey', size=.3) + 
         geom_point(alpha=.1, size=.01, color=colors[2]) +
-        annotate(geom='text', label=label, x=Inf, y=Inf, hjust=1.1, vjust=1.7, size=2,
+        annotate(geom='text', label=label, x=Inf, y=Inf, hjust=1.1, vjust=1.7, size=2.5,
                  family='Calibri', color='grey7') +
         theme_minimal() + 
         theme(
@@ -62,9 +81,10 @@ plot_single_cell_posneg <- function(sc_projected_posneg_plot) {
             panel.grid = element_blank(),
             axis.text = element_blank(),
             axis.title = element_blank(),
-            plot.title = element_text(hjust=.5, size=6, family='Calibri', color='gray7')
+            plot.title = element_text(hjust=.5, size=7, family='Calibri', color='gray7')
         ) +
-        ggtitle("Layer 2 VIP\ninterneurons only")
+        # ggtitle("Layer 2 VIP\ninterneurons only")
+        ggtitle("L2 VIP only")
     }
 
     inset_plots <- c('C1','C2','C3') %>% map(single_inset)
@@ -192,7 +212,9 @@ plot_bs_scores_corr <- function(bs_scores_corr) {
 
 
 
-plot_quantile_curves <- function(quantile_curves, facet='~C', continuous=FALSE, ncol=3, which='pred') {
+plot_quantile_curves <- function(quantile_curves, donor_ages=NULL, facet='~C', 
+                                 ytitle_rmargin = 0,
+                                 continuous=FALSE, ncol=3, which='pred') {
     n_quantiles <- quantile_curves$C_quantile %>% unique %>% length
 
     p <- quantile_curves %>% 
@@ -200,7 +222,7 @@ plot_quantile_curves <- function(quantile_curves, facet='~C', continuous=FALSE, 
     arrange(desc(C_quantile)) %>% 
     mutate(C_quantile = factor(C_quantile, ordered=T, levels=unique(.$C_quantile))) %>% 
     ggplot(aes(x=age_log10, y=10**curve)) +
-    facet_wrap(as.formula(facet), scales='fixed', ncol=ncol) +
+    facet_wrap(as.formula(facet), scales='free_x', ncol=ncol) +
     geom_line(aes(color=C_quantile, group=C_quantile, alpha=C_quantile), size=.3) +
     scale_x_continuous(
         breaks=log10(c(-0.5,0,1,5,14,40)*365+40*7),
@@ -208,14 +230,23 @@ plot_quantile_curves <- function(quantile_curves, facet='~C', continuous=FALSE, 
     scale_color_manual(values=brewer.rdbu(10), name='Decile', labels=seq(10,1)) +
     scale_alpha_manual(values=rep(1, n_quantiles), name='') +
     guides(color=guide_legend(override.aes = list(size=2)), alpha='none') +
-    ylab('log10 RPKM') +
+    ylab('mean\nRPKM') +
     xlab('Age') +
     coord_cartesian(clip='off') +
     theme(
-        axis.text.y=element_blank(),
-        axis.title.y = element_text(margin=margin(t=0,b=0,l=0,r=-5, unit='mm')),
-        strip.text.x = element_text(margin=margin(0,0,-2,0,'mm')),
+        axis.text.y=element_text(margin=margin(t=0,b=0,l=0,r=ytitle_rmargin, unit='mm')),
+        axis.title.y = element_text(margin=margin(t=0,b=0,l=0,r=ytitle_rmargin, unit='mm')),
+        axis.line = element_line(size=.2, color='darkgrey'),
+        panel.spacing.y = unit(5,'mm'),
+        strip.text.x = element_text(margin=margin(0,0,ytitle_rmargin,0,'mm')),
         legend.text = element_text(size=7),
         plot.title.position='plot'
     )
+
+    if (!is.null(donor_ages)) {
+        p + geom_point(data=bs_donor_ages, aes(x=age_log10, y=age_n/2), 
+                        size=.2, color='darkgrey')
+    } else {
+        p
+    }
 }

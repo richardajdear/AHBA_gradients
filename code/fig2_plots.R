@@ -1,3 +1,17 @@
+library(ggseg)
+library(ggtext)
+library(ggsegGlasser)
+library(ggrepel)
+# library(ggh4x) # needed for facet_grid2 to not clip strip labels
+library(ggpmisc)
+library(eulerr)
+suppressMessages(library(lemon))
+suppressMessages(library(scales))
+library(pals)
+library(shades)
+library(patchwork)
+suppressMessages(library(tidyverse))
+
 theme_set(theme_classic())
 theme_update(
     text = element_text(size=7, family = 'Calibri', color = 'grey7'),
@@ -267,13 +281,16 @@ plot_scatter_with_colors <- function(data, corrs,
 
     corrs <- corrs %>%
         filter(C == !!enquo(x_var), map == !!enquo(y_var)) %>% 
-        mutate(p_sig=ifelse(p<0.001, '***',
-                    ifelse(p<0.01, '**',
-                    ifelse(p<0.05, '*','')))) %>%
-        mutate(q_sig=ifelse(q<0.001, '†',
-                    ifelse(q<0.01, '†',
-                    ifelse(q<0.05, '†','')))) %>%
-        mutate(r_label=paste('r =', round(r,2), p_sig, q_sig))
+        # mutate(p_sig=ifelse(p<0.001, '***',
+        #             ifelse(p<0.01, '**',
+        #             ifelse(p<0.05, '*','')))) %>%
+        # mutate(q_sig=ifelse(q<0.001, '†',
+        #             ifelse(q<0.01, '†',
+        #             ifelse(q<0.05, '†','')))) %>%
+        mutate(q_sig=ifelse(q<0.001, '***',
+                    ifelse(q<0.01, '**',
+                    ifelse(q<0.05, '*','')))) %>%
+        mutate(r_label=paste('r =', round(r,2), q_sig))
     
     color_labels <- unique(data$color_names)
 

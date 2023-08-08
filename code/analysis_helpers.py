@@ -63,23 +63,36 @@ def make_var_exp_df(version_dict):
     return df_var_exp
 
 
-### Missing genes test
-
-
-### Regress out axes
-def regress_out_axes(version, n_axes = 1, norm=False):
+### Regress out components
+def regress_out_components(version, n_components = 1, norm=False):
     data = version.expression
-    axes = version.scores.iloc[:, 0:n_axes]
-    lm = LinearRegression().fit(axes, data)
-    estimated_data = lm.predict(axes)
+    components = version.scores.iloc[:, 0:n_components]
+    lm = LinearRegression().fit(components, data)
+    estimated_data = lm.predict(components)
     residuals = data - estimated_data
 
     if norm:
         residuals = residuals.apply(lambda x: (x-np.mean(x))/np.std(x))
     return residuals
 
+
+### Get variance explained by regressing out components
+def get_var_explained(version):
+    original_var = version.expression.var().sum() 
+    C1_regressed_var = regress_out_components(version, 1).var().sum()
+    C12_regressed_var = regress_out_components(version, 2).var().sum()
+    C123_regressed_var = regress_out_components(version, 3).var().sum()
+
+    var_explained_pct = np.array([
+        (original_var - C1_regressed_var)/original_var,
+        (C1_regressed_var - C12_regressed_var)/original_var,
+        (C12_regressed_var - C123_regressed_var)/original_var
+    ])
+    return var_explained_pct
+
+
 ### Get region-region coexpression matrix
-def get_coexp(expression, order=''):
+def get_coexp(expression, order='', return_order = False):
 
     coexp = expression.T.corr()
 
@@ -99,8 +112,15 @@ def get_coexp(expression, order=''):
             )
         coexp = coexp.loc[ord, ord]
     
-    coexp = coexp.set_axis(range(expression.shape[0])).set_axis(range(expression.shape[0]), axis=1)
-    return coexp
+    coexp = (coexp
+             .set_axis(range(expression.shape[0]))
+             .set_axis(range(expression.shape[0]), axis=1)
+            )
+    
+    if return_order:
+        return coexp, ord
+    else:
+        return coexp
 
 ### Clustering coefficients
 def get_graph_metric(coexp, metric='transitivity', threshold=None, nonnegative=True):
