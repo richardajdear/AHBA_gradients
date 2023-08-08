@@ -1,6 +1,6 @@
 # Functions to read and clean spatial data
 import numpy as np, pandas as pd
-from processing_helpers import *
+from processing import *
 
 def get_maps(data_dir="../data/cortical_maps.csv"):
     names = {

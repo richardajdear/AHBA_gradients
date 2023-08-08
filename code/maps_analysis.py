@@ -1,6 +1,6 @@
 # Code for comparing PC maps with MRI maps
 import numpy as np, pandas as pd
-from processing_helpers import *
+from processing import *
 from analysis_helpers import *
 
 from netneurotools import freesurfer as nnsurf

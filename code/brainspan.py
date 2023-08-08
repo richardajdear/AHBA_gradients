@@ -1,7 +1,7 @@
 # Helper functions for processing brainspan data
 
 import numpy as np, pandas as pd
-from processing_helpers import *
+from processing import *
 import statsmodels.api as sm
 from statsmodels.gam.api import GLMGam, BSplines
 import statsmodels.formula.api as smf

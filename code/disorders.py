@@ -4,7 +4,7 @@ import numpy as np, pandas as pd
 import mygene
 import nibabel as nib
 from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
-from processing_helpers import *
+from processing import *
 from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
 

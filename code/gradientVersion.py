@@ -11,7 +11,7 @@ from brainsmash.mapgen.base import Base
 from neuromaps.images import annot_to_gifti
 from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
 
-from processing_helpers import *
+from processing import *
 
 
 ### Monkey Patch compute_affinity function to not zero-out negative values

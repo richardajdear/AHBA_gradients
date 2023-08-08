@@ -2,7 +2,7 @@
 
 from abagen import fetch_microarray
 from itertools import combinations
-from processing_helpers import *
+from processing import *
 from gradientVersion import *
 
 
