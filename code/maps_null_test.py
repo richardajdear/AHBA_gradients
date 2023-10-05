@@ -8,53 +8,44 @@ from neuromaps.nulls import cornblath
 from neuromaps.transforms import fsaverage_to_fsaverage
 from neuromaps.images import annot_to_gifti
 from statsmodels.stats.multitest import multipletests
-# from brainsmash.mapgen.base import Base
+# from brainsmash.mapgen import Base
 
 
-
-def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr', 
-                          reindex=True, pool=False, pool_frac=.3, 
-                          adjust='fdr_bh', adjust_by_label=False,
-                          n_components=3):
+def correlate_maps_with_null_scores(
+            null_scores, scores, maps, 
+            method='pearsonr', reindex=True,
+            adjust='fdr_bh', adjust_by_label=False
+        ):
     """
-    Get correlations with maps from gradient score nulls
-    Uses numpy masked array to handle missing values
+    Spin test a set of maps against a set of scores with null scores
+    Uses neuromaps.compare_images to perform the test
     """
-    # Filter maps for regions in gradients
+
+    # Filter maps for regions in scores - assumes regions are in same order
     # maps = maps.set_axis(range(1, maps.shape[0]+1)).loc[scores.index, :]
-    # Filter nulls for regions in gradients
-    # null_grads = null_grads[scores.index-1, :, :]
+    
+    # Optional: filter nulls for regions in scores
+    # null_scores = null_scores[scores.index-1, :, :]
 
-    # # Reindex scores to all regions
-    if reindex:
-        scores = scores.reindex(range(1,181))
-    # null_grads = null_grads
+    # Optional: reindex scores to all regions
+    # if reindex:
+    #     scores = scores.reindex(range(1, null_scores.shape[0]+1))
 
     n_maps = maps.shape[1]
+    n_components = scores.shape[1]
     output_frame = np.zeros((n_components*n_maps, 2))
     output_index = pd.MultiIndex.from_product([scores.iloc[:,:n_components].columns, maps.columns])
 
-    # For each gradient
-    for g in range(null_grads.shape[1]):
-        _scores = scores.iloc[:,g].values
-        _scores = _scores.astype(np.longdouble) # force ValueError in compare_images
-        # Optionally pool maps together
-        if pool:
-            # Set dimensions for reshaping
-            # Downsample nulls because of pooling
-            m = null_grads.shape[1]
-            n = int(null_grads.shape[2] * pool_frac)
-            null_grads_downsample = null_grads[:,:,:n]
-            _nulls = null_grads_downsample.reshape(-1, g*n)
-        else:
-            _nulls = null_grads[:,g,:]
+    # For each component:
+    for C in range(null_scores.shape[1]):
+        _scores = scores.iloc[:,C].values.astype(np.longdouble)
+        _nulls = null_scores[:,C,:]
         
-        # For each map
+        # Test each map
         for m in range(maps.shape[1]):
-            _map = maps.iloc[:,m].values
-            _map = _map.astype(np.longdouble) # force compare_images to work
+            _map = maps.iloc[:,m].values.astype(np.longdouble)
             _r, _p = compare_images(_scores, _map, nulls=_nulls, metric=method, ignore_zero=False)
-            output_frame[m+g*n_maps,:] = [_r, _p]
+            output_frame[m+C*n_maps,:] = [_r, _p]
 
     # Output clean dataframe
     output_adjusted = (pd.DataFrame(output_frame, index=output_index) 
@@ -64,7 +55,7 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr',
     
     # Multiple comparisons
     if adjust is not None:
-        # Adjust across axes only (not by label)?
+        # Adjust for only across the comparisons within each component
         if adjust_by_label:
             output_adjusted = (output_adjusted
                 .assign(q = lambda x: x.groupby('C')
@@ -72,11 +63,13 @@ def corr_nulls_from_grads(null_grads, scores, maps, method='pearsonr',
                                        .reset_index(0, drop=True) # make index match
                                        )
                 )
+        # Or adjust across all comparisons for all components (more strict)
         else:
             output_adjusted = (output_adjusted
                 .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
                 )
     else:       
+        # Or don't adjust at all
         output_adjusted = output_adjusted.assign(q = lambda x: x['p'])
 
     return output_adjusted
@@ -98,10 +91,12 @@ def generate_shuffles(maps, n=1000, outfile='../outputs/shuffle_maps_1000.npy'):
 
 
 
-def generate_spins(n=1000, blocks=1, density='41k', save_name=None):
+def generate_spins(n=1000, blocks=1, density='41k', 
+                   save_name=None, save_path="../outputs/permutations"):
     """
-    Generate spins. Do this once so it's not repeated for each component
-    Optionally generate in blocks of 1000 to prevent crashes
+    Generate spins of the fsaverage sphere
+    (This saves time as we can use the same spins to make nulls for multiple maps)
+    Optionally generate in multiple blocks (helps if getting out of memory errors)
     """
     # Get sphere from which to generate spins (surface, not volume)
     surfaces = fetch_atlas('fsaverage', density)['sphere']
@@ -109,6 +104,7 @@ def generate_spins(n=1000, blocks=1, density='41k', save_name=None):
     # (This function is named 'get_parcel_centroids' but for cornblath spin method we use vertices)
     coords, hemiid = get_parcel_centroids(surfaces, method='surface')
 
+    # Auto-generate a name for the saved spins if not given
     if save_name is None:
         save_name = f"spins_{density}_{n}"
 
@@ -116,11 +112,11 @@ def generate_spins(n=1000, blocks=1, density='41k', save_name=None):
     for i in range(blocks):
         spins = gen_spinsamples(coords, hemiid, n_rotate=n, verbose=1)
         if blocks==1:
-            save_path = f"../outputs/permutations/{save_name}.npy"
+            save_path = f"{save_path}/{save_name}.npy"
             np.save(save_path, spins)
             print(f"\nSaved spins to {save_path}")
         else:
-            save_path = f"../outputs/permutations/{save_name}_{i}.npy"
+            save_path = f"{save_path}/{save_name}_{i}.npy"
             np.save(save_path, spins)
             print(f"\nSaved block {i} of spins to {save_path}")
     print(f"\nGenerated {blocks} blocks of {n} spins at density {density}")
@@ -128,14 +124,14 @@ def generate_spins(n=1000, blocks=1, density='41k', save_name=None):
 
 
 def generate_nulls_from_components(scores, spins, atlas='hcp', parcellation_img=None, density='41k', 
-                                  n=10, n_components=3, only_left=True,
+                                  n=10, only_left=True,
                                   save_dir = '../outputs/permutations/',
                                   save_name = 'spin_10'):
     """
     Generate null models using predefined spins
     Use fsaverage 41k (10k has an error)
     """
-    ## Next, get parcellation files in the same surface space as the spins (fsaverage)
+    ## First, get parcellation files in the same surface space as the spins (fsaverage)
     if parcellation_img is None and atlas=='hcp':
         parcellation_img_files = ('../data/parcellations/lh.HCPMMP1.annot',
                                   '../data/parcellations/rh.HCPMMP1.annot')
@@ -147,28 +143,31 @@ def generate_nulls_from_components(scores, spins, atlas='hcp', parcellation_img=
         parcellation_img = annot_to_gifti(parcellation_img_files)
         parcellation_img = fsaverage_to_fsaverage(parcellation_img, target_density=density, method='nearest')
 
+    n_components = scores.shape[1]
+
     ## Reindex scores to have NA where parcels are missing (including all right hemi)
     if atlas=='hcp':
         scores_reindex = scores.reindex(range(1,361)).iloc[:,:n_components].values
-            ### Drop parcels where data are missing in the 10k fsaverage HCPMMP parcellation template
-        if density=='10k':
-            scores_reindex = np.delete(scores_reindex, [120,300], axis=0)
+        # ### Drop parcels where data are missing in the 10k fsaverage HCPMMP parcellation template
+        # if density=='10k':
+        #     scores_reindex = np.delete(scores_reindex, [120,300], axis=0)
     elif atlas=='dk':
         scores_reindex = scores.reindex(range(1,69)).iloc[:,:n_components].values
 
 
-    ## Finally, for each gradient, compute nulls by projecting up to vertices and reaveraging
+    ## Finally, for each component, compute nulls by projecting up to vertices and reaveraging
+    ## Uses cornblath method
     null_scores = np.zeros([scores_reindex.shape[0], n_components, n])
     for i in range(n_components):
         _scores = scores_reindex[:,i]
         null_scores[:,i,:] = cornblath(
-                data=_scores,
-                atlas='fsaverage', 
-                density=density, 
-                parcellation=parcellation_img, 
-                n_perm=n, 
-                spins=spins
-                )
+                data = _scores,
+                atlas = 'fsaverage', 
+                density = density, 
+                parcellation = parcellation_img, 
+                n_perm = n, 
+                spins = spins
+            )
         print(f"\nGenerated {n} null spins of component {i}")
     
     # Drop right hemi
