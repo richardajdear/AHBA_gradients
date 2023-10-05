@@ -48,7 +48,7 @@ def correlate_maps_with_null_scores(
             output_frame[m+C*n_maps,:] = [_r, _p]
 
     # Output clean dataframe
-    output_adjusted = (pd.DataFrame(output_frame, index=output_index) 
+    output = (pd.DataFrame(output_frame, index=output_index) 
                         .set_axis(['r','p'], axis=1)
                         .rename_axis(['C','map']).reset_index()
     )
@@ -57,7 +57,7 @@ def correlate_maps_with_null_scores(
     if adjust is not None:
         # Adjust for only across the comparisons within each component
         if adjust_by_label:
-            output_adjusted = (output_adjusted
+            output_adjusted = (output
                 .assign(q = lambda x: x.groupby('C')
                                        .apply(lambda y: pd.Series(multipletests(y['p'], method=adjust)[1], index=y.index))
                                        .reset_index(0, drop=True) # make index match
@@ -65,12 +65,12 @@ def correlate_maps_with_null_scores(
                 )
         # Or adjust across all comparisons for all components (more strict)
         else:
-            output_adjusted = (output_adjusted
+            output_adjusted = (output
                 .assign(q = lambda x: multipletests(x['p'], method=adjust)[1])
                 )
     else:       
         # Or don't adjust at all
-        output_adjusted = output_adjusted.assign(q = lambda x: x['p'])
+        output_adjusted = output.assign(q = lambda x: x['p'])
 
     return output_adjusted
 
@@ -92,7 +92,7 @@ def generate_shuffles(maps, n=1000, outfile='../outputs/shuffle_maps_1000.npy'):
 
 
 def generate_spins(n=1000, blocks=1, density='41k', 
-                   save_name=None, save_path="../outputs/permutations"):
+                   save_name=None, save_dir="../outputs/permutations"):
     """
     Generate spins of the fsaverage sphere
     (This saves time as we can use the same spins to make nulls for multiple maps)
@@ -112,11 +112,11 @@ def generate_spins(n=1000, blocks=1, density='41k',
     for i in range(blocks):
         spins = gen_spinsamples(coords, hemiid, n_rotate=n, verbose=1)
         if blocks==1:
-            save_path = f"{save_path}/{save_name}.npy"
+            save_path = f"{save_dir}/{save_name}.npy"
             np.save(save_path, spins)
             print(f"\nSaved spins to {save_path}")
         else:
-            save_path = f"{save_path}/{save_name}_{i}.npy"
+            save_path = f"{save_dir}/{save_name}_{i}.npy"
             np.save(save_path, spins)
             print(f"\nSaved block {i} of spins to {save_path}")
     print(f"\nGenerated {blocks} blocks of {n} spins at density {density}")
@@ -156,7 +156,7 @@ def generate_nulls_from_components(scores, spins, atlas='hcp', parcellation_img=
 
 
     ## Finally, for each component, compute nulls by projecting up to vertices and reaveraging
-    ## Uses cornblath method
+    ## Uses cornblath method; can replace with other methods from https://netneurolab.github.io/neuromaps/api.html#module-neuromaps.nulls
     null_scores = np.zeros([scores_reindex.shape[0], n_components, n])
     for i in range(n_components):
         _scores = scores_reindex[:,i]
