@@ -2,7 +2,7 @@ library(ggseg)
 library(ggtext)
 library(ggsegGlasser)
 library(ggrepel)
-# library(ggh4x) # needed for facet_grid2 to not clip strip labels
+library(ggh4x) # needed for facet_grid2 to not clip strip labels
 library(ggpmisc)
 library(eulerr)
 suppressMessages(library(lemon))

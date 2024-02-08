@@ -2,9 +2,11 @@
 
 import numpy as np, pandas as pd
 from processing import *
-import statsmodels.api as sm
+# import statsmodels.api as sm
 from statsmodels.gam.api import GLMGam, BSplines
-import statsmodels.formula.api as smf
+# import statsmodels.formula.api as smf
+from itertools import combinations
+from abagen.utils import efficient_corr
 
 
 def get_brainspan_curves_by_gene(genes=None, return_points=False, alpha=0.5,
@@ -267,6 +269,7 @@ def count_samples(bs_col, bs_cortex_mapping):
 def clean_brainspan(bs_exp, bs_col, bs_row, bs_mapping, log=False, norm_samples=False):
     """
     Clean up Brainspan data into dataframe
+    Drop age groups with >=3 samples
     """
     mapped_regions = bs_mapping['structure_name'].dropna().unique()
     
@@ -289,6 +292,12 @@ def clean_brainspan(bs_exp, bs_col, bs_row, bs_mapping, log=False, norm_samples=
      .loc[:, lambda x: ~x.columns.duplicated()] # some columns are duplicates
     )
 
+    # Drop brains with < 4 samples
+    bs_donor_counts = bs_clean.groupby(['donor_id']).size()
+    bs_keep = bs_donor_counts > 3
+    ix_keep = pd.IndexSlice[bs_keep[bs_keep].index.get_level_values('donor_id'), :]
+    bs_clean = bs_clean.loc[ix_keep,:]
+
     if log:
         bs_clean = bs_clean.pipe(np.log10)
 
@@ -301,14 +310,7 @@ def clean_brainspan(bs_exp, bs_col, bs_row, bs_mapping, log=False, norm_samples=
 def aggregate_brainspan_by_age(bs_clean, normalize=True):
     """
     Aggregate Brainspan donor brains by ages
-    Drop age groups with >=3 samples
     """
-    # Drop brains with >= 3 missing samples
-    bs_donor_counts = bs_clean.groupby(['donor_id']).size()
-    bs_keep = bs_donor_counts > 3
-    ix_keep = pd.IndexSlice[bs_keep[bs_keep].index.get_level_values('donor_id'), :]
-    bs_clean = bs_clean.loc[ix_keep,:]
-
     # Optionally normalize by donor
     if normalize:
         bs_clean = (bs_clean
@@ -441,6 +443,36 @@ def make_brain_plots(version, version_to_bs_mapping, bs_scores):
 
 
 
+def get_stable_genes_brainspan(bs_clean, subjects_for_stability_test, 
+                               percentile_threshold=0.5, return_stability=False):
+    """
+    Identify top X% most stable genes using differential stability
+    Across selected subjects
+    """
+    # Get single subject expression for selected subjects
+    subject_expression_dict = {
+        s: bs_clean.loc[pd.IndexSlice[s,:,:,:,:]].reset_index(level=[0,1,2], drop=True) for s in subjects_for_stability_test
+    }
+
+    all_genes = np.array(bs_clean.columns)
+    gene_corrs = np.zeros((len(all_genes), sum(range(len(subjects_for_stability_test)))))
+    
+    # Iterate over all pairs of subjects
+    for n, (s1, s2) in enumerate(combinations(subjects_for_stability_test, 2)):
+        matched_regions = np.intersect1d(subject_expression_dict[s1].index, subject_expression_dict[s2].index)
+        gene_corrs[:, n] = efficient_corr(
+                subject_expression_dict[s1].loc[matched_regions], 
+                subject_expression_dict[s2].loc[matched_regions]
+        )
+
+
+    gene_stability = np.nanmean(gene_corrs, axis=1)
+    threshold = np.nanpercentile(gene_stability, percentile_threshold*100)
+    genes_to_keep = all_genes[gene_stability >= threshold]
+    if return_stability:
+        return gene_stability
+    return genes_to_keep
+
 
 
 ## LEGACY
@@ -568,8 +600,9 @@ def get_hcp_bs_mapping(hcp_info_file = "../data/parcellations/HCP-MMP1_UniqueReg
      .rename({'region':'label'}, axis=1)
                      )
     return hcp_bs_mapping
-    
-    
+
+
+
 # def get_mapped_pcs(pc_version, hcp_base, hcp_bs_mapping):
 #     """
 #     Get PC scores in mapped Brainspan regions
@@ -598,42 +631,42 @@ def get_hcp_bs_mapping(hcp_info_file = "../data/parcellations/HCP-MMP1_UniqueReg
 
 
 
-# Get AHBA and BS score comparison
-def get_scores(version, bs_agg, hcp_bs, hcp_info, hcp_base):
-    hcp_all = hcp_base.score_from(version).join(get_labels_hcp())
+# # Get AHBA and BS score comparison
+# def get_scores(version, bs_agg, hcp_bs, hcp_info, hcp_base):
+#     hcp_all = hcp_base.score_from(version).join(get_labels_hcp())
     
-    hcp_filtered, hcp_mean = get_filtered_hcp(version, bs_agg, hcp_bs, hcp_info)
+#     hcp_filtered, hcp_mean = get_filtered_hcp(version, bs_agg, hcp_bs, hcp_info)
     
-    bs_pcs_hcp = get_bs_pcs(version, bs_agg, hcp_bs)
+#     bs_pcs_hcp = get_bs_pcs(version, bs_agg, hcp_bs)
     
-    hcp_scores = (pd.concat({
-        'AHBA_all': hcp_all,
-        'AHBA_filtered': hcp_filtered.drop(['structure_name','cortex'],axis=1),
-        'AHBA_mean': hcp_mean,
-        'Brainspan': bs_pcs_hcp
-    })
-                  .reset_index(level=0).rename(columns={'level_0':'version'}).set_index(['version', 'label'])
-                  .apply(lambda y: y.groupby('version').apply(lambda x: (x-np.mean(x))/np.std(x)), axis=0) # standardize all versions for plotting
-                  .reset_index()
-                 )
+#     hcp_scores = (pd.concat({
+#         'AHBA_all': hcp_all,
+#         'AHBA_filtered': hcp_filtered.drop(['structure_name','cortex'],axis=1),
+#         'AHBA_mean': hcp_mean,
+#         'Brainspan': bs_pcs_hcp
+#     })
+#                   .reset_index(level=0).rename(columns={'level_0':'version'}).set_index(['version', 'label'])
+#                   .apply(lambda y: y.groupby('version').apply(lambda x: (x-np.mean(x))/np.std(x)), axis=0) # standardize all versions for plotting
+#                   .reset_index()
+#                  )
     
-    cortex_scores = (hcp_scores
-             .join(hcp_bs.set_index('region')['cortex'], on = 'label')
-             .groupby(['version', 'cortex'])
-             .mean()
-             .set_axis([f'PC{i+1}' for i in range(5)], axis=1)
-            )
+#     cortex_scores = (hcp_scores
+#              .join(hcp_bs.set_index('region')['cortex'], on = 'label')
+#              .groupby(['version', 'cortex'])
+#              .mean()
+#              .set_axis([f'PC{i+1}' for i in range(5)], axis=1)
+#             )
     
-    corrs = cortex_scores.loc['AHBA_mean'].corrwith(cortex_scores.loc['Brainspan'])
+#     corrs = cortex_scores.loc['AHBA_mean'].corrwith(cortex_scores.loc['Brainspan'])
 
-    cortex_scores = (cortex_scores
-                     .loc[['AHBA_mean','Brainspan']]
-                     .melt(ignore_index=False, var_name='PC')
-                     .reset_index()
-                     .pivot_table(index=['PC', 'cortex'],
-                                  columns='version', values='value')
-                     .loc[['PC1','PC2','PC3']].reset_index()
-                    )
+#     cortex_scores = (cortex_scores
+#                      .loc[['AHBA_mean','Brainspan']]
+#                      .melt(ignore_index=False, var_name='PC')
+#                      .reset_index()
+#                      .pivot_table(index=['PC', 'cortex'],
+#                                   columns='version', values='value')
+#                      .loc[['PC1','PC2','PC3']].reset_index()
+#                     )
     
-    return hcp_scores, cortex_scores, corrs
+#     return hcp_scores, cortex_scores, corrs
 

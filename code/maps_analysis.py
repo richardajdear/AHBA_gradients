@@ -3,7 +3,9 @@ import numpy as np, pandas as pd
 from processing import *
 from analysis_helpers import *
 
-from netneurotools import freesurfer as nnsurf
+# from netneurotools import freesurfer as nnsurf
+from neuromaps.images import annot_to_gifti
+from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
 from neuromaps.stats import compare_images
 # from scipy.stats import percentileofscore
 from statsmodels.stats.multitest import multipletests

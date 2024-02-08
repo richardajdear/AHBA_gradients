@@ -14,18 +14,20 @@ package_list <- c(
 	'ggsegGlasser',
 	'ggsegSchaefer',
 	'ggsegDesterieux',
+	'ggsegBrodmann',
 	# 'ggseg3d',
 	'ggrepel',
 	# 'ggridges',
-    # 'ggwordcloud',
+        # 'ggwordcloud',
 	'ggtext',
-	# 'ggpubr',
+	'ggpubr',
 	'ggpmisc',
 	'gggrid',
 	# 'vctrs=0.5.0',
 	'ggh4x',
 	'lemon',
 	'patchwork',
+	'svglite',
 	'png',
 	'pals', 
 	'scales',
@@ -34,6 +36,10 @@ package_list <- c(
 	'png',
 	# 'gdtools',
 	# 'flextable',
-	'eulerr'
+	'eulerr',
+	'plot3D'
 )
 install.packages(package_list)
+
+# install.packages("BiocManager")
+# BiocManager::install("ensembldb")

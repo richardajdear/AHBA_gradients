@@ -41,4 +41,4 @@ Common functions: these files include functions used in all the above
 
 Docker - to ease with installation of package dependencies do one of:
 1. Pull the docker image [richardajdear/ahba](https://hub.docker.com/repository/docker/richardajdear/ahba/general) and run these analyses in a container (the docker image will automatically start a jupyter lab instance that can be accessed through a browser or an IDE like VScode)
-2. Build your own docker image using the `Dockerfile` in `/docker`, or manually install the dependencies listed in `python-reqs.txt` and `r-reqs.R`
+2. Build your own docker image using the [Dockerfile](docker/Dockerfile), or manually install the dependencies listed in [python-reqs.txt](docker/python-reqs.txt) and [r-reqs.R](docker/r-reqs.R)

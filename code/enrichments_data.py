@@ -119,7 +119,7 @@ def combine_go_enrichments(version_, type_, dir_="../outputs/string_data/",
     return df
 
 
-def get_cell_genes(which='jakob', include=None, subtype=False, combine_layers=False, combine_ex_in=False, add_synapses=True):
+def get_cell_genes(which='seidlitz', include=None, subtype=False, combine_layers=False, combine_ex_in=False, add_synapses=True):
     """
     Read cell genes table
     """
@@ -138,8 +138,8 @@ def get_cell_genes(which='jakob', include=None, subtype=False, combine_layers=Fa
     elif which == 'zeng':
         path = '../data/zeng_layers.csv'
         cell_genes = pd.read_csv(path).set_axis(['label','gene'], axis=1)
-    elif which == 'jakob':
-        path="../data/jakob_cell_genes.csv"
+    elif which == 'seidlitz':
+        path="../data/seidlitz_cell_genes.csv"
         cell_genes = pd.read_csv(path)
 
         if include == 'only_lake':

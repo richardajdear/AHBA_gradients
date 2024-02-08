@@ -31,7 +31,8 @@ class gradientVersion():
     def __init__(self, approach='dm', n_components=5, sparsity=0, kernel=None,
                 #  marker_genes=['NEFL', 'LGALS1', 'SYT6'], 
                  marker_genes=['NEFL', 'LGALS1', 'RFTN1'], 
-                **kwargs):
+                 random_state=0,
+                 **kwargs):
         """
         Initialize
         """
@@ -49,7 +50,10 @@ class gradientVersion():
 
         self.expression = None
         self.scores = None
-        self.gradients = brainspace.gradient.gradient.GradientMaps(n_components=n_components, approach=approach, kernel=kernel)    
+        self.gradients = brainspace.gradient.gradient.GradientMaps(n_components=n_components, 
+                                                                   approach=approach, 
+                                                                   kernel=kernel, 
+                                                                   random_state=random_state)    
 
         
     def fit(self, expression, scale=False, message=True, 
@@ -155,7 +159,8 @@ class gradientVersion():
         Get gene weights by correlating expression with scores
         """
         x = self.expression.values
-        y = self.scores.values
+        # y = self.scores.values
+        y = self.scores.values / np.std(self.scores.values, axis=0)
         xv = x - x.mean(axis=0)
         yv = y - y.mean(axis=0)
         xvss = (xv * xv).sum(axis=0)
@@ -300,56 +305,56 @@ class gradientVersion():
 
 ### LEGACY ###
 
-    # def fit_weights_PLS(self, other_expression=None, independent=True, normalize=False, sort=False, save_name=None, overwrite=True):
-    #     """
-    #     Get gene weights from PLS
-    #     Use other expression matrix if provided, otherwise use self
-    #     If independent==True, fit each component separately
-    #     """
-    #     # Use own expression matrix as X, or use matching regions in another expression matrix
-    #     if other_expression is None:
-    #         X = self.expression
-    #     else:
-    #         X = other_expression.dropna(axis=0, how='all').dropna(axis=1, how='any')
-    #         # Make sure X will match onto regions in Y
-    #         X = X.loc[np.intersect1d(X.index, self.scores.index), :]
+    def fit_weights_PLS(self, other_expression=None, independent=True, normalize=False, sort=False, save_name=None, overwrite=True):
+        """
+        Get gene weights from PLS
+        Use other expression matrix if provided, otherwise use self
+        If independent==True, fit each component separately
+        """
+        # Use own expression matrix as X, or use matching regions in another expression matrix
+        if other_expression is None:
+            X = self.expression
+        else:
+            X = other_expression.dropna(axis=0, how='all').dropna(axis=1, how='any')
+            # Make sure X will match onto regions in Y
+            X = X.loc[np.intersect1d(X.index, self.scores.index), :]
         
-    #     # Fit each component independently
-    #     n_components = self.scores.shape[1]
-    #     if independent:
-    #         pls_weights = np.zeros((X.shape[1], n_components))
-    #         for i in range(n_components):
-    #             Y = self.scores.loc[X.index, i]
-    #             pls_weights[:,i] = PLSCanonical(n_components=1).fit(X,Y).x_weights_.squeeze()
-    #             # pls_weights[:,i] = PLSCanonical(n_components=1).fit(X,Y).x_loadings_.squeeze()
-    #     # Or fit all components together
-    #     else:
-    #         Y = self.scores.loc[X.index, :]
-    #         # pls_weights = PLSCanonical(n_components=5).fit(X,Y).x_weights_
-    #         pls_weights = PLSCanonical(n_components=5).fit(X,Y).x_loadings_
+        # Fit each component independently
+        n_components = self.scores.shape[1]
+        if independent:
+            pls_weights = np.zeros((X.shape[1], n_components))
+            for i in range(n_components):
+                Y = self.scores.loc[X.index, i]
+                pls_weights[:,i] = PLSCanonical(n_components=1).fit(X,Y).x_weights_.squeeze()
+                # pls_weights[:,i] = PLSCanonical(n_components=1).fit(X,Y).x_loadings_.squeeze()
+        # Or fit all components together
+        else:
+            Y = self.scores.loc[X.index, :]
+            # pls_weights = PLSCanonical(n_components=5).fit(X,Y).x_weights_
+            pls_weights = PLSCanonical(n_components=5).fit(X,Y).x_loadings_
         
-    #     # Normalize
-    #     if normalize:
-    #         pls_weights = StandardScaler().fit_transform(pls_weights)
+        # Normalize
+        if normalize:
+            pls_weights = StandardScaler().fit_transform(pls_weights)
         
-    #     # Make dataframe and align to marker genes
-    #     pls_weights = pd.DataFrame(pls_weights, index=X.columns)
-    #     for i, marker in enumerate(self.marker_genes):
-    #         # If the marker for a component is negative, flip that component
-    #         if pls_weights.loc[marker, i] < 0:
-    #             pls_weights.loc[:,i] *= -1
+        # Make dataframe and align to marker genes
+        pls_weights = pd.DataFrame(pls_weights, index=X.columns)
+        for i, marker in enumerate(self.marker_genes):
+            # If the marker for a component is negative, flip that component
+            if pls_weights.loc[marker, i] < 0:
+                pls_weights.loc[:,i] *= -1
         
-    #     # Save to self
-    #     if overwrite:
-    #         self.weights = pls_weights
+        # Save to self
+        if overwrite:
+            self.weights = pls_weights
         
-    #     # Output sorted lists, or unsorted dataframe
-    #     if sort:
-    #         if save_name is not None:
-    #             self.sort_weights(pls_weights).to_csv("../outputs/" + save_name + ".csv")
-    #         return self.sort_weights(pls_weights)
-    #     else:
-    #         return pls_weights.set_axis(['G'+str(i+1) for i in range(n_components)], axis=1)
+        # Output sorted lists, or unsorted dataframe
+        if sort:
+            if save_name is not None:
+                self.sort_weights(pls_weights).to_csv("../outputs/" + save_name + ".csv")
+            return self.sort_weights(pls_weights)
+        else:
+            return pls_weights.set_axis(['C'+str(i+1) for i in range(n_components)], axis=1)
 
         
     # def make_null_scores(self, n=10, atlas='hcp', scores=None, dist_mat=None, save_name=None):

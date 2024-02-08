@@ -8,27 +8,17 @@ RUN sudo apt-get update && \
     apt-get install -y libudunits2-dev && \
     apt-get install -y libnlopt-dev && \
     apt-get install -y default-jre less
-#    apt-get install -y libmagick++-dev && \
-#    apt-get install -y libmagickwand-dev
 
-### mamba install some R packages (needed for ggseg, images)
-RUN mamba install -y libgdal r-units
-RUN mamba install -y r-rcpp
-
-### conda install r-sf (testing if this fixes ggseg)
-RUN conda install -y r-sf
-
-### magick requires r-magick conda build, but it's not currently available for ARM64
-# RUN R -e "install.packages('magick', dependencies=TRUE, repos='http://cran.rstudio.com/')"
-# RUN conda install -c conda-forge r-magick
+### mamba install some R dependencies (needed for ggseg, ggpubr, images)
+RUN mamba install -y libgdal nlopt r-units r-rcpp r-sf rpy2
 
 ### R packages
 COPY r-reqs.R ./
 RUN Rscript r-reqs.R
 
-### mamba install 'vtk' for python
+
+### mamba install 'vtk' dependency for python
 RUN mamba install -y vtk
-# RUN sudo apt-get install -y vtk6 python-vtk
 
 ### Python reqs
 COPY python-reqs.txt ./
@@ -36,6 +26,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH $HOME/.cargo/bin:$PATH
 RUN pip3 install gseapy
 RUN pip3 install -r python-reqs.txt
+
 
 ### ENIGMA
 #RUN git clone https://github.com/MICA-MNI/ENIGMA.git
@@ -50,7 +41,6 @@ RUN sudo apt-key adv --recv-keys --keyserver keyserver.ubuntu.com 0xA5D32F012649
 RUN sudo apt install ca-certificates
 RUN sudo apt-get update
 RUN sudo apt-get install -y connectome-workbench
-#RUN sudo strip --remove-section=.note.ABI-tag /usr/lib/x86_64-linux-gnu/libQt5Core.so.5
 
 
 ENV MPLCONFIGDIR=~/tmp/matplotlib

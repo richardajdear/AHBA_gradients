@@ -1,5 +1,5 @@
 nilearn
-rpy2
+#rpy2
 plotnine
 abagen
 gseapy

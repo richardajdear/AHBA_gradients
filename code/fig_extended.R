@@ -1,3 +1,20 @@
+library(ggseg)
+library(ggtext)
+library(ggsegGlasser)
+library(ggsegSchaefer)
+library(ggsegDesterieux)
+library(ggrepel)
+# library(ggh4x) # needed for facet_grid2 to not clip strip labels
+# library(ggpmisc)
+library(eulerr)
+suppressMessages(library(lemon))
+suppressMessages(library(scales))
+library(pals)
+library(shades)
+library(patchwork)
+
+suppressMessages(library(tidyverse))
+
 theme_set(theme_classic())
 theme_update(
     text = element_text(size=7, family = 'Calibri', color = 'grey7'),
@@ -30,15 +47,11 @@ plot_triplets_raster <- function(triplets_raster, n_components=3, highlight = 't
     mutate(component=factor(component, ordered=T, levels=seq(1,5),
             labels=c('C1','C2','C3','C4','C5')))
 
-    # highlight_options = triplets_raster %>% 
-    # filter(
-    #         ((method=='PCA') & (gene_filter==0.0) & (donors_filter==1)) |
-    #         ((method=='PCA') & (gene_filter==0.7) & (donors_filter==3)) |
-    #         ((method=='DME') & (gene_filter==0.5) & (donors_filter==3)) |
-    #         ((method=='DME') & (gene_filter==0.8) & (donors_filter==1))
-    # ) %>% 
-    # arrange(component, method, gene_filter, donors_filter) %>%
-    # mutate(label=rep(c('1','2','3','4'), n_components))
+    highlight_boxes <- triplets_raster %>% 
+    filter(
+            ((component=='C3') & (method=='PCA') & (gene_filter==0.7) & (donors_filter==3)) |
+            ((component=='C3') & (method=='DME') & (gene_filter==0.5) & (donors_filter==3))
+    )
 
     g <- triplets_raster %>%
     ggplot(aes(x=gene_filter, y=donors_filter, fill=corr_abs)) + 
@@ -85,7 +98,8 @@ plot_triplets_raster <- function(triplets_raster, n_components=3, highlight = 't
             limits=c(0,1), breaks=seq(0,1,.2), 
             labels=c('0.0', '0.2', '0.4', '0.6 ✔', '0.8', '1.0'),
             name='Generalisability\n(median \ntriplet \ncorrelation)'
-        ) 
+        ) + geom_tile(aes(x=gene_filter, y=donors_filter), fill=NA, color='green', size=.5,
+                      data = highlight_boxes, width=0.09)
     }
 }
 
@@ -456,7 +470,6 @@ plot_coexp <- function(coexp_df, limit=NULL) {
         )
 }
 
-
 plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, switch='both',
                               xlab='', ylab='') {
 
@@ -489,108 +502,4 @@ plot_maps_scatter <- function(maps_scatter, maps_scatter_corrs, switch='both',
           plot.title = element_text(hjust=0.5, vjust=1),
           aspect.ratio=1
          )
-}
-
-
-## Supplementary plots on variance explained vs number of genes
-
-plot_var_explained_bars <- function(var_explained_bars) {
-    var_explained_bars %>% 
-    pivot_longer(cols=c('VE','pct'), names_to='variable') %>% 
-    ggplot() + 
-    geom_col(aes(x=C, y=value, fill=variable), position='dodge', alpha=.7) + 
-    geom_text(aes(x=C, y=pct, label=paste0(signif(pct,2)*100, '%\n(', n, ')')),
-            nudge_x=-0.2, nudge_y=0.003, hjust=.5, vjust=0.5, data=var_explained_bars, size=3) +
-    geom_text(aes(x=C, y=VE, label=paste0(signif(VE,2)*100,'%')),
-            nudge_x=0.2, nudge_y=0.02, hjust=.5, vjust=0.5, data=var_explained_bars, size=3) +
-    scale_y_continuous(name='%', labels=percent, limits=c(0,.7)) +
-    scale_fill_manual(values=brewer.brbg(11)[c(3,9)] %>% rev, labels=c('% genes with |r|>0.5', '% variance explained')) +
-    # scale_color_manual(values=brewer.brbg(11)[c(3,9)], labels=c('% genes with |r|>0.5', '% variance explained')) +
-    guides(fill=guide_legend(ncol=1)) +
-    theme(
-        axis.title.y = element_text(angle=0, vjust=.5),
-        axis.title.x = element_blank(),
-        legend.text = element_text(size=7),
-        legend.title = element_blank(),
-        legend.key.size = unit(3, "mm"),
-        legend.margin = margin(-5,0,0,0,'mm')
-    )
-}
-
-plot_var_explained_scatter <- function(var_explained_bars) {
-
-    df_slope <- var_explained_bars %>% 
-    group_by(threshold) %>% 
-    mutate(
-        slope = round(lm(pct ~ VE)$coefficients[2], 2),
-        significance = summary(lm(pct ~ VE))$coefficients[2, 4],
-        y = mean(pct)+.1,   # y coordinate for slope label
-        x = mean(VE)+(.5-y)/3   # x coordinate for slope label
-    ) %>% 
-    mutate(label = paste0('slope = ', slope))
-
-    # df_label <- data.frame(
-    #     y = c(0.2, 0.35, 0.5),
-    #     label = c('|r| > 0.6', '|r| > 0.5', '|r| > 0.4')
-    # )
-
-    colors <- c(
-        brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
-    )
-
-    var_explained_bars %>% 
-    ggplot(aes(x=VE, y=pct, color=factor(threshold), group=threshold)) + 
-    geom_point(aes(size=n)) +
-    # geom_text(aes(label=C), vjust=1, hjust=0, nudge_x=.02, size=2.5, data=var_explained_bars %>% filter(threshold==0.4)) +
-    geom_text(aes(label=C, y=.8), color='grey7', hjust=1, nudge_x=0, size=2.7, data=var_explained_bars %>% filter(threshold==0.4)) +
-    geom_text(aes(label=n, hjust=ifelse(C=='C2',-0.3,1.3)), color='grey7', size=2.2) +
-    geom_vline(aes(xintercept=VE), data=var_explained_bars %>% filter(threshold==0.4), linetype='dashed', color='grey', size=.3) +
-    geom_smooth(method='lm', se=F, size=.3, color='darkgrey') +
-    # geom_text(aes(x=x, y=y, label=label, group=threshold), color='grey7', data=df_slope, inherit.aes = F, size=2.5, font='Calibri') +
-    # scale_y_continuous(name='% of genes |r|>0.5', labels=percent, limits=c(0,.7)) +
-    # scale_x_continuous(name='% variance explained', labels=percent, limits=c(0,.7)) + 
-    scale_color_manual(values=colors, name='|r| threshold') +
-    scale_size_continuous(range=c(1,5)) +
-    guides(colour = guide_legend(order = 1), 
-        #    size = guide_legend(order = 2)) +
-           size = 'none') +
-    scale_y_continuous(name='% of genes', labels=percent) +
-    scale_x_continuous(name='% variance explained', labels=percent, limits=c(0,.5)) + 
-    theme(
-        # text = element_text(size=6),
-        # axis.text = element_text(size=6),
-        legend.box='vertical',
-        legend.spacing.y = unit(0, 'mm'),
-        legend.text = element_text(size=7),
-        axis.line = element_line(size=.3, color='grey')
-    )
-}
-
-
-plot_var_explained_violins <- function(var_explained_violins) {
-    colors <- c(
-        brewer.puor(10)[8], brewer.brbg(10)[8], brewer.rdbu(10)[2]
-    )
-
-    var_explained_violins %>% 
-    ggplot(aes(x=VE, y=r)) + 
-    # ggplot(aes(x=r, y=VE)) + 
-    geom_jitter(aes(color=r>0.5), alpha=.2, size=.1) +
-    # geom_violin(aes(group=C), fill=NA) + 
-    # geom_violin(aes(color=C, fill=C), alpha=.5) + 
-    # geom_boxplot(aes(group=C), color='grey', fill='white', width=.01) + 
-    # geom_smooth(formula='y ~ x', method='lm', se=F, data=var_explained_violins %>% filter(r>=0.5),
-    #           color='darkgrey', size=.3) +
-    geom_hline(yintercept=0.5, linetype=2, size=.3, color='grey') +
-    scale_y_continuous(name='|r|') +
-    scale_x_continuous(name='% variance explained of component', labels=percent, limits=c(0,.45)) + 
-    scale_fill_manual(values=colors) +
-    scale_color_manual(values=colors) +
-    theme(
-        axis.title.y = element_text(angle=0, vjust=.5),
-        legend.text = element_text(size=7),
-        legend.title = element_blank(),
-        legend.key.size = unit(3, "mm"),
-        legend.margin = margin(-2,0,0,0,'mm')
-    )
 }

@@ -4,8 +4,8 @@ import numpy as np, pandas as pd
 import mygene
 import nibabel as nib
 from neuromaps.nulls.spins import parcels_to_vertices, vertices_to_parcels
+from neuromaps.images import annot_to_gifti
 from processing import *
-from scipy.stats import fisher_exact
 
 
 replace_dict = {'01-Mar':'MARCH1', '02-Mar':'MARCH2', '03-Mar':'MARCH3', '04-Mar':'MARCH4', '05-Mar':'MARCH5', '06-Mar':'MARCH6', '07-Mar':'MARCH7', '08-Mar':'MARCH8', 
@@ -35,13 +35,14 @@ def get_disorder_maps(data_dir="../data/brainchart_maps_dk.csv"):
     return maps
 
 
-def get_gwas_combined():
+def get_gwas_combined(az=False):
     # SCZ data from https://figshare.com/articles/dataset/scz2022/19426775?file=35775617
     trubetskoy = (pd.read_csv(f"../data/gwas/trubetskoy2022_extended.csv")
-                #   .loc[lambda x: x["Extended.GWAS"]=='YES', 'Symbol.ID']
+                  .loc[lambda x: x["Extended.GWAS"]=='YES', 'Symbol.ID']
                 #   .rename('gene')
-                  .loc[lambda x: x["Extended.GWAS"]=='YES', 'Ensembl.ID']
-                  .pipe(ensembl_id_to_gene_symbol)
+                #   .loc[lambda x: x["Prioritised"]==1, :]
+                #   .loc[lambda x: x["Extended.GWAS"]=='YES', 'Ensembl.ID']
+                #   .pipe(ensembl_id_to_gene_symbol)
                   .rename('gene')
                   .reset_index(drop=True)
     )
@@ -61,11 +62,23 @@ def get_gwas_combined():
                   .loc[:, 'Gene Name'].rename('gene')
     )
 
-    df = (pd.concat({
+    # AZ data from Bellenguez 2022
+    bellenguez = (pd.read_csv("../data/gwas/bellenguez2022_tableS20.csv", skiprows=2)
+                 .loc[lambda x: np.isin(x['Gene Prioritization Tier'], ['Tier 1', 'Tier 2']), 'Gene']
+                 .rename('gene')
+                 .reset_index(drop=True)
+                )
+
+    gwas_dict = {
         'ASD': matoba,
         'MDD': howard,
         'SCZ': trubetskoy,
-    })
+    }
+
+    if az:
+        gwas_dict['AZ'] = bellenguez
+
+    df = (pd.concat(gwas_dict)
         .reset_index(0)
         .rename({'level_0':'label'}, axis=1)
         .assign(gene = lambda x: x['gene'].str.replace('\\..*','', regex=True)) #drop variants

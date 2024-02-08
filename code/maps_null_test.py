@@ -28,8 +28,8 @@ def correlate_maps_with_null_scores(
     # null_scores = null_scores[scores.index-1, :, :]
 
     # Optional: reindex scores to all regions
-    # if reindex:
-    #     scores = scores.reindex(range(1, null_scores.shape[0]+1))
+    if reindex:
+        scores = scores.reindex(range(1, null_scores.shape[0]+1))
 
     n_maps = maps.shape[1]
     n_components = scores.shape[1]
@@ -148,8 +148,8 @@ def generate_nulls_from_components(scores, spins, atlas='hcp', parcellation_img=
     ## Reindex scores to have NA where parcels are missing (including all right hemi)
     if atlas=='hcp':
         scores_reindex = scores.reindex(range(1,361)).iloc[:,:n_components].values
-        # ### Drop parcels where data are missing in the 10k fsaverage HCPMMP parcellation template
         # if density=='10k':
+        # ### Drop parcels where data are missing in the 10k fsaverage HCPMMP parcellation template
         #     scores_reindex = np.delete(scores_reindex, [120,300], axis=0)
     elif atlas=='dk':
         scores_reindex = scores.reindex(range(1,69)).iloc[:,:n_components].values

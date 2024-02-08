@@ -3,7 +3,7 @@ library(ggtext)
 library(ggsegGlasser)
 library(ggrepel)
 # library(ggh4x) # needed for facet_grid2 to not clip strip labels
-library(ggpmisc)
+# library(ggpmisc)
 library(eulerr)
 suppressMessages(library(lemon))
 suppressMessages(library(scales))
@@ -108,7 +108,7 @@ plot_brain_maps <- function(scores_df,
         strip.text = element_text(size=7, family='Calibri', color='grey7'),
         strip.text.x = element_text(vjust = 1, face='bold', margin=margin(t=0,b=3,l=0,r=0, unit='mm')),
         strip.text.y.left = element_text(angle = 0),
-        legend.position = c(.5,-.1),
+        legend.position = c(.5,-.07),
         legend.direction = 'horizontal',
         legend.title = element_text(vjust=1),
         plot.tag.position = c(0, 1),

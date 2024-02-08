@@ -1,12 +1,16 @@
 # Helper functions for processing
 import numpy as np, pandas as pd
 from pathlib import Path
+import pickle
 import abagen
 from abagen import io
 from abagen.samples_ import _get_struct
 from abagen.correct import keep_stable_genes
+# from neuromaps.transforms import fslr_to_fsaverage
+# from neuromaps.images import dlabel_to_gifti, relabel_gifti
 import warnings
-import nibabel as nib
+import nibabel as nib 
+import abagen_allen_tweaked
 
 
 # Patch drop_mismatch_samples function to keep only left cortical samples *before* probe selection
@@ -32,7 +36,6 @@ def drop_mismatch_samples_and_filter(annotation, ontology):
                              '| (hemisphere == "B" & mni_x == 0)',
                              engine='python')
 
-    # annot = abagen.samples_.drop_mismatch_samples(annot, ontol)
     annot = annot.copy().query("structure == 'cortex'")
     annot = annot.copy().query("hemisphere == 'L'")
     return annot
@@ -120,6 +123,7 @@ def get_expression_abagen(
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         expression, counts, report = abagen.allen.get_expression_data(
+        # expression, counts, report = abagen_allen_tweaked.get_expression_data(
         # expression = abagen.get_expression_data(
                 atlas = atlas['image'],
                 atlas_info = atlas['info'],
@@ -373,6 +377,28 @@ def get_labels_schaefer(size=400):
     return labels
 
     
+# Not working...
+# def fetch_brodmann():
+#     """
+#     Get Brodmann atlas
+#     """
+#     # ba_info = (
+#     #     pd.read_csv("../data/parcellations/Destrieux.csv")
+#     #     .set_axis(['id','label'],axis=1)
+#     #     .assign(structure='cortex', hemisphere='L')
+#     # )
+
+#     brodmann_img_path = "../data/parcellations/Human.Brodmann09.32k_fs_LR.dlabel.nii"
+#     brodmann_fslr = dlabel_to_gifti(brodmann_img_path)
+#     brodmann_fsa = fslr_to_fsaverage(brodmann_fslr, target_density='164k', hemi='L', method='nearest')
+#     brodmann_fsa_relabel = relabel_gifti(brodmann_fsa, background=0)
+
+#     atlas_brodmann = {
+#         'image':brodmann_fsa_relabel,
+#         'info': None
+#     }
+
+#     return atlas_brodmann
 
 
 ### LEGACY

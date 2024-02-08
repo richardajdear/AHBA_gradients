@@ -171,7 +171,7 @@ def compute_null_p(true_enrichments, null_enrichments,
               .join(null_mean)
               .assign(z = lambda x: (x['true_mean'] - x['null_mean'])/x['null_std'])
               .assign(pos = lambda x: [pct > 0.5 for pct in x['pct']])
-              .assign(p = lambda x: [(1-pct)*2 if pct>0.5 else pct*2 for pct in x['pct']]) # x2 for bidirectional
+              .assign(p = lambda x: [(1-pct)*2 if pct>0.5 else pct*2 for pct in x['pct']]) # x2 for two-sided
              )
     
     # Apply multiple comparisons

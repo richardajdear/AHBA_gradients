@@ -1,6 +1,7 @@
 # Helper functions for analysis
 import numpy as np, pandas as pd
 from processing import *
+import pickle
 from brainsmash.mapgen.base import Base
 from sklearn.linear_model import LinearRegression
 from scipy import sparse
@@ -61,27 +62,30 @@ def get_var_explained(version):
     C1_regressed_var = regress_out_components(version, 1).var().sum()
     C12_regressed_var = regress_out_components(version, 2).var().sum()
     C123_regressed_var = regress_out_components(version, 3).var().sum()
+    C1234_regressed_var = regress_out_components(version, 4).var().sum()
+    C12345_regressed_var = regress_out_components(version, 5).var().sum()
 
     var_explained_pct = np.array([
         (original_var - C1_regressed_var)/original_var,
         (C1_regressed_var - C12_regressed_var)/original_var,
-        (C12_regressed_var - C123_regressed_var)/original_var
+        (C12_regressed_var - C123_regressed_var)/original_var,
+        (C123_regressed_var - C1234_regressed_var)/original_var,
+        (C1234_regressed_var - C12345_regressed_var)/original_var
     ])
     return var_explained_pct
 
 
-def get_var_explained_from_eigenvalues(version_dict):
+def get_var_explained_from_eigenvalues(version):
     """
     Get df of variance explained % from dictionary of PCA versions for plotting
     Note: unclear how to calculate this for DME
     """
-    dict_var_exp = {name: version.eigenvalues / version.expression.var().sum()
-        for name, version in version_dict.items()
-    }
-    df_var_exp = (pd.DataFrame(dict_var_exp, index=[i+1 for i in range(5)])
-        .melt(ignore_index=False).reset_index().set_axis(['PC','version','var'],axis=1)
-    )
-    return df_var_exp
+    var_exp = version.eigenvalues / version.expression.var().sum()
+        
+    # df_var_exp = (pd.DataFrame(var_exp, index=[i+1 for i in range(5)])
+        # .melt(ignore_index=False).reset_index().set_axis(['C','version','var'],axis=1)
+    # )
+    return var_exp
 
 
 
