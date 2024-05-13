@@ -16,6 +16,10 @@ We also provide the region scores and gene weights of the top three AHBA compone
 - [ahba_dme_hcp_top8kgenes_scores.csv](outputs/ahba_dme_hcp_top8kgenes_scores.csv)
 - [ahba_dme_hcp_top8kgenes_weights.csv](outputs/ahba_dme_hcp_top8kgenes_weights.csv)
 
+The gene lists used for enrichment tests are all publicly available. For clarity:
+- The PGC3 schizophrenia [Extended Prioritized](https://figshare.com/articles/dataset/scz2022/19426775?file=35775617) gene list is included here [data/gwas/trubetskoy2022_extended.csv](data/gwas/trubetskoy2022_extended.csv)
+- The consensus lists of differentially expressed genes for ASD, MDD, and SCZ are from the studies in [data/deg](data/deg), compiled using the function [get_deg_consensus](code/disorders_data.py). For convenience the consensus list is provided here (outputs/deg_consensus_genes.csv)[outputs/deg_consensus_genes.csv].
+
 ## Analysis and figures
 Figures and results are presented in jupyter notebooks that walk through the logic of each analysis. 
 Figure-specific code files are listed below each notebook with some other common files listed at the end.
