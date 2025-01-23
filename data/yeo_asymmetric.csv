@@ -1,0 +1,361 @@
+id,label,Yeo,Yeo_names,Yeo_colors,Yeo_shortnames
+1,V1,1.0,Visual,#660066,VIS
+2,MST,1.0,Visual,#660066,VIS
+3,V6,1.0,Visual,#660066,VIS
+4,V2,1.0,Visual,#660066,VIS
+5,V3,1.0,Visual,#660066,VIS
+6,V4,1.0,Visual,#660066,VIS
+7,V8,1.0,Visual,#660066,VIS
+8,4,2.0,Somatomotor,#0066CC,SMN
+9,3b,2.0,Somatomotor,#0066CC,SMN
+10,FEF,3.0,Dorsal Attention,#009900,DAN
+11,PEF,3.0,Dorsal Attention,#009900,DAN
+12,55b,2.0,Somatomotor,#0066CC,SMN
+13,V3A,1.0,Visual,#660066,VIS
+14,RSC,7.0,Default,#FF6666,DMN
+15,POS2,7.0,Default,#FF6666,DMN
+16,V7,1.0,Visual,#660066,VIS
+17,IPS1,1.0,Visual,#660066,VIS
+18,FFC,1.0,Visual,#660066,VIS
+19,V3B,1.0,Visual,#660066,VIS
+20,LO1,1.0,Visual,#660066,VIS
+21,LO2,1.0,Visual,#660066,VIS
+22,PIT,1.0,Visual,#660066,VIS
+23,MT,1.0,Visual,#660066,VIS
+24,A1,2.0,Somatomotor,#0066CC,SMN
+25,PSL,4.0,Ventral Attention,#FF00FF,CAN
+26,SFL,7.0,Default,#FF6666,DMN
+27,PCV,7.0,Default,#FF6666,DMN
+28,STV,7.0,Default,#FF6666,DMN
+29,7Pm,6.0,Frontoparietal,#FF8000,FPN
+30,7m,7.0,Default,#FF6666,DMN
+31,POS1,7.0,Default,#FF6666,DMN
+32,23d,7.0,Default,#FF6666,DMN
+33,v23ab,7.0,Default,#FF6666,DMN
+34,d23ab,7.0,Default,#FF6666,DMN
+35,31pv,7.0,Default,#FF6666,DMN
+36,5m,2.0,Somatomotor,#0066CC,SMN
+37,5mv,4.0,Ventral Attention,#FF00FF,CAN
+38,23c,4.0,Ventral Attention,#FF00FF,CAN
+39,5L,2.0,Somatomotor,#0066CC,SMN
+40,24dd,2.0,Somatomotor,#0066CC,SMN
+41,24dv,2.0,Somatomotor,#0066CC,SMN
+42,7AL,3.0,Dorsal Attention,#009900,DAN
+43,SCEF,4.0,Ventral Attention,#FF00FF,CAN
+44,6ma,4.0,Ventral Attention,#FF00FF,CAN
+45,7Am,3.0,Dorsal Attention,#009900,DAN
+46,7Pl,3.0,Dorsal Attention,#009900,DAN
+47,7PC,3.0,Dorsal Attention,#009900,DAN
+48,LIPv,3.0,Dorsal Attention,#009900,DAN
+49,VIP,3.0,Dorsal Attention,#009900,DAN
+50,MIP,3.0,Dorsal Attention,#009900,DAN
+51,1,2.0,Somatomotor,#0066CC,SMN
+52,2,2.0,Somatomotor,#0066CC,SMN
+53,3a,2.0,Somatomotor,#0066CC,SMN
+54,6d,2.0,Somatomotor,#0066CC,SMN
+55,6mp,2.0,Somatomotor,#0066CC,SMN
+56,6v,2.0,Somatomotor,#0066CC,SMN
+57,p24pr,4.0,Ventral Attention,#FF00FF,CAN
+58,33pr,4.0,Ventral Attention,#FF00FF,CAN
+59,a24pr,4.0,Ventral Attention,#FF00FF,CAN
+60,p32pr,4.0,Ventral Attention,#FF00FF,CAN
+61,a24,7.0,Default,#FF6666,DMN
+62,d32,7.0,Default,#FF6666,DMN
+63,8BM,7.0,Default,#FF6666,DMN
+64,p32,7.0,Default,#FF6666,DMN
+65,10r,7.0,Default,#FF6666,DMN
+66,47m,7.0,Default,#FF6666,DMN
+67,8Av,7.0,Default,#FF6666,DMN
+68,8Ad,7.0,Default,#FF6666,DMN
+69,9m,7.0,Default,#FF6666,DMN
+70,8BL,7.0,Default,#FF6666,DMN
+71,9p,7.0,Default,#FF6666,DMN
+72,10d,7.0,Default,#FF6666,DMN
+73,8C,6.0,Frontoparietal,#FF8000,FPN
+74,44,7.0,Default,#FF6666,DMN
+75,45,7.0,Default,#FF6666,DMN
+76,47l,7.0,Default,#FF6666,DMN
+77,a47r,7.0,Default,#FF6666,DMN
+78,6r,4.0,Ventral Attention,#FF00FF,CAN
+79,IFJa,6.0,Frontoparietal,#FF8000,FPN
+80,IFJp,3.0,Dorsal Attention,#009900,DAN
+81,IFSp,6.0,Frontoparietal,#FF8000,FPN
+82,IFSa,6.0,Frontoparietal,#FF8000,FPN
+83,p9-46v,6.0,Frontoparietal,#FF8000,FPN
+84,46,6.0,Frontoparietal,#FF8000,FPN
+85,a9-46v,6.0,Frontoparietal,#FF8000,FPN
+86,9-46d,6.0,Frontoparietal,#FF8000,FPN
+87,9a,7.0,Default,#FF6666,DMN
+88,10v,5.0,Limbic,#FFFF99,LIM
+89,a10p,7.0,Default,#FF6666,DMN
+90,10pp,5.0,Limbic,#FFFF99,LIM
+91,11l,6.0,Frontoparietal,#FF8000,FPN
+92,13l,5.0,Limbic,#FFFF99,LIM
+93,OFC,5.0,Limbic,#FFFF99,LIM
+94,47s,7.0,Default,#FF6666,DMN
+95,LIPd,3.0,Dorsal Attention,#009900,DAN
+96,6a,3.0,Dorsal Attention,#009900,DAN
+97,i6-8,6.0,Frontoparietal,#FF8000,FPN
+98,s6-8,7.0,Default,#FF6666,DMN
+99,43,4.0,Ventral Attention,#FF00FF,CAN
+100,OP4,2.0,Somatomotor,#0066CC,SMN
+101,OP1,2.0,Somatomotor,#0066CC,SMN
+102,OP2-3,2.0,Somatomotor,#0066CC,SMN
+103,52,2.0,Somatomotor,#0066CC,SMN
+104,RI,2.0,Somatomotor,#0066CC,SMN
+105,PFcm,4.0,Ventral Attention,#FF00FF,CAN
+106,PoI2,4.0,Ventral Attention,#FF00FF,CAN
+107,TA2,2.0,Somatomotor,#0066CC,SMN
+108,FOP4,4.0,Ventral Attention,#FF00FF,CAN
+109,MI,4.0,Ventral Attention,#FF00FF,CAN
+110,Pir,0.0,,#404040,
+111,AVI,6.0,Frontoparietal,#FF8000,FPN
+112,AAIC,7.0,Default,#FF6666,DMN
+113,FOP1,4.0,Ventral Attention,#FF00FF,CAN
+114,FOP3,4.0,Ventral Attention,#FF00FF,CAN
+115,FOP2,4.0,Ventral Attention,#FF00FF,CAN
+116,PFt,3.0,Dorsal Attention,#009900,DAN
+117,AIP,3.0,Dorsal Attention,#009900,DAN
+118,EC,5.0,Limbic,#FFFF99,LIM
+119,PreS,7.0,Default,#FF6666,DMN
+120,H,0.0,,#404040,
+121,ProS,1.0,Visual,#660066,VIS
+122,PeEc,5.0,Limbic,#FFFF99,LIM
+123,STGa,5.0,Limbic,#FFFF99,LIM
+124,PBelt,2.0,Somatomotor,#0066CC,SMN
+125,A5,7.0,Default,#FF6666,DMN
+126,PHA1,1.0,Visual,#660066,VIS
+127,PHA3,1.0,Visual,#660066,VIS
+128,STSda,7.0,Default,#FF6666,DMN
+129,STSdp,7.0,Default,#FF6666,DMN
+130,STSvp,7.0,Default,#FF6666,DMN
+131,TGd,5.0,Limbic,#FFFF99,LIM
+132,TE1a,7.0,Default,#FF6666,DMN
+133,TE1p,7.0,Default,#FF6666,DMN
+134,TE2a,7.0,Default,#FF6666,DMN
+135,TF,5.0,Limbic,#FFFF99,LIM
+136,TE2p,3.0,Dorsal Attention,#009900,DAN
+137,PHT,4.0,Ventral Attention,#FF00FF,CAN
+138,PH,3.0,Dorsal Attention,#009900,DAN
+139,TPOJ1,2.0,Somatomotor,#0066CC,SMN
+140,TPOJ2,4.0,Ventral Attention,#FF00FF,CAN
+141,TPOJ3,7.0,Default,#FF6666,DMN
+142,DVT,1.0,Visual,#660066,VIS
+143,PGp,3.0,Dorsal Attention,#009900,DAN
+144,IP2,6.0,Frontoparietal,#FF8000,FPN
+145,IP1,6.0,Frontoparietal,#FF8000,FPN
+146,IP0,3.0,Dorsal Attention,#009900,DAN
+147,PFop,4.0,Ventral Attention,#FF00FF,CAN
+148,PF,4.0,Ventral Attention,#FF00FF,CAN
+149,PFm,7.0,Default,#FF6666,DMN
+150,PGi,7.0,Default,#FF6666,DMN
+151,PGs,7.0,Default,#FF6666,DMN
+152,V6A,1.0,Visual,#660066,VIS
+153,VMV1,1.0,Visual,#660066,VIS
+154,VMV3,1.0,Visual,#660066,VIS
+155,PHA2,7.0,Default,#FF6666,DMN
+156,V4t,1.0,Visual,#660066,VIS
+157,FST,3.0,Dorsal Attention,#009900,DAN
+158,V3CD,1.0,Visual,#660066,VIS
+159,LO3,1.0,Visual,#660066,VIS
+160,VMV2,1.0,Visual,#660066,VIS
+161,31pd,7.0,Default,#FF6666,DMN
+162,31a,7.0,Default,#FF6666,DMN
+163,VVC,1.0,Visual,#660066,VIS
+164,25,5.0,Limbic,#FFFF99,LIM
+165,s32,5.0,Limbic,#FFFF99,LIM
+166,pOFC,5.0,Limbic,#FFFF99,LIM
+167,PoI1,4.0,Ventral Attention,#FF00FF,CAN
+168,Ig,2.0,Somatomotor,#0066CC,SMN
+169,FOP5,4.0,Ventral Attention,#FF00FF,CAN
+170,p10p,7.0,Default,#FF6666,DMN
+171,p47r,6.0,Frontoparietal,#FF8000,FPN
+172,TGv,5.0,Limbic,#FFFF99,LIM
+173,MBelt,2.0,Somatomotor,#0066CC,SMN
+174,LBelt,2.0,Somatomotor,#0066CC,SMN
+175,A4,2.0,Somatomotor,#0066CC,SMN
+176,STSva,7.0,Default,#FF6666,DMN
+177,TE1m,7.0,Default,#FF6666,DMN
+178,PI,5.0,Limbic,#FFFF99,LIM
+179,a32pr,6.0,Frontoparietal,#FF8000,FPN
+180,p24,7.0,Default,#FF6666,DMN
+181,V1,1.0,Visual,#660066,VIS
+182,MST,1.0,Visual,#660066,VIS
+183,V6,1.0,Visual,#660066,VIS
+184,V2,1.0,Visual,#660066,VIS
+185,V3,1.0,Visual,#660066,VIS
+186,V4,1.0,Visual,#660066,VIS
+187,V8,1.0,Visual,#660066,VIS
+188,4,2.0,Somatomotor,#0066CC,SMN
+189,3b,2.0,Somatomotor,#0066CC,SMN
+190,FEF,3.0,Dorsal Attention,#009900,DAN
+191,PEF,3.0,Dorsal Attention,#009900,DAN
+192,55b,4.0,Ventral Attention,#FF00FF,CAN
+193,V3A,1.0,Visual,#660066,VIS
+194,RSC,7.0,Default,#FF6666,DMN
+195,POS2,6.0,Frontoparietal,#FF8000,FPN
+196,V7,1.0,Visual,#660066,VIS
+197,IPS1,1.0,Visual,#660066,VIS
+198,FFC,1.0,Visual,#660066,VIS
+199,V3B,1.0,Visual,#660066,VIS
+200,LO1,1.0,Visual,#660066,VIS
+201,LO2,1.0,Visual,#660066,VIS
+202,PIT,1.0,Visual,#660066,VIS
+203,MT,1.0,Visual,#660066,VIS
+204,A1,2.0,Somatomotor,#0066CC,SMN
+205,PSL,4.0,Ventral Attention,#FF00FF,CAN
+206,SFL,7.0,Default,#FF6666,DMN
+207,PCV,3.0,Dorsal Attention,#009900,DAN
+208,STV,4.0,Ventral Attention,#FF00FF,CAN
+209,7Pm,6.0,Frontoparietal,#FF8000,FPN
+210,7m,7.0,Default,#FF6666,DMN
+211,POS1,7.0,Default,#FF6666,DMN
+212,23d,7.0,Default,#FF6666,DMN
+213,v23ab,7.0,Default,#FF6666,DMN
+214,d23ab,7.0,Default,#FF6666,DMN
+215,31pv,7.0,Default,#FF6666,DMN
+216,5m,2.0,Somatomotor,#0066CC,SMN
+217,5mv,4.0,Ventral Attention,#FF00FF,CAN
+218,23c,4.0,Ventral Attention,#FF00FF,CAN
+219,5L,2.0,Somatomotor,#0066CC,SMN
+220,24dd,2.0,Somatomotor,#0066CC,SMN
+221,24dv,2.0,Somatomotor,#0066CC,SMN
+222,7AL,3.0,Dorsal Attention,#009900,DAN
+223,SCEF,4.0,Ventral Attention,#FF00FF,CAN
+224,6ma,4.0,Ventral Attention,#FF00FF,CAN
+225,7Am,3.0,Dorsal Attention,#009900,DAN
+226,7Pl,3.0,Dorsal Attention,#009900,DAN
+227,7PC,3.0,Dorsal Attention,#009900,DAN
+228,LIPv,3.0,Dorsal Attention,#009900,DAN
+229,VIP,3.0,Dorsal Attention,#009900,DAN
+230,MIP,3.0,Dorsal Attention,#009900,DAN
+231,1,2.0,Somatomotor,#0066CC,SMN
+232,2,2.0,Somatomotor,#0066CC,SMN
+233,3a,2.0,Somatomotor,#0066CC,SMN
+234,6d,2.0,Somatomotor,#0066CC,SMN
+235,6mp,2.0,Somatomotor,#0066CC,SMN
+236,6v,2.0,Somatomotor,#0066CC,SMN
+237,p24pr,4.0,Ventral Attention,#FF00FF,CAN
+238,33pr,4.0,Ventral Attention,#FF00FF,CAN
+239,a24pr,4.0,Ventral Attention,#FF00FF,CAN
+240,p32pr,4.0,Ventral Attention,#FF00FF,CAN
+241,a24,7.0,Default,#FF6666,DMN
+242,d32,7.0,Default,#FF6666,DMN
+243,8BM,6.0,Frontoparietal,#FF8000,FPN
+244,p32,7.0,Default,#FF6666,DMN
+245,10r,7.0,Default,#FF6666,DMN
+246,47m,7.0,Default,#FF6666,DMN
+247,8Av,6.0,Frontoparietal,#FF8000,FPN
+248,8Ad,7.0,Default,#FF6666,DMN
+249,9m,7.0,Default,#FF6666,DMN
+250,8BL,7.0,Default,#FF6666,DMN
+251,9p,7.0,Default,#FF6666,DMN
+252,10d,7.0,Default,#FF6666,DMN
+253,8C,6.0,Frontoparietal,#FF8000,FPN
+254,44,6.0,Frontoparietal,#FF8000,FPN
+255,45,7.0,Default,#FF6666,DMN
+256,47l,7.0,Default,#FF6666,DMN
+257,a47r,6.0,Frontoparietal,#FF8000,FPN
+258,6r,4.0,Ventral Attention,#FF00FF,CAN
+259,IFJa,6.0,Frontoparietal,#FF8000,FPN
+260,IFJp,3.0,Dorsal Attention,#009900,DAN
+261,IFSp,6.0,Frontoparietal,#FF8000,FPN
+262,IFSa,6.0,Frontoparietal,#FF8000,FPN
+263,p9-46v,6.0,Frontoparietal,#FF8000,FPN
+264,46,6.0,Frontoparietal,#FF8000,FPN
+265,a9-46v,6.0,Frontoparietal,#FF8000,FPN
+266,9-46d,6.0,Frontoparietal,#FF8000,FPN
+267,9a,7.0,Default,#FF6666,DMN
+268,10v,5.0,Limbic,#FFFF99,LIM
+269,a10p,6.0,Frontoparietal,#FF8000,FPN
+270,10pp,5.0,Limbic,#FFFF99,LIM
+271,11l,6.0,Frontoparietal,#FF8000,FPN
+272,13l,5.0,Limbic,#FFFF99,LIM
+273,OFC,5.0,Limbic,#FFFF99,LIM
+274,47s,7.0,Default,#FF6666,DMN
+275,LIPd,3.0,Dorsal Attention,#009900,DAN
+276,6a,3.0,Dorsal Attention,#009900,DAN
+277,i6-8,6.0,Frontoparietal,#FF8000,FPN
+278,s6-8,6.0,Frontoparietal,#FF8000,FPN
+279,43,4.0,Ventral Attention,#FF00FF,CAN
+280,OP4,2.0,Somatomotor,#0066CC,SMN
+281,OP1,2.0,Somatomotor,#0066CC,SMN
+282,OP2-3,2.0,Somatomotor,#0066CC,SMN
+283,52,2.0,Somatomotor,#0066CC,SMN
+284,RI,2.0,Somatomotor,#0066CC,SMN
+285,PFcm,4.0,Ventral Attention,#FF00FF,CAN
+286,PoI2,4.0,Ventral Attention,#FF00FF,CAN
+287,TA2,2.0,Somatomotor,#0066CC,SMN
+288,FOP4,4.0,Ventral Attention,#FF00FF,CAN
+289,MI,4.0,Ventral Attention,#FF00FF,CAN
+290,Pir,0.0,,#404040,
+291,AVI,6.0,Frontoparietal,#FF8000,FPN
+292,AAIC,7.0,Default,#FF6666,DMN
+293,FOP1,4.0,Ventral Attention,#FF00FF,CAN
+294,FOP3,4.0,Ventral Attention,#FF00FF,CAN
+295,FOP2,2.0,Somatomotor,#0066CC,SMN
+296,PFt,3.0,Dorsal Attention,#009900,DAN
+297,AIP,3.0,Dorsal Attention,#009900,DAN
+298,EC,5.0,Limbic,#FFFF99,LIM
+299,PreS,0.0,,#404040,
+300,H,0.0,,#404040,
+301,ProS,1.0,Visual,#660066,VIS
+302,PeEc,5.0,Limbic,#FFFF99,LIM
+303,STGa,7.0,Default,#FF6666,DMN
+304,PBelt,2.0,Somatomotor,#0066CC,SMN
+305,A5,2.0,Somatomotor,#0066CC,SMN
+306,PHA1,1.0,Visual,#660066,VIS
+307,PHA3,1.0,Visual,#660066,VIS
+308,STSda,7.0,Default,#FF6666,DMN
+309,STSdp,7.0,Default,#FF6666,DMN
+310,STSvp,7.0,Default,#FF6666,DMN
+311,TGd,5.0,Limbic,#FFFF99,LIM
+312,TE1a,7.0,Default,#FF6666,DMN
+313,TE1p,6.0,Frontoparietal,#FF8000,FPN
+314,TE2a,7.0,Default,#FF6666,DMN
+315,TF,5.0,Limbic,#FFFF99,LIM
+316,TE2p,3.0,Dorsal Attention,#009900,DAN
+317,PHT,3.0,Dorsal Attention,#009900,DAN
+318,PH,3.0,Dorsal Attention,#009900,DAN
+319,TPOJ1,4.0,Ventral Attention,#FF00FF,CAN
+320,TPOJ2,3.0,Dorsal Attention,#009900,DAN
+321,TPOJ3,3.0,Dorsal Attention,#009900,DAN
+322,DVT,1.0,Visual,#660066,VIS
+323,PGp,3.0,Dorsal Attention,#009900,DAN
+324,IP2,6.0,Frontoparietal,#FF8000,FPN
+325,IP1,6.0,Frontoparietal,#FF8000,FPN
+326,IP0,3.0,Dorsal Attention,#009900,DAN
+327,PFop,4.0,Ventral Attention,#FF00FF,CAN
+328,PF,4.0,Ventral Attention,#FF00FF,CAN
+329,PFm,6.0,Frontoparietal,#FF8000,FPN
+330,PGi,7.0,Default,#FF6666,DMN
+331,PGs,7.0,Default,#FF6666,DMN
+332,V6A,1.0,Visual,#660066,VIS
+333,VMV1,1.0,Visual,#660066,VIS
+334,VMV3,1.0,Visual,#660066,VIS
+335,PHA2,1.0,Visual,#660066,VIS
+336,V4t,1.0,Visual,#660066,VIS
+337,FST,3.0,Dorsal Attention,#009900,DAN
+338,V3CD,1.0,Visual,#660066,VIS
+339,LO3,1.0,Visual,#660066,VIS
+340,VMV2,1.0,Visual,#660066,VIS
+341,31pd,7.0,Default,#FF6666,DMN
+342,31a,7.0,Default,#FF6666,DMN
+343,VVC,1.0,Visual,#660066,VIS
+344,25,5.0,Limbic,#FFFF99,LIM
+345,s32,7.0,Default,#FF6666,DMN
+346,pOFC,5.0,Limbic,#FFFF99,LIM
+347,PoI1,4.0,Ventral Attention,#FF00FF,CAN
+348,Ig,2.0,Somatomotor,#0066CC,SMN
+349,FOP5,4.0,Ventral Attention,#FF00FF,CAN
+350,p10p,6.0,Frontoparietal,#FF8000,FPN
+351,p47r,6.0,Frontoparietal,#FF8000,FPN
+352,TGv,5.0,Limbic,#FFFF99,LIM
+353,MBelt,2.0,Somatomotor,#0066CC,SMN
+354,LBelt,2.0,Somatomotor,#0066CC,SMN
+355,A4,2.0,Somatomotor,#0066CC,SMN
+356,STSva,7.0,Default,#FF6666,DMN
+357,TE1m,7.0,Default,#FF6666,DMN
+358,PI,4.0,Ventral Attention,#FF00FF,CAN
+359,a32pr,6.0,Frontoparietal,#FF8000,FPN
+360,p24,7.0,Default,#FF6666,DMN
